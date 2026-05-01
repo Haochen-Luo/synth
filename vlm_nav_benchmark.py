@@ -111,14 +111,17 @@ Rules:
 
 Output ONLY the action name, nothing else. Do not explain. Example output: MOVE_FORWARD"""
 
-def query_vlm(image_path: str, out_log: str, collision_alert: bool = False) -> str:
+def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, action_history: list = None) -> str:
     """Send image to VLM, return action string."""
     with open(image_path, "rb") as f:
         img_b64 = base64.b64encode(f.read()).decode("utf-8")
     
     prompt = "You are navigating an indoor environment to reach the SOFA. Based on this first-person view, what action should you take? Output only: MOVE_FORWARD, TURN_LEFT, TURN_RIGHT, or STOP."
+    if action_history:
+        recent = action_history[-5:]  # last 5 actions
+        prompt += f" Your recent actions were: {', '.join(recent)}. Avoid repeating unhelpful patterns."
     if collision_alert:
-        prompt += " WARNING: Your path is currently blocked by an obstacle."
+        prompt += " WARNING: Your path is currently blocked by an obstacle. You MUST turn to find a clear path."
 
     payload = {
         "model": MODEL_NAME,
@@ -254,13 +257,13 @@ try:
     writer_fpv.initialize(output_dir=out_dir_fpv, rgb=True)
     writer_fpv.attach([rp_fpv])
 
-    # === Third-Person Camera (High Overhead — ceiling is hidden at L215) ===
-    # Position: Z=10m (well above ceiling ~2.5m), slightly south of room center
-    # Look at: room center at floor level
-    # Angle from vertical: ~73° (steep near-top-down, avoids gimbal lock)
+    # === Third-Person Camera (Best angle from 45-position grid search) ===
+    # Z=2.7 is the max safe height (just under ceiling ~3.0m).
+    # Going higher (Z>3) causes all-black: room walls enclose the space
+    # even with ceiling hidden, blocking visibility from outside.
     cam_bird = rep.create.camera(
-        position=(8.0, 2.0, 10.0),
-        look_at=(7.0, 5.5, 0.0),
+        position=(13.0, 7.0, 2.7),
+        look_at=(5.0, 5.0, 0.5),
         name="BirdEyeCamera"
     )
     rp_bird = rep.create.render_product(cam_bird, (1920, 1080))
@@ -371,7 +374,8 @@ try:
         with open(out_log, "a") as f: 
             f.write(f"[NAV] Step {step}: pos=({agent_x:.2f},{agent_y:.2f}) yaw={agent_yaw:.0f}° dist={dist_to_target:.2f}m\n")
         
-        action = query_vlm(frame_path, out_log, collision_alert=collision_occurred)
+        past_actions = [h["action"] for h in nav_history] if nav_history else None
+        action = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions)
         collision_occurred = False # reset after consuming
         
         with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: VLM action = {action}\n")
