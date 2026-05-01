@@ -159,7 +159,7 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False) -> s
 # ============================================================
 STEP_DISTANCE = 0.25     # meters per MOVE_FORWARD
 TURN_ANGLE = 30.0        # degrees per TURN
-MAX_STEPS = 5          # timeout
+MAX_STEPS = 250        # timeout
 SUCCESS_RADIUS = 0.8     # meters to target for success
 AGENT_HEIGHT = 0.0       # Fix: match dancer's floor-level physical height
 AGENT_EYE_HEIGHT = 1.58  # z for camera (eye level)
@@ -254,10 +254,13 @@ try:
     writer_fpv.initialize(output_dir=out_dir_fpv, rgb=True)
     writer_fpv.attach([rp_fpv])
 
-    # === Third-Person Camera ===
+    # === Third-Person Camera (High Overhead — ceiling is hidden at L215) ===
+    # Position: Z=10m (well above ceiling ~2.5m), slightly south of room center
+    # Look at: room center at floor level
+    # Angle from vertical: ~73° (steep near-top-down, avoids gimbal lock)
     cam_bird = rep.create.camera(
-        position=(13.0, 7.0, 2.7),
-        look_at=(5.0, 5.0, 0.5),
+        position=(8.0, 2.0, 10.0),
+        look_at=(7.0, 5.5, 0.0),
         name="BirdEyeCamera"
     )
     rp_bird = rep.create.render_product(cam_bird, (1920, 1080))
@@ -317,7 +320,7 @@ try:
     nav_history = []
     collision_occurred = False
     
-    for step in range(250):
+    for step in range(MAX_STEPS):
         # 1. Update agent position in scene
         agent_trans.Set(Gf.Vec3d(agent_x, agent_y, AGENT_HEIGHT))
         yaw_rad = math.radians(agent_yaw)
@@ -332,19 +335,8 @@ try:
             cam_trans = cam_xf.AddTranslateOp()
             cam_orient = cam_xf.AddOrientOp()
             
-            look_x = agent_x + math.cos(yaw_rad)
-            look_y = agent_y + math.sin(yaw_rad)
-            
             cam_trans.Set(Gf.Vec3d(agent_x, agent_y, AGENT_EYE_HEIGHT))
-            
-            cam_trans.Set(Gf.Vec3d(agent_x, agent_y, AGENT_EYE_HEIGHT))
-            
-            # Since rep.create.camera defaults to a perfect horizontal view, we ONLY need to apply Yaw!
-            # No pitch, no lookat_to_quatf, no rot_x. Just pure rotation around Z.
-            # But wait, Replicator's default orientation at rotation=(0,0,0) faces +X?
-            # Or does it? Let's just use Gf.Rotation around Z.
-            q_yaw = Gf.Rotation(Gf.Vec3d(0, 0, 1), float(agent_yaw)).GetQuat()
-            cam_orient.Set(Gf.Quatf(q_yaw.GetReal(), *q_yaw.GetImaginary()))
+            cam_orient.Set(get_camera_quat_from_yaw(agent_yaw))
         
         # 3. Update runner 1 position
         if runner1_xform:
@@ -383,6 +375,14 @@ try:
         collision_occurred = False # reset after consuming
         
         with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: VLM action = {action}\n")
+        
+        # Anti-oscillation guard: if VLM alternates TURN_LEFT/TURN_RIGHT 3+ times, force MOVE_FORWARD
+        if len(nav_history) >= 2:
+            last_actions = [h["action"] for h in nav_history[-2:]]
+            if (last_actions == ["TURN_LEFT", "TURN_RIGHT"] and action == "TURN_LEFT") or \
+               (last_actions == ["TURN_RIGHT", "TURN_LEFT"] and action == "TURN_RIGHT"):
+                with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: Oscillation detected! Overriding to MOVE_FORWARD\n")
+                action = "MOVE_FORWARD"
         
         nav_history.append({
             "step": step,
@@ -459,7 +459,7 @@ try:
             
             # Use 'avc1' or 'mp4v' for mp4 format
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            video = cv2.VideoWriter(mp4_path, fourcc, 5.0, (width, height))
+            video = cv2.VideoWriter(mp4_path, fourcc, 2.0, (width, height))
             
             for f in png_files:
                 video.write(cv2.imread(f))
