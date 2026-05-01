@@ -238,8 +238,9 @@ try:
     
     out_dir_fpv = "/home/qi/hc/Puppeteer/zehao_task/vlm_nav_frames_fpv"
     out_dir_bird = "/home/qi/hc/Puppeteer/zehao_task/vlm_nav_frames_bird"
+    out_dir_bird2 = "/home/qi/hc/Puppeteer/zehao_task/vlm_nav_frames_bird2"
     
-    for d in [out_dir_fpv, out_dir_bird]:
+    for d in [out_dir_fpv, out_dir_bird, out_dir_bird2]:
         import shutil
         if os.path.exists(d):
             shutil.rmtree(d)
@@ -270,6 +271,18 @@ try:
     writer_bird = rep.WriterRegistry.get("BasicWriter")
     writer_bird.initialize(output_dir=out_dir_bird, rgb=True)
     writer_bird.attach([rp_bird])
+
+    # === Second Bird Camera (opposite corner — sofa/front side) ===
+    # Captures agent approaching from the front, complementing the rear view.
+    cam_bird2 = rep.create.camera(
+        position=(2.0, 1.0, 2.7),
+        look_at=(8.0, 5.0, 0.5),
+        name="BirdEyeCamera2"
+    )
+    rp_bird2 = rep.create.render_product(cam_bird2, (1920, 1080))
+    writer_bird2 = rep.WriterRegistry.get("BasicWriter")
+    writer_bird2.initialize(output_dir=out_dir_bird2, rgb=True)
+    writer_bird2.attach([rp_bird2])
     
     # === Setup Runner 1 (obstacle) ===
     runner1_spec = None
@@ -454,7 +467,7 @@ try:
     with open(out_log, "a") as f: f.write("[NAV] Generating MP4 videos...\n")
     import cv2
     
-    for label, src_dir in [("fpv", out_dir_fpv), ("birdseye", out_dir_bird)]:
+    for label, src_dir in [("fpv", out_dir_fpv), ("bird_rear", out_dir_bird), ("bird_front", out_dir_bird2)]:
         png_files = sorted(glob.glob(os.path.join(src_dir, "rgb_*.png")))
         if png_files:
             img = cv2.imread(png_files[0])
@@ -477,6 +490,77 @@ try:
             gif_path = f"/home/qi/hc/Puppeteer/zehao_task/vlm_nav_{label}.gif"
             frames[0].save(gif_path, save_all=True, append_images=frames[1:], duration=500, loop=0)
             with open(out_log, "a") as f: f.write(f"[NAV] {label} GIF saved: {gif_path} ({len(frames)} frames)\n")
+    
+    # === Generate 2D Trajectory Map ===
+    with open(out_log, "a") as f: f.write("[NAV] Generating 2D trajectory map...\n")
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as mpatches
+        
+        fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+        ax.set_facecolor('#1a1a2e')
+        fig.patch.set_facecolor('#0f0f23')
+        
+        # Extract trajectory
+        xs = [h["x"] for h in nav_history]
+        ys = [h["y"] for h in nav_history]
+        actions = [h["action"] for h in nav_history]
+        
+        # Color-code by action
+        action_colors = {
+            "MOVE_FORWARD": "#00ff88",
+            "TURN_LEFT": "#ff6b6b",
+            "TURN_RIGHT": "#4ecdc4",
+            "STOP": "#ffd93d",
+        }
+        
+        # Draw trajectory segments
+        for i in range(len(xs) - 1):
+            color = action_colors.get(actions[i], "#888888")
+            ax.plot([xs[i], xs[i+1]], [ys[i], ys[i+1]], color=color, linewidth=2, alpha=0.8)
+            # Draw action dots
+            ax.scatter(xs[i], ys[i], c=color, s=30, zorder=5, alpha=0.9)
+        
+        # Mark start and target
+        ax.scatter(AGENT_START_X, AGENT_START_Y, c='#ff4444', s=200, marker='*', zorder=10, label='Start', edgecolors='white', linewidths=1)
+        ax.scatter(TARGET[0], TARGET[1], c='#44ff44', s=200, marker='s', zorder=10, label='Target (Sofa)', edgecolors='white', linewidths=1)
+        
+        # Mark final position
+        if xs:
+            ax.scatter(xs[-1], ys[-1], c='#ffaa00', s=150, marker='D', zorder=10, label=f'End (d={nav_history[-1]["dist_to_target"]:.1f}m)', edgecolors='white', linewidths=1)
+        
+        # Draw facing direction arrows at key steps
+        for i in range(0, len(nav_history), max(1, len(nav_history)//15)):
+            h = nav_history[i]
+            yaw_r = math.radians(h["yaw"])
+            dx = 0.4 * math.cos(yaw_r)
+            dy = 0.4 * math.sin(yaw_r)
+            ax.annotate('', xy=(h["x"]+dx, h["y"]+dy), xytext=(h["x"], h["y"]),
+                       arrowprops=dict(arrowstyle='->', color='white', lw=1.5))
+            ax.text(h["x"]+dx*1.3, h["y"]+dy*1.3, str(h["step"]), fontsize=7, color='white', ha='center', va='center')
+        
+        # Legend
+        legend_patches = [mpatches.Patch(color=c, label=a) for a, c in action_colors.items()]
+        ax.legend(handles=legend_patches + ax.get_legend_handles_labels()[0], loc='upper right',
+                 fontsize=9, facecolor='#2a2a4a', edgecolor='#444', labelcolor='white')
+        
+        ax.set_xlabel('X (meters)', color='white', fontsize=12)
+        ax.set_ylabel('Y (meters)', color='white', fontsize=12)
+        ax.set_title('VLM Navigation Trajectory (Top-Down View)', color='white', fontsize=14, fontweight='bold')
+        ax.tick_params(colors='white')
+        ax.set_aspect('equal')
+        ax.grid(True, alpha=0.2, color='white')
+        for spine in ax.spines.values():
+            spine.set_color('#444')
+        
+        traj_path = "/home/qi/hc/Puppeteer/zehao_task/vlm_nav_trajectory.png"
+        plt.savefig(traj_path, dpi=150, bbox_inches='tight', facecolor=fig.get_facecolor())
+        plt.close()
+        with open(out_log, "a") as f: f.write(f"[NAV] 2D trajectory map saved: {traj_path}\n")
+    except Exception as e:
+        with open(out_log, "a") as f: f.write(f"[NAV] Failed to generate trajectory map: {e}\n")
     
     with open(out_log, "a") as f: f.write("[NAV] All done!\n")
     simulation_app.close()
