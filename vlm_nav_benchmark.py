@@ -133,7 +133,7 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
                 {"type": "text", "text": prompt}
             ]}
         ],
-        "max_tokens": 512,
+        "max_tokens": 4096,
         "temperature": 0.0,
     }
     
