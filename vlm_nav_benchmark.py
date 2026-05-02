@@ -219,12 +219,12 @@ try:
     if ceiling_prim.IsValid():
         UsdGeom.Imageable(ceiling_prim).MakeInvisible()
     
-    # Hide the second sofa (right side, near start) to avoid VLM ambiguity
-    # Only the target sofa (left side, center=(4.4,6.4)) should be visible
+    # Remove the second sofa (right side, near start) to avoid VLM ambiguity
+    # SetActive(False) removes it entirely: no visuals, no collision, no physics
     sofa2_prim = stage.GetPrimAtPath("/World/Env/SofaFactory_1079026__spawn_asset_4034957_")
     if sofa2_prim.IsValid():
-        UsdGeom.Imageable(sofa2_prim).MakeInvisible()
-        with open(out_log, "a") as f: f.write("[NAV] Hidden Sofa 2 (right side) to remove ambiguity\n")
+        sofa2_prim.SetActive(False)
+        with open(out_log, "a") as f: f.write("[NAV] Removed Sofa 2 (right side) from scene\n")
     
     # Instance agent runner
     agent_prim = stage.DefinePrim("/World/Humans/agent_runner")
