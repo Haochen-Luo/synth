@@ -109,14 +109,15 @@ Rules:
 - If a person is blocking your path, wait (output STOP temporarily) or turn to find an alternate route.
 - When you are very close to the sofa (within arm's reach), output STOP.
 
-Output ONLY the action name, nothing else. Do not explain. Example output: MOVE_FORWARD"""
+First, briefly explain your reasoning based on what you see. Then, on a new line, output the action exactly in this format:
+ACTION: <action_name>"""
 
-def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, action_history: list = None) -> str:
+def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, action_history: list = None, step: int = 0) -> str:
     """Send image to VLM, return action string."""
     with open(image_path, "rb") as f:
         img_b64 = base64.b64encode(f.read()).decode("utf-8")
     
-    prompt = "You are navigating an indoor environment to reach the SOFA. Based on this first-person view, what action should you take? Output only: MOVE_FORWARD, TURN_LEFT, TURN_RIGHT, or STOP."
+    prompt = "You are navigating an indoor environment to reach the SOFA. Based on this first-person view, what action should you take? First explain your reasoning, then output the action."
     if action_history:
         recent = action_history[-5:]  # last 5 actions
         prompt += f" Your recent actions were: {', '.join(recent)}. Avoid repeating unhelpful patterns."
@@ -132,7 +133,7 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
                 {"type": "text", "text": prompt}
             ]}
         ],
-        "max_tokens": 20,
+        "max_tokens": 512,
         "temperature": 0.0,
     }
     
@@ -146,13 +147,27 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             result = json.loads(resp.read().decode("utf-8"))
-            text = result["choices"][0]["message"]["content"].strip().upper()
-            # Extract valid action from response
+            text = result["choices"][0]["message"]["content"].strip()
+            
+            # Log the full response reasoning to a jsonl file
+            resp_log = "/home/qi/hc/Puppeteer/zehao_task/vlm_responses.jsonl"
+            with open(resp_log, "a") as f:
+                f.write(json.dumps({"step": step, "image": image_path, "response": text}) + "\n")
+
+            text_upper = text.upper()
+            # Extract valid action from response (search backwards to find the final chosen action)
+            best_action = "MOVE_FORWARD"
+            best_idx = -1
             for action in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP"]:
-                if action in text:
-                    return action
-            with open(out_log, "a") as f: f.write(f"[VLM] Unrecognized response: {text[:100]}\n")
-            return "MOVE_FORWARD"  # Default fallback
+                idx = text_upper.rfind(action)
+                if idx > best_idx:
+                    best_idx = idx
+                    best_action = action
+            
+            if best_idx == -1:
+                with open(out_log, "a") as f: f.write(f"[VLM] Unrecognized response: {text[:100]}\n")
+            
+            return best_action
     except Exception as e:
         with open(out_log, "a") as f: f.write(f"[VLM] API error: {e}\n")
         return "MOVE_FORWARD"  # Fallback on error
@@ -485,7 +500,7 @@ try:
             f.write(f"[NAV] Step {step}: pos=({agent_x:.2f},{agent_y:.2f}) yaw={agent_yaw:.0f}° dist={dist_to_target:.2f}m\n")
         
         past_actions = [h["action"] for h in nav_history] if nav_history else None
-        action = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions)
+        action = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions, step=step)
         collision_occurred = False # reset after consuming
         
         with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: VLM action = {action}\n")
