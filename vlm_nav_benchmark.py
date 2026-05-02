@@ -265,6 +265,11 @@ try:
     # from overriding our manual per-step pose updates.
     nav_cam_path = "/World/NavCamera"
     cam_fpv_prim = UsdGeom.Camera.Define(stage, nav_cam_path)
+    
+    # Set to a standard 90-degree wide Field of View (FOV)
+    cam_fpv_prim.CreateFocalLengthAttr().Set(17.0)
+    cam_fpv_prim.CreateHorizontalApertureAttr().Set(34.0)
+    
     rp_fpv = rep.create.render_product(str(nav_cam_path), (1920, 1080))
     writer_fpv = rep.WriterRegistry.get("BasicWriter")
     writer_fpv.initialize(output_dir=out_dir_fpv, rgb=True)
