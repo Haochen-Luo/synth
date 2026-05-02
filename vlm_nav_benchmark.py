@@ -266,8 +266,8 @@ TARGET_CONFIGS = {
     },
 }
 
-# === SELECT TARGET HERE ===
-TARGET_NAME = "sofa"  # change to "bookshelf" to test bookshelf navigation
+# === SELECT TARGET (override via env: NAV_TARGET=bookshelf) ===
+TARGET_NAME = os.environ.get("NAV_TARGET", "sofa")
 
 _cfg = TARGET_CONFIGS[TARGET_NAME]
 TARGET = _cfg["coords"]
