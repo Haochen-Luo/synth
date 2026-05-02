@@ -176,14 +176,22 @@ AGENT_START_Y = 4.0
 AGENT_START_YAW = 160.0  # degrees, roughly facing the sofa (upper-left)
 
 def get_camera_quat_from_yaw(yaw_deg):
-    """Pure Z-axis yaw rotation for FPV camera (level horizon)."""
+    """Generates a camera orientation looking in the yaw direction, keeping the horizon level."""
     from pxr import Gf
-    # Step 1: tilt camera from default up-facing to horizontal (look along +Y)
-    rot_x = Gf.Rotation(Gf.Vec3d(1, 0, 0), 90)
-    # Step 2: rotate around Z-axis for yaw direction
-    rot_z = Gf.Rotation(Gf.Vec3d(0, 0, 1), float(yaw_deg) - 90)
-    # Compose: first tilt to horizontal, then apply yaw
-    qd = (rot_z * rot_x).GetQuat()
+    import math
+    yaw_rad = math.radians(yaw_deg)
+    
+    eye = Gf.Vec3d(0.0, 0.0, 0.0)
+    # The direction the agent is facing
+    target = Gf.Vec3d(math.cos(yaw_rad), math.sin(yaw_rad), 0.0)
+    # The world up vector
+    up = Gf.Vec3d(0.0, 0.0, 1.0)
+    
+    # SetLookAt creates a View matrix (transforms world to camera local, where camera looks down -Z).
+    # The camera's world transform is the inverse of the view matrix.
+    mat = Gf.Matrix4d().SetLookAt(eye, target, up)
+    qd = mat.GetInverse().ExtractRotation().GetQuat()
+    
     return Gf.Quatf(qd.GetReal(), *qd.GetImaginary())
 
 # ============================================================
@@ -381,6 +389,17 @@ try:
             all_frames = sorted(glob.glob(os.path.join(out_dir_fpv, "rgb_*.png")))
             if len(all_frames) >= step + 1:
                 frame_path = all_frames[-1]
+                
+                # Create a lightweight thumbnail for quick VS Code preview
+                try:
+                    from PIL import Image
+                    thumb_path = frame_path.replace(".png", "_thumb.jpg")
+                    with Image.open(frame_path) as img:
+                        img.thumbnail((480, 270))
+                        img.save(thumb_path, format="JPEG", quality=80)
+                except Exception:
+                    pass
+                
                 break
             time.sleep(0.1)
         else:
