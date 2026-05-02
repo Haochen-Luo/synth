@@ -238,15 +238,9 @@ try:
     agent_prim.GetReferences().AddReference(human_usd)
     simulation_app.update()
     
-    # Lighting
-    for i, lp in enumerate([(5,6,2.3),(10,6,2.3),(15,6,2.3),(5,2,2.3),(10,10,2.3)]):
-        light_prim = UsdLux.SphereLight.Define(stage, f"/World/Lights/SphereLight_{i}")
-        light_prim.CreateIntensityAttr().Set(50000.0)
-        light_prim.CreateRadiusAttr().Set(0.0) # Set radius to 0 to prevent glowing orbs
-        light_prim.CreateTreatAsPointAttr().Set(True)
-        xf = UsdGeom.Xformable(light_prim)
-        xf.ClearXformOpOrder()
-        xf.AddTranslateOp().Set(Gf.Vec3d(*lp))
+    # Lighting (Moved Z from 2.3 to 5.0 to be above cameras and out of FOV to avoid glare)
+    for lp in [(5,6,5.0),(10,6,5.0),(15,6,5.0),(5,2,5.0),(10,10,5.0)]:
+        rep.create.light(light_type="sphere", position=lp, intensity=50000.0)
     
     # Warm up
     for _ in range(100):
