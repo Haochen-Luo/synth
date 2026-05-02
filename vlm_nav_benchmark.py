@@ -203,7 +203,7 @@ try:
     import omni.usd
     import omni.replicator.core as rep
     from omni.isaac.core.utils.stage import open_stage, is_stage_loading
-    from pxr import Gf, UsdGeom
+    from pxr import Gf, UsdGeom, UsdLux
     
     scene_dir = "/home/qi/hc/Puppeteer/zehao_new_folder/phy_env/case11_multi_surface_turn_right_full_physics_scene"
     usd_path = os.path.join(scene_dir, "compiled_stages", "case11_multi_surface_turn_right_full_physics.compiled.usda")
@@ -240,7 +240,7 @@ try:
     
     # Lighting
     for i, lp in enumerate([(5,6,2.3),(10,6,2.3),(15,6,2.3),(5,2,2.3),(10,10,2.3)]):
-        light_prim = UsdGeom.SphereLight.Define(stage, f"/World/Lights/SphereLight_{i}")
+        light_prim = UsdLux.SphereLight.Define(stage, f"/World/Lights/SphereLight_{i}")
         light_prim.CreateIntensityAttr().Set(50000.0)
         light_prim.CreateRadiusAttr().Set(0.0) # Set radius to 0 to prevent glowing orbs
         light_prim.CreateTreatAsPointAttr().Set(True)
