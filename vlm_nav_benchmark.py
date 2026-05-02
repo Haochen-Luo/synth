@@ -176,22 +176,12 @@ AGENT_START_Y = 4.0
 AGENT_START_YAW = 160.0  # degrees, roughly facing the sofa (upper-left)
 
 def get_camera_quat_from_yaw(yaw_deg):
-    """Generates a camera orientation looking in the yaw direction, keeping the horizon level."""
+    """Generates a camera orientation for Isaac Sim Replicator cameras (+X forward, +Z up)."""
     from pxr import Gf
-    import math
-    yaw_rad = math.radians(yaw_deg)
-    
-    eye = Gf.Vec3d(0.0, 0.0, 0.0)
-    # The direction the agent is facing
-    target = Gf.Vec3d(math.cos(yaw_rad), math.sin(yaw_rad), 0.0)
-    # The world up vector
-    up = Gf.Vec3d(0.0, 0.0, 1.0)
-    
-    # SetLookAt creates a View matrix (transforms world to camera local, where camera looks down -Z).
-    # The camera's world transform is the inverse of the view matrix.
-    mat = Gf.Matrix4d().SetLookAt(eye, target, up)
-    qd = mat.GetInverse().ExtractRotation().GetQuat()
-    
+    # Replicator cameras naturally look down +X with +Z as up. 
+    # Therefore, we ONLY need a pure Z-axis rotation to set the yaw!
+    rot_z = Gf.Rotation(Gf.Vec3d(0.0, 0.0, 1.0), float(yaw_deg))
+    qd = rot_z.GetQuat()
     return Gf.Quatf(qd.GetReal(), *qd.GetImaginary())
 
 # ============================================================
@@ -395,10 +385,12 @@ try:
                     from PIL import Image
                     thumb_path = frame_path.replace(".png", "_thumb.jpg")
                     with Image.open(frame_path) as img:
+                        if img.mode in ('RGBA', 'P'):
+                            img = img.convert('RGB')
                         img.thumbnail((480, 270))
                         img.save(thumb_path, format="JPEG", quality=80)
-                except Exception:
-                    pass
+                except Exception as e:
+                    with open(out_log, "a") as f: f.write(f"[NAV] Thumbnail error: {e}\n")
                 
                 break
             time.sleep(0.1)
