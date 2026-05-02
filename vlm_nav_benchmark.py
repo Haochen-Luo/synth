@@ -175,8 +175,13 @@ AGENT_START_X = 12.0
 AGENT_START_Y = 4.0
 AGENT_START_YAW = 160.0  # degrees, roughly facing the sofa (upper-left)
 
+def get_camera_lookat(pos, target):
+    from pxr import Gf
+    mat = Gf.Matrix4d().SetLookAt(pos, target, Gf.Vec3d(0, 0, 1))
+    qd = mat.GetInverse().ExtractRotation().GetQuat()
+    return Gf.Quatf(qd.GetReal(), *qd.GetImaginary())
+
 def get_camera_quat_from_yaw(yaw_deg):
-    """Generates a camera orientation looking in the yaw direction, keeping the horizon level."""
     from pxr import Gf
     import math
     yaw_rad = math.radians(yaw_deg)
@@ -212,6 +217,7 @@ try:
     
     spec = json.load(open(spec_path))
     humans_spec = spec.get("humans", [])
+    active_humans = spec.get("active_humans", [])
     anim_fps = float(spec.get("stage", {}).get("time_codes_per_second", 10.0) or 10.0)
     
     with open(out_log, "a") as f: f.write(f"[NAV] Loading stage...\n")
@@ -238,11 +244,12 @@ try:
     agent_prim.GetReferences().AddReference(human_usd)
     simulation_app.update()
     
-    # Lighting
+    # Lighting — soft SphereLights inside the room
+    # (DomeLight doesn't work: it's blocked by walls/ceiling in enclosed rooms)
     for i, lp in enumerate([(5,6,2.3),(10,6,2.3),(15,6,2.3),(5,2,2.3),(10,10,2.3)]):
         light_prim = UsdLux.SphereLight.Define(stage, f"/World/Lights/SphereLight_{i}")
-        light_prim.CreateIntensityAttr().Set(50000000.0) # Boost intensity 1000x to compensate for tiny area
-        light_prim.CreateRadiusAttr().Set(0.01) # 1cm radius: emits light but avoids massive glare orbs
+        light_prim.CreateIntensityAttr().Set(80000.0)
+        light_prim.CreateRadiusAttr().Set(0.3)  # 30cm radius: soft, uniform illumination
         xf = UsdGeom.Xformable(light_prim)
         xf.ClearXformOpOrder()
         xf.AddTranslateOp().Set(Gf.Vec3d(*lp))
@@ -257,9 +264,8 @@ try:
     
     out_dir_fpv = "/home/qi/hc/Puppeteer/zehao_task/vlm_nav_frames_fpv"
     out_dir_bird = "/home/qi/hc/Puppeteer/zehao_task/vlm_nav_frames_bird"
-    out_dir_bird2 = "/home/qi/hc/Puppeteer/zehao_task/vlm_nav_frames_bird2"
     
-    for d in [out_dir_fpv, out_dir_bird, out_dir_bird2]:
+    for d in [out_dir_fpv, out_dir_bird]:
         import shutil
         if os.path.exists(d):
             shutil.rmtree(d)
@@ -280,87 +286,100 @@ try:
     writer_fpv.initialize(output_dir=out_dir_fpv, rgb=True)
     writer_fpv.attach([rp_fpv])
 
-    # === Bird Camera (high angle overview) ===
-    bird_cam_path = "/World/BirdEyeCamera"
-    cam_bird_prim = UsdGeom.Camera.Define(stage, bird_cam_path)
-    cam_bird_prim.CreateFocalLengthAttr().Set(12.0) # Wider FOV to see everyone
+    # Bird's-eye camera — 3/4 angle from agent-start corner, sees entire room
+    # Room bounds: X=[0,18] Y=[0.13,11.87] Z=[0.13,2.71]
+    cam_bird_path = "/World/BirdCamera"
+    cam_bird_prim = UsdGeom.Camera.Define(stage, cam_bird_path)
+    cam_bird_prim.CreateFocalLengthAttr().Set(18.0)   # moderate wide-angle (less distortion)
     cam_bird_prim.CreateHorizontalApertureAttr().Set(34.0)
     
     bird_xf = UsdGeom.Xformable(cam_bird_prim)
     bird_xf.ClearXformOpOrder()
-    bird_t = bird_xf.AddTranslateOp()
-    bird_o = bird_xf.AddOrientOp()
-    
-    # Move higher and back to see the whole room, but KEEP INSIDE walls
-    bird_pos = Gf.Vec3d(11.5, 0.5, 4.5)
-    bird_target = Gf.Vec3d(6.0, 4.0, 0.5) # Center of room
-    bird_t.Set(bird_pos)
-    bird_mat = Gf.Matrix4d().SetLookAt(bird_pos, bird_target, Gf.Vec3d(0,0,1))
-    bird_qd = bird_mat.GetInverse().ExtractRotation().GetQuat()
-    bird_o.Set(Gf.Quatf(bird_qd.GetReal(), *bird_qd.GetImaginary()))
-    
-    rp_bird = rep.create.render_product(str(bird_cam_path), (1920, 1080))
+    b_trans = bird_xf.AddTranslateOp()
+    b_orient = bird_xf.AddOrientOp()
+    # Position near agent-start corner, below ceiling; look toward sofa/room center
+    bird_pos = Gf.Vec3d(15.0, 2.0, 2.4)
+    bird_target = Gf.Vec3d(5.0, 7.0, 0.3)
+    b_trans.Set(bird_pos)
+    b_orient.Set(get_camera_lookat(bird_pos, bird_target))
+
+    rp_bird = rep.create.render_product(str(cam_bird_path), (1920, 1080))
     writer_bird = rep.WriterRegistry.get("BasicWriter")
     writer_bird.initialize(output_dir=out_dir_bird, rgb=True)
     writer_bird.attach([rp_bird])
-
-    # === Second Bird Camera (sofa-side corner) ===
-    bird2_cam_path = "/World/BirdEyeCamera2"
-    cam_bird2_prim = UsdGeom.Camera.Define(stage, bird2_cam_path)
-    cam_bird2_prim.CreateFocalLengthAttr().Set(12.0) # Wider FOV
-    cam_bird2_prim.CreateHorizontalApertureAttr().Set(34.0)
     
-    bird2_xf = UsdGeom.Xformable(cam_bird2_prim)
-    bird2_xf.ClearXformOpOrder()
-    bird2_t = bird2_xf.AddTranslateOp()
-    bird2_o = bird2_xf.AddOrientOp()
-    
-    bird2_pos = Gf.Vec3d(1.5, 7.5, 3.5)
-    bird2_target = Gf.Vec3d(6.0, 4.0, 0.5) # Look towards center
-    bird2_t.Set(bird2_pos)
-    bird2_mat = Gf.Matrix4d().SetLookAt(bird2_pos, bird2_target, Gf.Vec3d(0,0,1))
-    bird2_qd = bird2_mat.GetInverse().ExtractRotation().GetQuat()
-    bird2_o.Set(Gf.Quatf(bird2_qd.GetReal(), *bird2_qd.GetImaginary()))
-    
-    rp_bird2 = rep.create.render_product(str(bird2_cam_path), (1920, 1080))
-    writer_bird2 = rep.WriterRegistry.get("BasicWriter")
-    writer_bird2.initialize(output_dir=out_dir_bird2, rgb=True)
-    writer_bird2.attach([rp_bird2])
-    
-    # === Setup Runner 1 (obstacle) ===
+    # === Read correct animation bindings from active_humans ===
+    runner1_binding = {}
+    runner1_human_spec = None
+    for ah in active_humans:
+        if "run" in ah.get("name", ""):
+            runner1_binding = ah.get("animation_binding", {})
+            runner1_human_spec = ah
+            break
+    # Also find top-level runner spec for trajectory keyframes
     runner1_spec = None
     for h in humans_spec:
         if "run" in h.get("name", ""):
             runner1_spec = h
             break
     
-    if runner1_spec:
-        # The spec name is often 'obj_1__run__anim_1_full_physics' but the prim is 'obj_1_run_anim_1'
-        # Let's extract the base name or just hardcode the known prefix to be safe
-        prim_name = runner1_spec.get('target_human_name', runner1_spec['name'].replace('_full_physics', ''))
-        prim_name = prim_name.replace('__', '_') # e.g. obj_1__run__anim_1 -> obj_1_run_anim_1
-        
-        runner1_path = f"/World/Humans/{prim_name}"
+    # Use runner's animation_binding scale (0.53) for consistent sizing across all humans
+    runner_scale = runner1_binding.get("scale_xyz", [0.53, 0.53, 0.53])
+    runner_root_offset = runner1_binding.get("root_offset_m", [0, 0, 0.53])
+    
+    # === Scale Dancer to match runner height ===
+    dancer_prim = stage.GetPrimAtPath("/World/Humans/obj_2_dance_anim_2")
+    if dancer_prim and dancer_prim.IsValid():
+        d_xf = UsdGeom.Xformable(dancer_prim)
+        try: d_xf.ClearXformOpOrder()
+        except: pass
+        # Read dancer's original position from spec so we can re-apply after clearing xform
+        dancer_spec = None
+        for h in humans_spec:
+            if "dance" in h.get("name", ""):
+                dancer_spec = h
+                break
+        dancer_binding = {}
+        for ah in active_humans:
+            if "dance" in ah.get("name", ""):
+                dancer_binding = ah.get("animation_binding", {})
+                break
+        d_pos = dancer_binding.get("placement_location_m", [2.34, 2.13, 1.18])
+        d_rot = dancer_binding.get("rotation_deg_xyz", [0, 0, 132.7])
+        d_root_off = dancer_binding.get("root_offset_m", [0, 0, 1.04])
+        d_trans = d_xf.AddTranslateOp()
+        d_orient = d_xf.AddOrientOp()
+        d_scale = d_xf.AddScaleOp()
+        d_trans.Set(Gf.Vec3d(d_pos[0], d_pos[1], d_root_off[2]))
+        d_yaw_rad = math.radians(d_rot[2])
+        d_orient.Set(Gf.Quatf(math.cos(d_yaw_rad/2), 0, 0, math.sin(d_yaw_rad/2)))
+        d_scale.Set(Gf.Vec3d(runner_scale[0], runner_scale[1], runner_scale[2]))
+        with open(out_log, "a") as f: f.write(f"[NAV] Dancer scale set to {runner_scale} to match runner\n")
+    
+    # === Setup Runner 1 (obstacle) — override scale + animate manually ===
+    runner1_prim = None
+    runner1_xf_ops = {}  # will hold translate/orient/scale ops
+    prim_name = "obj_1_run_anim_1"
+    if runner1_human_spec:
+        pn = runner1_human_spec.get('target_human_name', prim_name)
+        prim_name = pn.replace('__', '_')
+    
+    runner1_path = f"/World/Humans/{prim_name}"
+    runner1_prim = stage.GetPrimAtPath(runner1_path)
+    if not runner1_prim.IsValid():
+        runner1_path = "/World/Humans/obj_1_run_anim_1"
         runner1_prim = stage.GetPrimAtPath(runner1_path)
-        if not runner1_prim.IsValid():
-            # Fallback exact name if the replacement above failed
-            runner1_path = "/World/Humans/obj_1_run_anim_1"
-            runner1_prim = stage.GetPrimAtPath(runner1_path)
-            
-        if runner1_prim.IsValid():
-            xf = UsdGeom.Xformable(runner1_prim)
-            try: xf.ClearXformOpOrder()
-            except: pass
-            t = xf.AddTranslateOp()
-            o = xf.AddOrientOp()
-            s = xf.AddScaleOp()
-            
-            # Read scale and offset from spec
-            anim_binding = runner1_spec.get("animation_binding", {})
-            sc = anim_binding.get("scale_xyz", [1.0, 1.0, 1.0])
-            s.Set(Gf.Vec3d(sc[0], sc[1], sc[2]))
-            
-            runner1_xform = {"spec": runner1_spec, "trans_op": t, "orient_op": o}
+    
+    if runner1_prim and runner1_prim.IsValid():
+        r1_xf = UsdGeom.Xformable(runner1_prim)
+        try: r1_xf.ClearXformOpOrder()
+        except: pass
+        r1_trans = r1_xf.AddTranslateOp()
+        r1_orient = r1_xf.AddOrientOp()
+        r1_scale = r1_xf.AddScaleOp()
+        r1_scale.Set(Gf.Vec3d(runner_scale[0], runner_scale[1], runner_scale[2]))
+        runner1_xf_ops = {"trans": r1_trans, "orient": r1_orient, "scale": r1_scale}
+        with open(out_log, "a") as f: f.write(f"[NAV] Runner1 scale set to {runner_scale}, root_offset={runner_root_offset}\n")
     
     # === Setup Agent (Runner 2) ===
     agent_xf = UsdGeom.Xformable(agent_prim)
@@ -370,11 +389,8 @@ try:
     agent_orient = agent_xf.AddOrientOp()
     agent_scale = agent_xf.AddScaleOp()
     
-    # Apply the same scale to the agent since it shares the human_usd
-    if runner1_spec:
-        anim_binding = runner1_spec.get("animation_binding", {})
-        sc = anim_binding.get("scale_xyz", [1.0, 1.0, 1.0])
-        agent_scale.Set(Gf.Vec3d(sc[0], sc[1], sc[2]))
+    # Apply the same scale as runner (both use same human_usd mesh)
+    agent_scale.Set(Gf.Vec3d(runner_scale[0], runner_scale[1], runner_scale[2]))
     
     # Find camera prim for per-step repositioning
     nav_cam_prim = None
@@ -400,10 +416,8 @@ try:
     collision_occurred = False
     
     for step in range(MAX_STEPS):
-        # Read root offset for agent to prevent clipping into floor
-        agent_root_z = 0.0
-        if runner1_spec:
-            agent_root_z = runner1_spec.get("animation_binding", {}).get("root_offset_m", [0,0,0])[2]
+        # Root offset keeps feet on the ground (pelvis-to-feet distance)
+        agent_root_z = runner_root_offset[2] if runner_root_offset else 0.0
             
         # 1. Update agent position in scene
         agent_trans.Set(Gf.Vec3d(agent_x, agent_y, AGENT_HEIGHT + agent_root_z))
@@ -411,7 +425,6 @@ try:
         agent_orient.Set(Gf.Quatf(math.cos(yaw_rad/2), 0, 0, math.sin(yaw_rad/2)))
         
         # 2. Update camera to agent's eye position + facing direction
-        # [FIX]: Native USD LookAt algorithm (Zero gimbal lock, zero replicator overhead)
         if nav_cam_prim and nav_cam_prim.IsValid():
             cam_xf = UsdGeom.Xformable(nav_cam_prim)
             try: cam_xf.ClearXformOpOrder()
@@ -422,17 +435,13 @@ try:
             cam_trans.Set(Gf.Vec3d(agent_x, agent_y, AGENT_EYE_HEIGHT))
             cam_orient.Set(get_camera_quat_from_yaw(agent_yaw))
         
-        # 3. Update runner 1 position
-        if runner1_xform:
-            pos, rot_deg = sample_human_motion(runner1_xform["spec"], sim_time, anim_fps)
-            offset = runner1_xform["spec"].get("visual_rotation_offset_deg_xyz", [0,0,0])
-            final_rot = [rot_deg[i]+offset[i] for i in range(3)]
-            
-            root_offset = runner1_xform["spec"].get("animation_binding", {}).get("root_offset_m", [0,0,0])
-            
-            runner1_xform["trans_op"].Set(Gf.Vec3d(pos[0], pos[1], pos[2] + root_offset[2]))
-            r_yaw = math.radians(float(final_rot[2]))
-            runner1_xform["orient_op"].Set(Gf.Quatf(math.cos(r_yaw/2), 0, 0, math.sin(r_yaw/2)))
+        # 3. Animate Runner 1 (obstacle) — position from trajectory keyframes
+        if runner1_spec and runner1_xf_ops:
+            r1_pos, r1_rot = sample_human_motion(runner1_spec, sim_time, anim_fps)
+            r1_z = runner_root_offset[2] if runner_root_offset else 0.0
+            runner1_xf_ops["trans"].Set(Gf.Vec3d(r1_pos[0], r1_pos[1], r1_z))
+            r1_yaw_rad = math.radians(r1_rot[2])
+            runner1_xf_ops["orient"].Set(Gf.Quatf(math.cos(r1_yaw_rad/2), 0, 0, math.sin(r1_yaw_rad/2)))
         
         # 4. Advance timeline for skeleton animation
         timeline.set_current_time(sim_time)
@@ -451,7 +460,7 @@ try:
                 # Create a lightweight thumbnail for quick VS Code preview
                 try:
                     from PIL import Image
-                    for d in [out_dir_fpv, out_dir_bird, out_dir_bird2]:
+                    for d in [out_dir_fpv, out_dir_bird]:
                         dir_frames = sorted(glob.glob(os.path.join(d, "rgb_*.png")))
                         if len(dir_frames) > 0:
                             fpath = dir_frames[-1]
@@ -597,52 +606,23 @@ try:
         }, f, indent=2)
     with open(out_log, "a") as f: f.write(f"[NAV] History saved: {log_path}\n")
     
-    # === Generate videos via FFmpeg (HD + Lite preview) ===
+    # === Generate media (HD + Preview) via FFmpeg ===
+    # FFmpeg is NOT available inside the Isaac Sim Docker container.
+    # Try to invoke gen_media.sh on the host via subprocess, otherwise print manual instructions.
     import subprocess, shutil
     base_dir = "/home/qi/hc/Puppeteer/zehao_task"
     preview_dir = os.path.join(base_dir, "nav_preview")
     os.makedirs(preview_dir, exist_ok=True)
     
+    gen_media_script = os.path.join(base_dir, "gen_media.sh")
     if shutil.which("ffmpeg"):
-        with open(out_log, "a") as f: f.write("[NAV] Generating MP4/GIF videos via FFmpeg...\n")
-        
-        for label, src_dir in [("fpv", out_dir_fpv), ("bird_rear", out_dir_bird), ("bird_front", out_dir_bird2)]:
-            png_files = sorted(glob.glob(os.path.join(src_dir, "rgb_*.png")))
-            if not png_files:
-                continue
-            frame_pattern = os.path.join(src_dir, "rgb_%04d.png")
-            n_frames = len(png_files)
-            
-            # --- HD MP4 (1920x1080, 5fps) ---
-            mp4_hd = os.path.join(base_dir, f"vlm_nav_{label}_hd.mp4")
-            subprocess.run(["ffmpeg", "-y", "-framerate", "5", "-i", frame_pattern, "-frames:v", str(n_frames),
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-preset", "fast", mp4_hd], capture_output=True)
-            with open(out_log, "a") as flog: flog.write(f"[NAV] {label} HD MP4: {mp4_hd} ({n_frames} frames)\n")
-            
-            # --- HD GIF (960x540, 5fps, max 100 frames) ---
-            gif_hd = os.path.join(base_dir, f"vlm_nav_{label}_hd.gif")
-            max_gif_hd = min(n_frames, 100)
-            subprocess.run(["ffmpeg", "-y", "-framerate", "5", "-i", frame_pattern, "-frames:v", str(max_gif_hd),
-                "-vf", "scale=960:540,fps=5,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse", gif_hd], capture_output=True)
-            with open(out_log, "a") as flog: flog.write(f"[NAV] {label} HD GIF: {gif_hd} ({max_gif_hd} frames)\n")
-            
-            # --- Preview MP4 (480x270, 5fps — nav_preview/) ---
-            mp4_lite = os.path.join(preview_dir, f"{label}_preview.mp4")
-            subprocess.run(["ffmpeg", "-y", "-framerate", "5", "-i", frame_pattern, "-frames:v", str(n_frames),
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-vf", "scale=480:270",
-                "-crf", "28", "-preset", "fast", mp4_lite], capture_output=True)
-            with open(out_log, "a") as flog: flog.write(f"[NAV] {label} Preview MP4: {mp4_lite}\n")
-            
-            # --- Preview GIF (320x180, 5fps, max 100 frames — nav_preview/) ---
-            gif_lite = os.path.join(preview_dir, f"{label}_preview.gif")
-            max_gif_lite = min(n_frames, 100)
-            subprocess.run(["ffmpeg", "-y", "-framerate", "5", "-i", frame_pattern, "-frames:v", str(max_gif_lite),
-                "-vf", "scale=320:180,fps=5,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse", gif_lite], capture_output=True)
-            with open(out_log, "a") as flog: flog.write(f"[NAV] {label} Preview GIF: {gif_lite}\n")
+        # Running outside Docker (unlikely but handle it)
+        with open(out_log, "a") as f: f.write("[NAV] FFmpeg found, running gen_media.sh locally...\n")
+        subprocess.run(["bash", gen_media_script], capture_output=True)
     else:
         with open(out_log, "a") as f:
-            f.write("[NAV] ffmpeg not found in container. Run post-processing from host:\n")
-            f.write("[NAV]   ssh GPU-843 'source ~/miniconda3/etc/profile.d/conda.sh && conda activate pp && cd /home/qi/hc/Puppeteer/zehao_task && bash gen_videos.sh'\n")
+            f.write("[NAV] FFmpeg not in container. Run media generation from host:\n")
+            f.write(f"[NAV]   ssh GPU-843 'source ~/miniconda3/etc/profile.d/conda.sh && conda activate pp && bash {gen_media_script}'\n")
     
     # === Generate 2D Trajectory Map ===
     with open(out_log, "a") as f: f.write("[NAV] Generating 2D trajectory map...\n")
