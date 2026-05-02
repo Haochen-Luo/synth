@@ -417,12 +417,16 @@ try:
                 # Create a lightweight thumbnail for quick VS Code preview
                 try:
                     from PIL import Image
-                    thumb_path = frame_path.replace(".png", "_thumb.jpg")
-                    with Image.open(frame_path) as img:
-                        if img.mode in ('RGBA', 'P'):
-                            img = img.convert('RGB')
-                        img.thumbnail((480, 270))
-                        img.save(thumb_path, format="JPEG", quality=80)
+                    for d in [out_dir_fpv, out_dir_bird, out_dir_bird2]:
+                        dir_frames = sorted(glob.glob(os.path.join(d, "rgb_*.png")))
+                        if len(dir_frames) > 0:
+                            fpath = dir_frames[-1]
+                            thumb_path = fpath.replace(".png", "_thumb.jpg")
+                            with Image.open(fpath) as img:
+                                if img.mode in ('RGBA', 'P'):
+                                    img = img.convert('RGB')
+                                img.thumbnail((480, 270))
+                                img.save(thumb_path, format="JPEG", quality=80)
                 except Exception as e:
                     with open(out_log, "a") as f: f.write(f"[NAV] Thumbnail error: {e}\n")
                 
