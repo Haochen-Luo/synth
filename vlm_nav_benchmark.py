@@ -280,10 +280,10 @@ try:
     writer_fpv.initialize(output_dir=out_dir_fpv, rgb=True)
     writer_fpv.attach([rp_fpv])
 
-    # === Third-Person Camera (rear corner) ===
+    # === Bird Camera (high angle overview) ===
     bird_cam_path = "/World/BirdEyeCamera"
     cam_bird_prim = UsdGeom.Camera.Define(stage, bird_cam_path)
-    cam_bird_prim.CreateFocalLengthAttr().Set(17.0)
+    cam_bird_prim.CreateFocalLengthAttr().Set(12.0) # Wider FOV to see everyone
     cam_bird_prim.CreateHorizontalApertureAttr().Set(34.0)
     
     bird_xf = UsdGeom.Xformable(cam_bird_prim)
@@ -291,8 +291,9 @@ try:
     bird_t = bird_xf.AddTranslateOp()
     bird_o = bird_xf.AddOrientOp()
     
-    bird_pos = Gf.Vec3d(13.0, 7.0, 2.7)
-    bird_target = Gf.Vec3d(6.0, 5.0, 0.5)
+    # Move higher and back to see the whole room
+    bird_pos = Gf.Vec3d(14.0, -1.0, 5.0)
+    bird_target = Gf.Vec3d(6.0, 4.0, 0.5) # Center of room
     bird_t.Set(bird_pos)
     bird_mat = Gf.Matrix4d().SetLookAt(bird_pos, bird_target, Gf.Vec3d(0,0,1))
     bird_qd = bird_mat.GetInverse().ExtractRotation().GetQuat()
@@ -306,7 +307,7 @@ try:
     # === Second Bird Camera (sofa-side corner) ===
     bird2_cam_path = "/World/BirdEyeCamera2"
     cam_bird2_prim = UsdGeom.Camera.Define(stage, bird2_cam_path)
-    cam_bird2_prim.CreateFocalLengthAttr().Set(17.0)
+    cam_bird2_prim.CreateFocalLengthAttr().Set(12.0) # Wider FOV
     cam_bird2_prim.CreateHorizontalApertureAttr().Set(34.0)
     
     bird2_xf = UsdGeom.Xformable(cam_bird2_prim)
@@ -314,8 +315,8 @@ try:
     bird2_t = bird2_xf.AddTranslateOp()
     bird2_o = bird2_xf.AddOrientOp()
     
-    bird2_pos = Gf.Vec3d(2.0, 7.0, 2.7)
-    bird2_target = Gf.Vec3d(8.0, 4.0, 0.5)
+    bird2_pos = Gf.Vec3d(0.0, 9.0, 4.0)
+    bird2_target = Gf.Vec3d(6.0, 4.0, 0.5) # Look towards center
     bird2_t.Set(bird2_pos)
     bird2_mat = Gf.Matrix4d().SetLookAt(bird2_pos, bird2_target, Gf.Vec3d(0,0,1))
     bird2_qd = bird2_mat.GetInverse().ExtractRotation().GetQuat()
@@ -352,7 +353,13 @@ try:
             except: pass
             t = xf.AddTranslateOp()
             o = xf.AddOrientOp()
-            # Do NOT scale runner1 by 0.01; case11 usdc is already 1.0 scale
+            s = xf.AddScaleOp()
+            
+            # Read scale and offset from spec
+            anim_binding = runner1_spec.get("animation_binding", {})
+            sc = anim_binding.get("scale_xyz", [1.0, 1.0, 1.0])
+            s.Set(Gf.Vec3d(sc[0], sc[1], sc[2]))
+            
             runner1_xform = {"spec": runner1_spec, "trans_op": t, "orient_op": o}
     
     # === Setup Agent (Runner 2) ===
@@ -361,7 +368,13 @@ try:
     except: pass
     agent_trans = agent_xf.AddTranslateOp()
     agent_orient = agent_xf.AddOrientOp()
-    # Do NOT scale agent by 0.01; case11 usdc is already 1.0 scale
+    agent_scale = agent_xf.AddScaleOp()
+    
+    # Apply the same scale to the agent since it shares the human_usd
+    if runner1_spec:
+        anim_binding = runner1_spec.get("animation_binding", {})
+        sc = anim_binding.get("scale_xyz", [1.0, 1.0, 1.0])
+        agent_scale.Set(Gf.Vec3d(sc[0], sc[1], sc[2]))
     
     # Find camera prim for per-step repositioning
     nav_cam_prim = None
@@ -387,8 +400,13 @@ try:
     collision_occurred = False
     
     for step in range(MAX_STEPS):
+        # Read root offset for agent to prevent clipping into floor
+        agent_root_z = 0.0
+        if runner1_spec:
+            agent_root_z = runner1_spec.get("animation_binding", {}).get("root_offset_m", [0,0,0])[2]
+            
         # 1. Update agent position in scene
-        agent_trans.Set(Gf.Vec3d(agent_x, agent_y, AGENT_HEIGHT))
+        agent_trans.Set(Gf.Vec3d(agent_x, agent_y, AGENT_HEIGHT + agent_root_z))
         yaw_rad = math.radians(agent_yaw)
         agent_orient.Set(Gf.Quatf(math.cos(yaw_rad/2), 0, 0, math.sin(yaw_rad/2)))
         
@@ -409,7 +427,10 @@ try:
             pos, rot_deg = sample_human_motion(runner1_xform["spec"], sim_time, anim_fps)
             offset = runner1_xform["spec"].get("visual_rotation_offset_deg_xyz", [0,0,0])
             final_rot = [rot_deg[i]+offset[i] for i in range(3)]
-            runner1_xform["trans_op"].Set(Gf.Vec3d(pos[0], pos[1], pos[2]))
+            
+            root_offset = runner1_xform["spec"].get("animation_binding", {}).get("root_offset_m", [0,0,0])
+            
+            runner1_xform["trans_op"].Set(Gf.Vec3d(pos[0], pos[1], pos[2] + root_offset[2]))
             r_yaw = math.radians(float(final_rot[2]))
             runner1_xform["orient_op"].Set(Gf.Quatf(math.cos(r_yaw/2), 0, 0, math.sin(r_yaw/2)))
         
