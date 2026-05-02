@@ -229,6 +229,7 @@ After a benchmark run, the following are generated:
    - **DO NOT use** `SetLookAt` or complex pitch/roll quaternions for the FPV camera. Doing so aligns the USD +Y up vector with the World +Z sky, causing a 90-degree sideways rotated image. **Always use a pure Z-axis yaw rotation** (e.g. `Gf.Rotation(Gf.Vec3d(0, 0, 1), yaw)`) for the Replicator FPV camera.
 5. **VLM oscillation** — The VLM sometimes oscillates between TURN_LEFT and TURN_RIGHT indefinitely. This is a model-level limitation, not a physics bug.
 6. **Thumbnail Generation (PIL)** — If saving PNGs (which have an RGBA alpha channel) as JPEG thumbnails using PIL, you must first convert the image to RGB (`img.convert('RGB')`). Failing to do so will cause a silent `OSError` if caught inside a blind `try-except` block, resulting in missing thumbnails.
+7. **Double-Scaling of Physics Human Models** — The 4D human assets (like `obj_1_run_anim_1.usdc`) may have a native `scale` (e.g. `0.53`) baked directly into their USD `Xform` node. If the `compiled.spec.json` *also* contains `"scale_xyz": [0.53, 0.53, 0.53]` at the top level, the `human_physics` extension will read the JSON and apply a *second* `0.53` scale to the physical colliders and the root. This results in `0.53 * 0.53 = 0.28`, turning the human into a tiny "ant" that appears sunken into the floor because its pelvis rests on the floor instead of its feet. **Fix:** Ensure the top-level `scale_xyz` in the `.spec.json` is set to `[1.0, 1.0, 1.0]` for models that already have baked USD scales.
 ---
 
 ## Conda Environment: `pp`
@@ -240,3 +241,13 @@ ffmpeg -version  # should work
 ```
 
 This is used both by the interactive script's Cell 5 and by manual command-line media generation.
+
+---
+
+## Progress Updates
+
+### [2026-05-02] Navigation Benchmark Stabilization Complete
+- **Success Threshold Calibration**: Increased `SUCCESS_RADIUS` to `2.5m` to reliably detect when the VLM agent reaches the edge of large target objects (e.g. Sofa).
+- **Physical Realism & Scaling**: Resolved a critical "double-scaling" bug where background physics actors (`runner1`) were shrunk to `0.28` scale due to conflicting USD baked scales and JSON spec scales. Ensured all characters are rendered at `0.53` scale with feet perfectly grounded on the `Z=0` floor plane.
+- **Camera Pose Optimization**: Repositioned `bird` and `bird2` cameras to `Z=2.9` (below the ceiling) and implemented a robust `get_camera_lookat()` utility. This permanently fixed the "black screen / clipping" artifacts caused by placing ultra-wide FOV cameras outside the room boundaries.
+- **Orientation Stability**: Restored `get_camera_quat_from_yaw()` to enforce pure Z-axis yaw rotations for the FPV camera, preventing the agent from tilting its head into the floor during movement.
