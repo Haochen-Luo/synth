@@ -109,11 +109,12 @@ Rules:
 - If a person is blocking your path, wait (output STOP temporarily) or turn to find an alternate route.
 - When you are very close to the sofa (within arm's reach), output STOP.
 
-First, briefly explain your reasoning based on what you see. Then, on a new line, output the action exactly in this format:
+First, briefly explain your reasoning based on what you see. 
+Then, as the VERY LAST line of your response, output ONLY the single chosen action in this exact format:
 ACTION: <action_name>"""
 
-def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, action_history: list = None, step: int = 0) -> str:
-    """Send image to VLM, return action string."""
+def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, action_history: list = None, step: int = 0) -> tuple:
+    """Send image to VLM, return (action_string, is_fallback)."""
     with open(image_path, "rb") as f:
         img_b64 = base64.b64encode(f.read()).decode("utf-8")
     
@@ -160,7 +161,7 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
             import re
             match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP)", text_upper)
             if match:
-                best_action = match.group(1)
+                return match.group(1), False
             else:
                 # Fallback: search backwards to find the final chosen action
                 best_action = "MOVE_FORWARD"
@@ -174,10 +175,10 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
                 if best_idx == -1:
                     with open(out_log, "a") as f: f.write(f"[VLM] Unrecognized response: {text[:100]}\n")
             
-            return best_action
+                return best_action, True
     except Exception as e:
         with open(out_log, "a") as f: f.write(f"[VLM] API error: {e}\n")
-        return "MOVE_FORWARD"  # Fallback on error
+        return "MOVE_FORWARD", True  # Fallback on error
 
 # ============================================================
 # Navigation config
@@ -507,10 +508,11 @@ try:
             f.write(f"[NAV] Step {step}: pos=({agent_x:.2f},{agent_y:.2f}) yaw={agent_yaw:.0f}° dist={dist_to_target:.2f}m\n")
         
         past_actions = [h["action"] for h in nav_history] if nav_history else None
-        action = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions, step=step)
+        action, is_fallback = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions, step=step)
         collision_occurred = False # reset after consuming
         
-        with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: VLM action = {action}\n")
+        log_action = f"{action} (fallback)" if is_fallback else action
+        with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: VLM action = {log_action}\n")
         
         # Anti-oscillation guard v4: track collision-blocked moves, not just position
         # --- Stuck detector: only fires after consecutive collision-blocked moves ---
