@@ -161,7 +161,7 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
 # Navigation config
 # ============================================================
 STEP_DISTANCE = 0.25     # meters per MOVE_FORWARD
-TURN_ANGLE = 30.0        # degrees per TURN
+TURN_ANGLE = 15.0        # degrees per TURN
 MAX_STEPS = 250        # timeout
 SUCCESS_RADIUS = 0.8     # meters to target for success
 AGENT_HEIGHT = 0.0       # Fix: match dancer's floor-level physical height
