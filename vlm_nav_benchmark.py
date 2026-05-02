@@ -176,10 +176,14 @@ AGENT_START_Y = 4.0
 AGENT_START_YAW = 160.0  # degrees, roughly facing the sofa (upper-left)
 
 def get_camera_quat_from_yaw(yaw_deg):
+    """Pure Z-axis yaw rotation for FPV camera (level horizon)."""
     from pxr import Gf
+    # Step 1: tilt camera from default up-facing to horizontal (look along +Y)
     rot_x = Gf.Rotation(Gf.Vec3d(1, 0, 0), 90)
+    # Step 2: rotate around Z-axis for yaw direction
     rot_z = Gf.Rotation(Gf.Vec3d(0, 0, 1), float(yaw_deg) - 90)
-    qd = (rot_x * rot_z).GetQuat()
+    # Compose: first tilt to horizontal, then apply yaw
+    qd = (rot_z * rot_x).GetQuat()
     return Gf.Quatf(qd.GetReal(), *qd.GetImaginary())
 
 # ============================================================
