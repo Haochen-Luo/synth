@@ -488,11 +488,13 @@ try:
         }, f, indent=2)
     with open(out_log, "a") as f: f.write(f"[NAV] History saved: {log_path}\n")
     
-    # === Generate videos via FFmpeg (HD + Lite) ===
+    # === Generate videos via FFmpeg (HD + Lite preview) ===
     with open(out_log, "a") as f: f.write("[NAV] Generating MP4/GIF videos via FFmpeg...\n")
     import subprocess
     
     base_dir = "/home/qi/hc/Puppeteer/zehao_task"
+    preview_dir = os.path.join(base_dir, "nav_preview")
+    os.makedirs(preview_dir, exist_ok=True)
     
     for label, src_dir in [("fpv", out_dir_fpv), ("bird_rear", out_dir_bird), ("bird_front", out_dir_bird2)]:
         png_files = sorted(glob.glob(os.path.join(src_dir, "rgb_*.png")))
@@ -514,18 +516,6 @@ try:
         ], capture_output=True)
         with open(out_log, "a") as flog: flog.write(f"[NAV] {label} HD MP4: {mp4_hd} ({n_frames} frames)\n")
         
-        # --- Lite MP4 (480x270, 5fps, higher compression — easy preview) ---
-        mp4_lite = os.path.join(base_dir, f"vlm_nav_{label}_lite.mp4")
-        subprocess.run([
-            "ffmpeg", "-y", "-framerate", "5",
-            "-i", frame_pattern, "-frames:v", str(n_frames),
-            "-c:v", "libx264", "-pix_fmt", "yuv420p",
-            "-vf", "scale=480:270",
-            "-crf", "28", "-preset", "fast",
-            mp4_lite
-        ], capture_output=True)
-        with open(out_log, "a") as flog: flog.write(f"[NAV] {label} Lite MP4: {mp4_lite}\n")
-        
         # --- HD GIF (960x540, 5fps, max 100 frames) ---
         gif_hd = os.path.join(base_dir, f"vlm_nav_{label}_hd.gif")
         max_gif_hd = min(n_frames, 100)
@@ -537,8 +527,20 @@ try:
         ], capture_output=True)
         with open(out_log, "a") as flog: flog.write(f"[NAV] {label} HD GIF: {gif_hd} ({max_gif_hd} frames)\n")
         
-        # --- Lite GIF (320x180, 5fps, max 100 frames — instant preview) ---
-        gif_lite = os.path.join(base_dir, f"vlm_nav_{label}_lite.gif")
+        # --- Preview MP4 (480x270, 5fps — nav_preview/) ---
+        mp4_lite = os.path.join(preview_dir, f"{label}_preview.mp4")
+        subprocess.run([
+            "ffmpeg", "-y", "-framerate", "5",
+            "-i", frame_pattern, "-frames:v", str(n_frames),
+            "-c:v", "libx264", "-pix_fmt", "yuv420p",
+            "-vf", "scale=480:270",
+            "-crf", "28", "-preset", "fast",
+            mp4_lite
+        ], capture_output=True)
+        with open(out_log, "a") as flog: flog.write(f"[NAV] {label} Preview MP4: {mp4_lite}\n")
+        
+        # --- Preview GIF (320x180, 5fps, max 100 frames — nav_preview/) ---
+        gif_lite = os.path.join(preview_dir, f"{label}_preview.gif")
         max_gif_lite = min(n_frames, 100)
         subprocess.run([
             "ffmpeg", "-y", "-framerate", "5",
@@ -546,7 +548,7 @@ try:
             "-vf", "scale=320:180,fps=5,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
             gif_lite
         ], capture_output=True)
-        with open(out_log, "a") as flog: flog.write(f"[NAV] {label} Lite GIF: {gif_lite}\n")
+        with open(out_log, "a") as flog: flog.write(f"[NAV] {label} Preview GIF: {gif_lite}\n")
     
     # === Generate 2D Trajectory Map ===
     with open(out_log, "a") as f: f.write("[NAV] Generating 2D trajectory map...\n")
@@ -612,7 +614,7 @@ try:
         for spine in ax.spines.values():
             spine.set_color('#444')
         
-        traj_path = "/home/qi/hc/Puppeteer/zehao_task/vlm_nav_trajectory.png"
+        traj_path = os.path.join(preview_dir, "trajectory_2d.png")
         plt.savefig(traj_path, dpi=150, bbox_inches='tight', facecolor=fig.get_facecolor())
         plt.close()
         with open(out_log, "a") as f: f.write(f"[NAV] 2D trajectory map saved: {traj_path}\n")
