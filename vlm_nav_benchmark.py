@@ -258,27 +258,21 @@ try:
     writer_fpv.initialize(output_dir=out_dir_fpv, rgb=True)
     writer_fpv.attach([rp_fpv])
 
-    # === Third-Person Camera (Best angle from 45-position grid search) ===
-    # Z=2.7 is the max safe height (just under ceiling ~3.0m).
-    # Going higher (Z>3) causes all-black: room walls enclose the space
-    # even with ceiling hidden, blocking visibility from outside.
-    cam_bird = rep.create.camera(
-        position=(13.0, 7.0, 2.7),
-        look_at=(5.0, 5.0, 0.5),
-        name="BirdEyeCamera"
-    )
+    # === Third-Person Camera (rear corner — validated by grid search) ===
+    # CRITICAL: Must use rep.modify.pose inside 'with cam:' block.
+    # rep.create.camera(look_at=...) silently fails to orient the camera.
+    cam_bird = rep.create.camera(position=(13.0, 7.0, 2.7), name="BirdEyeCamera")
+    with cam_bird:
+        rep.modify.pose(position=(13.0, 7.0, 2.7), look_at=(6.0, 5.0, 0.5))
     rp_bird = rep.create.render_product(cam_bird, (1920, 1080))
     writer_bird = rep.WriterRegistry.get("BasicWriter")
     writer_bird.initialize(output_dir=out_dir_bird, rgb=True)
     writer_bird.attach([rp_bird])
 
-    # === Second Bird Camera (opposite corner — sofa/front side) ===
-    # Captures agent approaching from the front, complementing the rear view.
-    cam_bird2 = rep.create.camera(
-        position=(2.0, 1.0, 2.7),
-        look_at=(8.0, 5.0, 0.5),
-        name="BirdEyeCamera2"
-    )
+    # === Second Bird Camera (sofa-side corner — opposite angle) ===
+    cam_bird2 = rep.create.camera(position=(2.0, 7.0, 2.7), name="BirdEyeCamera2")
+    with cam_bird2:
+        rep.modify.pose(position=(2.0, 7.0, 2.7), look_at=(8.0, 4.0, 0.5))
     rp_bird2 = rep.create.render_product(cam_bird2, (1920, 1080))
     writer_bird2 = rep.WriterRegistry.get("BasicWriter")
     writer_bird2.initialize(output_dir=out_dir_bird2, rgb=True)
@@ -393,12 +387,33 @@ try:
         
         with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: VLM action = {action}\n")
         
-        # Anti-oscillation guard: if VLM alternates TURN_LEFT/TURN_RIGHT 3+ times, force MOVE_FORWARD
-        if len(nav_history) >= 2:
+        # Anti-oscillation guard v3: independent stuck + oscillation checks
+        # --- Stuck detector: same position for 4+ consecutive steps ---
+        if len(nav_history) >= 4:
+            recent_pos = [(h["x"], h["y"]) for h in nav_history[-4:]]
+            if len(set(recent_pos)) == 1:
+                # Count total consecutive stuck steps for escalation
+                stuck_pos = recent_pos[0]
+                stuck_count = sum(1 for h in reversed(nav_history) if (h["x"], h["y"]) == stuck_pos)
+                if stuck_count >= 16:
+                    # Desperate: 180° about-face + force move
+                    agent_yaw = wrap_angle_deg(agent_yaw + 180)
+                    action = "MOVE_FORWARD"
+                    with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK {stuck_count} steps! 180° about-face + MOVE_FORWARD\n")
+                elif stuck_count % 4 < 2:
+                    agent_yaw += 60  # 60° immediate + 30° TURN = 90° total
+                    action = "TURN_LEFT"
+                    with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK {stuck_count} steps! Forcing 90° LEFT\n")
+                else:
+                    agent_yaw -= 60  # alternate direction
+                    action = "TURN_RIGHT"
+                    with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK {stuck_count} steps! Forcing 90° RIGHT\n")
+        # --- Turn oscillation detector (independent, not elif) ---
+        if action in ("TURN_LEFT", "TURN_RIGHT") and len(nav_history) >= 2:
             last_actions = [h["action"] for h in nav_history[-2:]]
             if (last_actions == ["TURN_LEFT", "TURN_RIGHT"] and action == "TURN_LEFT") or \
                (last_actions == ["TURN_RIGHT", "TURN_LEFT"] and action == "TURN_RIGHT"):
-                with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: Oscillation detected! Overriding to MOVE_FORWARD\n")
+                with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: Turn oscillation detected! Overriding to MOVE_FORWARD\n")
                 action = "MOVE_FORWARD"
         
         nav_history.append({
@@ -420,22 +435,32 @@ try:
         # 9. Apply action
         if action == "MOVE_FORWARD":
             import omni.physx, carb
+            # Sync PhysX broadphase with latest xform changes
+            simulation_app.update()
             query = omni.physx.get_physx_scene_query_interface()
             dir_x = math.cos(math.radians(agent_yaw))
             dir_y = math.sin(math.radians(agent_yaw))
             
-            # Use Physics Sweep (Sphere) to wrap the agent in a 0.2m thick collision volume
-            # We sweep from current pos to target pos at knee/waist height
-            origin = carb.Float3(agent_x, agent_y, 0.5) # center of sphere at 0.5m height
-            direction = carb.Float3(dir_x, dir_y, 0.0)
+            # Multi-height sphere sweep: knee (0.3m) + chest (0.9m)
+            blocked = False
+            hit_info = ""
+            for sweep_z in [0.3, 0.9]:
+                origin = carb.Float3(agent_x, agent_y, sweep_z)
+                direction = carb.Float3(dir_x, dir_y, 0.0)
+                hit = query.sweep_sphere_closest(0.2, origin, direction, STEP_DISTANCE)
+                if hit["hit"]:
+                    blocked = True
+                    hit_body = hit.get("rigidBody", "?")
+                    hit_collider = hit.get("collider", "?")
+                    hit_dist = hit.get("distance", -1)
+                    hit_info = f"z={sweep_z} body={hit_body} collider={hit_collider} dist={hit_dist:.3f}"
+                    break
             
-            # sweep_sphere_closest(radius, origin, direction, distance)
-            hit = query.sweep_sphere_closest(0.2, origin, direction, STEP_DISTANCE)
-            if not hit["hit"]:
+            if not blocked:
                 agent_x += STEP_DISTANCE * dir_x
                 agent_y += STEP_DISTANCE * dir_y
             else:
-                with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: COLLISION DETECTED (Sweep hit). Move blocked.\n")
+                with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: COLLISION [{hit_info}]\n")
                 collision_occurred = True
         elif action == "TURN_LEFT":
             agent_yaw += TURN_ANGLE
@@ -463,33 +488,65 @@ try:
         }, f, indent=2)
     with open(out_log, "a") as f: f.write(f"[NAV] History saved: {log_path}\n")
     
-    # === Generate High Quality MP4s ===
-    with open(out_log, "a") as f: f.write("[NAV] Generating MP4 videos...\n")
-    import cv2
+    # === Generate videos via FFmpeg (HD + Lite) ===
+    with open(out_log, "a") as f: f.write("[NAV] Generating MP4/GIF videos via FFmpeg...\n")
+    import subprocess
+    
+    base_dir = "/home/qi/hc/Puppeteer/zehao_task"
     
     for label, src_dir in [("fpv", out_dir_fpv), ("bird_rear", out_dir_bird), ("bird_front", out_dir_bird2)]:
         png_files = sorted(glob.glob(os.path.join(src_dir, "rgb_*.png")))
-        if png_files:
-            img = cv2.imread(png_files[0])
-            height, width, layers = img.shape
-            mp4_path = f"/home/qi/hc/Puppeteer/zehao_task/vlm_nav_{label}.mp4"
-            
-            # Use 'avc1' or 'mp4v' for mp4 format
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            video = cv2.VideoWriter(mp4_path, fourcc, 2.0, (width, height))
-            
-            for f in png_files:
-                video.write(cv2.imread(f))
-            
-            video.release()
-            with open(out_log, "a") as f: f.write(f"[NAV] {label} MP4 saved: {mp4_path} ({len(png_files)} frames)\n")
-            
-            # Generate GIF as well
-            from PIL import Image
-            frames = [Image.open(f) for f in png_files]
-            gif_path = f"/home/qi/hc/Puppeteer/zehao_task/vlm_nav_{label}.gif"
-            frames[0].save(gif_path, save_all=True, append_images=frames[1:], duration=500, loop=0)
-            with open(out_log, "a") as f: f.write(f"[NAV] {label} GIF saved: {gif_path} ({len(frames)} frames)\n")
+        if not png_files:
+            continue
+        
+        # Find the frame pattern (rgb_0000.png, rgb_0001.png, ...)
+        frame_pattern = os.path.join(src_dir, "rgb_%04d.png")
+        n_frames = len(png_files)
+        
+        # --- HD MP4 (1920x1080, 5fps) ---
+        mp4_hd = os.path.join(base_dir, f"vlm_nav_{label}_hd.mp4")
+        subprocess.run([
+            "ffmpeg", "-y", "-framerate", "5",
+            "-i", frame_pattern, "-frames:v", str(n_frames),
+            "-c:v", "libx264", "-pix_fmt", "yuv420p",
+            "-crf", "18", "-preset", "fast",
+            mp4_hd
+        ], capture_output=True)
+        with open(out_log, "a") as flog: flog.write(f"[NAV] {label} HD MP4: {mp4_hd} ({n_frames} frames)\n")
+        
+        # --- Lite MP4 (480x270, 5fps, higher compression — easy preview) ---
+        mp4_lite = os.path.join(base_dir, f"vlm_nav_{label}_lite.mp4")
+        subprocess.run([
+            "ffmpeg", "-y", "-framerate", "5",
+            "-i", frame_pattern, "-frames:v", str(n_frames),
+            "-c:v", "libx264", "-pix_fmt", "yuv420p",
+            "-vf", "scale=480:270",
+            "-crf", "28", "-preset", "fast",
+            mp4_lite
+        ], capture_output=True)
+        with open(out_log, "a") as flog: flog.write(f"[NAV] {label} Lite MP4: {mp4_lite}\n")
+        
+        # --- HD GIF (960x540, 5fps, max 100 frames) ---
+        gif_hd = os.path.join(base_dir, f"vlm_nav_{label}_hd.gif")
+        max_gif_hd = min(n_frames, 100)
+        subprocess.run([
+            "ffmpeg", "-y", "-framerate", "5",
+            "-i", frame_pattern, "-frames:v", str(max_gif_hd),
+            "-vf", "scale=960:540,fps=5,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+            gif_hd
+        ], capture_output=True)
+        with open(out_log, "a") as flog: flog.write(f"[NAV] {label} HD GIF: {gif_hd} ({max_gif_hd} frames)\n")
+        
+        # --- Lite GIF (320x180, 5fps, max 100 frames — instant preview) ---
+        gif_lite = os.path.join(base_dir, f"vlm_nav_{label}_lite.gif")
+        max_gif_lite = min(n_frames, 100)
+        subprocess.run([
+            "ffmpeg", "-y", "-framerate", "5",
+            "-i", frame_pattern, "-frames:v", str(max_gif_lite),
+            "-vf", "scale=320:180,fps=5,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+            gif_lite
+        ], capture_output=True)
+        with open(out_log, "a") as flog: flog.write(f"[NAV] {label} Lite GIF: {gif_lite}\n")
     
     # === Generate 2D Trajectory Map ===
     with open(out_log, "a") as f: f.write("[NAV] Generating 2D trajectory map...\n")
