@@ -241,7 +241,7 @@ try:
     # Lighting
     for i, lp in enumerate([(5,6,2.3),(10,6,2.3),(15,6,2.3),(5,2,2.3),(10,10,2.3)]):
         light_prim = UsdLux.SphereLight.Define(stage, f"/World/Lights/SphereLight_{i}")
-        light_prim.CreateIntensityAttr().Set(50000.0)
+        light_prim.CreateIntensityAttr().Set(50000000.0) # Boost intensity 1000x to compensate for tiny area
         light_prim.CreateRadiusAttr().Set(0.01) # 1cm radius: emits light but avoids massive glare orbs
         xf = UsdGeom.Xformable(light_prim)
         xf.ClearXformOpOrder()
@@ -332,12 +332,22 @@ try:
         if "run" in h.get("name", ""):
             runner1_spec = h
             break
-    runner1_xform = None
+    
     if runner1_spec:
-        name = runner1_spec["name"].replace(" ", "_")
-        prim = stage.GetPrimAtPath(f"/World/Humans/{name}")
-        if prim.IsValid():
-            xf = UsdGeom.Xformable(prim)
+        # The spec name is often 'obj_1__run__anim_1_full_physics' but the prim is 'obj_1_run_anim_1'
+        # Let's extract the base name or just hardcode the known prefix to be safe
+        prim_name = runner1_spec.get('target_human_name', runner1_spec['name'].replace('_full_physics', ''))
+        prim_name = prim_name.replace('__', '_') # e.g. obj_1__run__anim_1 -> obj_1_run_anim_1
+        
+        runner1_path = f"/World/Humans/{prim_name}"
+        runner1_prim = stage.GetPrimAtPath(runner1_path)
+        if not runner1_prim.IsValid():
+            # Fallback exact name if the replacement above failed
+            runner1_path = "/World/Humans/obj_1_run_anim_1"
+            runner1_prim = stage.GetPrimAtPath(runner1_path)
+            
+        if runner1_prim.IsValid():
+            xf = UsdGeom.Xformable(runner1_prim)
             try: xf.ClearXformOpOrder()
             except: pass
             t = xf.AddTranslateOp()
