@@ -708,25 +708,13 @@ try:
     os.makedirs(preview_dir, exist_ok=True)
     
     gen_media_script = os.path.join(base_dir, "gen_media.sh")
-    if shutil.which("ffmpeg"):
-        with open(out_log, "a") as f: f.write("[NAV] FFmpeg found, running gen_media.sh locally...\n")
-        subprocess.run(["bash", gen_media_script], capture_output=True)
+    with open(out_log, "a") as f: f.write("[NAV] Running gen_media.sh for HD + preview media...\n")
+    result = subprocess.run(["bash", gen_media_script], capture_output=True, text=True, timeout=120)
+    if result.returncode == 0:
+        with open(out_log, "a") as f: f.write("[NAV] Media generation complete.\n")
     else:
-        # Inside Docker container: SSH to host (localhost) to run gen_media.sh with pp conda env
-        ssh_cmd = (
-            "ssh -o StrictHostKeyChecking=no -o BatchMode=yes qi@localhost "
-            f"'source ~/miniconda3/etc/profile.d/conda.sh && conda activate pp && bash {gen_media_script}'"
-        )
-        with open(out_log, "a") as f: f.write(f"[NAV] FFmpeg not in container, invoking via SSH: {ssh_cmd}\n")
-        result = subprocess.run(ssh_cmd, shell=True, capture_output=True, text=True, timeout=120)
-        if result.returncode == 0:
-            with open(out_log, "a") as f: f.write("[NAV] Media generation complete via SSH.\n")
-        else:
-            with open(out_log, "a") as f:
-                f.write(f"[NAV] SSH media gen failed (rc={result.returncode}). Run manually:\n")
-                f.write(f"[NAV]   ssh GPU-843 'source ~/miniconda3/etc/profile.d/conda.sh && conda activate pp && bash {gen_media_script}'\n")
-                if result.stderr:
-                    f.write(f"[NAV]   stderr: {result.stderr[:200]}\n")
+        with open(out_log, "a") as f:
+            f.write(f"[NAV] Media generation failed (rc={result.returncode}): {(result.stderr or '')[:200]}\n")
     
     # === Generate 2D Trajectory Map ===
     with open(out_log, "a") as f: f.write("[NAV] Generating 2D trajectory map...\n")
