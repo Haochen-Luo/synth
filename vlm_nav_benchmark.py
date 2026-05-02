@@ -441,10 +441,11 @@ try:
             dir_x = math.cos(math.radians(agent_yaw))
             dir_y = math.sin(math.radians(agent_yaw))
             
-            # Multi-height sphere sweep: knee (0.3m) + chest (0.9m)
+            # Multi-height sphere sweep: waist (0.5m) + chest (1.0m)
+            # Note: floor collision is at z≈0.1, sphere r=0.2, so z must be >= 0.4
             blocked = False
             hit_info = ""
-            for sweep_z in [0.3, 0.9]:
+            for sweep_z in [0.5, 1.0]:
                 origin = carb.Float3(agent_x, agent_y, sweep_z)
                 direction = carb.Float3(dir_x, dir_y, 0.0)
                 hit = query.sweep_sphere_closest(0.2, origin, direction, STEP_DISTANCE)
