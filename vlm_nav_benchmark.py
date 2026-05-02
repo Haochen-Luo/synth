@@ -233,8 +233,8 @@ try:
         sofa2_prim.SetActive(False)
         with open(out_log, "a") as f: f.write("[NAV] Removed Sofa 2 (right side) from scene\n")
     
-    # Instance agent runner
-    agent_prim = stage.DefinePrim("/World/Humans/agent_runner", "Xform")
+    # Instance agent runner (Do NOT use 'Xform' or it overrides 'SkelRoot' and won't render)
+    agent_prim = stage.DefinePrim("/World/Humans/agent_runner")
     agent_prim.GetReferences().AddReference(human_usd)
     simulation_app.update()
     
@@ -352,8 +352,7 @@ try:
             except: pass
             t = xf.AddTranslateOp()
             o = xf.AddOrientOp()
-            s = xf.AddScaleOp()
-            s.Set(Gf.Vec3d(0.01, 0.01, 0.01)) # FORCE 0.01 scale for human meshes
+            # Do NOT scale runner1 by 0.01; case11 usdc is already 1.0 scale
             runner1_xform = {"spec": runner1_spec, "trans_op": t, "orient_op": o}
     
     # === Setup Agent (Runner 2) ===
@@ -362,8 +361,7 @@ try:
     except: pass
     agent_trans = agent_xf.AddTranslateOp()
     agent_orient = agent_xf.AddOrientOp()
-    agent_scale = agent_xf.AddScaleOp()
-    agent_scale.Set(Gf.Vec3d(0.01, 0.01, 0.01)) # FORCE 0.01 scale for human meshes
+    # Do NOT scale agent by 0.01; case11 usdc is already 1.0 scale
     
     # Find camera prim for per-step repositioning
     nav_cam_prim = None
