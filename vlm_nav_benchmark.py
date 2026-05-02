@@ -387,28 +387,42 @@ try:
         
         with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: VLM action = {action}\n")
         
-        # Anti-oscillation guard v3: independent stuck + oscillation checks
-        # --- Stuck detector: same position for 4+ consecutive steps ---
-        if len(nav_history) >= 4:
-            recent_pos = [(h["x"], h["y"]) for h in nav_history[-4:]]
-            if len(set(recent_pos)) == 1:
-                # Count total consecutive stuck steps for escalation
-                stuck_pos = recent_pos[0]
-                stuck_count = sum(1 for h in reversed(nav_history) if (h["x"], h["y"]) == stuck_pos)
-                if stuck_count >= 16:
-                    # Desperate: 180° about-face + force move
-                    agent_yaw = wrap_angle_deg(agent_yaw + 180)
-                    action = "MOVE_FORWARD"
-                    with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK {stuck_count} steps! 180° about-face + MOVE_FORWARD\n")
-                elif stuck_count % 4 < 2:
-                    agent_yaw += 60  # 60° immediate + 30° TURN = 90° total
-                    action = "TURN_LEFT"
-                    with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK {stuck_count} steps! Forcing 90° LEFT\n")
+        # Anti-oscillation guard v4: track collision-blocked moves, not just position
+        # --- Stuck detector: only fires after consecutive collision-blocked moves ---
+        if len(nav_history) >= 3:
+            # Count recent consecutive collision-blocked moves (action was MOVE but position didn't change)
+            blocked_moves = 0
+            for h in reversed(nav_history):
+                if h["action"] == "MOVE_FORWARD" and blocked_moves == 0:
+                    # Check if this move was blocked (same pos as current)
+                    if abs(h["x"] - round(agent_x, 3)) < 0.01 and abs(h["y"] - round(agent_y, 3)) < 0.01:
+                        blocked_moves += 1
+                    else:
+                        break
+                elif h["action"] in ("TURN_LEFT", "TURN_RIGHT"):
+                    continue  # skip turns — they don't indicate stuck
+                elif h["action"] == "MOVE_FORWARD":
+                    if abs(h["x"] - round(agent_x, 3)) < 0.01 and abs(h["y"] - round(agent_y, 3)) < 0.01:
+                        blocked_moves += 1
+                    else:
+                        break
                 else:
-                    agent_yaw -= 60  # alternate direction
+                    break
+            
+            if blocked_moves >= 3 and action == "MOVE_FORWARD":
+                # Only override MOVE_FORWARD, let VLM-requested turns proceed naturally
+                if blocked_moves >= 8:
+                    agent_yaw = wrap_angle_deg(agent_yaw + 180)
+                    with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK ({blocked_moves} blocked moves)! 180° about-face\n")
+                elif blocked_moves % 2 == 1:
+                    agent_yaw += 60
+                    action = "TURN_LEFT"
+                    with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK ({blocked_moves} blocked moves)! Forcing 90° LEFT\n")
+                else:
+                    agent_yaw -= 60
                     action = "TURN_RIGHT"
-                    with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK {stuck_count} steps! Forcing 90° RIGHT\n")
-        # --- Turn oscillation detector (independent, not elif) ---
+                    with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK ({blocked_moves} blocked moves)! Forcing 90° RIGHT\n")
+        # --- Turn oscillation detector (independent) ---
         if action in ("TURN_LEFT", "TURN_RIGHT") and len(nav_history) >= 2:
             last_actions = [h["action"] for h in nav_history[-2:]]
             if (last_actions == ["TURN_LEFT", "TURN_RIGHT"] and action == "TURN_LEFT") or \
