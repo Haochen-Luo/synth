@@ -234,7 +234,7 @@ try:
         with open(out_log, "a") as f: f.write("[NAV] Removed Sofa 2 (right side) from scene\n")
     
     # Instance agent runner
-    agent_prim = stage.DefinePrim("/World/Humans/agent_runner")
+    agent_prim = stage.DefinePrim("/World/Humans/agent_runner", "Xform")
     agent_prim.GetReferences().AddReference(human_usd)
     simulation_app.update()
     
