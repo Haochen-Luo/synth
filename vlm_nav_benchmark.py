@@ -155,17 +155,24 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
                 f.write(json.dumps({"step": step, "image": image_path, "response": text}) + "\n")
 
             text_upper = text.upper()
-            # Extract valid action from response (search backwards to find the final chosen action)
-            best_action = "MOVE_FORWARD"
-            best_idx = -1
-            for action in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP"]:
-                idx = text_upper.rfind(action)
-                if idx > best_idx:
-                    best_idx = idx
-                    best_action = action
             
-            if best_idx == -1:
-                with open(out_log, "a") as f: f.write(f"[VLM] Unrecognized response: {text[:100]}\n")
+            # Extract valid action from response
+            import re
+            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP)", text_upper)
+            if match:
+                best_action = match.group(1)
+            else:
+                # Fallback: search backwards to find the final chosen action
+                best_action = "MOVE_FORWARD"
+                best_idx = -1
+                for action in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP"]:
+                    idx = text_upper.rfind(action)
+                    if idx > best_idx:
+                        best_idx = idx
+                        best_action = action
+                
+                if best_idx == -1:
+                    with open(out_log, "a") as f: f.write(f"[VLM] Unrecognized response: {text[:100]}\n")
             
             return best_action
     except Exception as e:
