@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # Generate HD + Preview media from rendered navigation frames.
-# Run on host (not in Docker) with conda env 'pp' for ffmpeg.
-#
 # Usage:
-#   ssh GPU-843 'source ~/miniconda3/etc/profile.d/conda.sh && conda activate pp && \
-#     bash /home/qi/hc/Puppeteer/zehao_task/gen_media.sh'
+#   bash gen_media.sh [RUN_DIR]
+# If RUN_DIR is provided, look for frames inside it. Otherwise use default paths.
 
 set -u
 
-BASE="/home/qi/hc/Puppeteer/zehao_task"
+# Accept run directory as argument, or use default
+BASE="${1:-/home/qi/hc/Puppeteer/zehao_task}"
 PREVIEW="$BASE/nav_preview"
 mkdir -p "$PREVIEW"
 

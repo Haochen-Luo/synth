@@ -93,7 +93,9 @@ def sample_human_motion(hs, elapsed_s, fps):
 VLLM_URL = "http://localhost:8300/v1/chat/completions"
 MODEL_NAME = "Qwen/Qwen3-VL-30B-A3B-Instruct-FP8"
 
-SYSTEM_PROMPT = """You are a navigation robot inside a living room. Your goal is to reach the SOFA.
+def make_system_prompt(target_desc: str) -> str:
+    """Generate a target-aware system prompt."""
+    return f"""You are a navigation robot inside a living room. Your goal is to reach the {target_desc}.
 
 You see the room from your first-person camera. There may be a person running across the room - you must avoid colliding with them.
 
@@ -101,13 +103,13 @@ You can ONLY output ONE of these actions:
 - MOVE_FORWARD (move 0.25 meters in your current facing direction)
 - TURN_LEFT (rotate 30 degrees to the left)  
 - TURN_RIGHT (rotate 30 degrees to the right)
-- STOP (you believe you have reached the sofa)
+- STOP (you believe you have reached the target)
 
 Rules:
-- If you see the sofa directly ahead and close, move toward it.
-- If the sofa is to your left or right, turn toward it first.
+- If you see the target directly ahead and close, move toward it.
+- If the target is to your left or right, turn toward it first.
 - If a person is blocking your path, turn to find an alternate route. Do NOT use STOP for waiting.
-- When you are very close to the sofa (within arm's reach), output STOP.
+- When you are very close to the target (within arm's reach), output STOP.
 
 First, briefly explain your reasoning based on what you see. 
 Then, as the VERY LAST line of your response, output ONLY the single chosen action in this exact format:
@@ -118,7 +120,7 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
     with open(image_path, "rb") as f:
         img_b64 = base64.b64encode(f.read()).decode("utf-8")
     
-    prompt = "You are navigating an indoor environment to reach the SOFA. Based on this first-person view, what action should you take? First explain your reasoning, then output the action."
+    prompt = f"You are navigating an indoor environment to reach the {TARGET_DESC}. Based on this first-person view, what action should you take? First explain your reasoning, then output the action."
     if action_history:
         recent = action_history[-5:]  # last 5 actions
         prompt += f" Your recent actions were: {', '.join(recent)}. Avoid repeating unhelpful patterns."
@@ -151,7 +153,7 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
             text = result["choices"][0]["message"]["content"].strip()
             
             # Log the full response reasoning to a jsonl file
-            resp_log = "/home/qi/hc/Puppeteer/zehao_task/vlm_responses.jsonl"
+            resp_log = os.path.join(RUN_DIR, "vlm_responses.jsonl")
             with open(resp_log, "a") as f:
                 f.write(json.dumps({"step": step, "image": image_path, "response": text}) + "\n")
 
@@ -216,7 +218,7 @@ def query_vlm_confirm_stop(image_path: str, out_log: str, step: int = 0) -> str:
         with urllib.request.urlopen(req, timeout=30) as resp:
             result = json.loads(resp.read().decode("utf-8"))
             text = result["choices"][0]["message"]["content"].strip()
-            resp_log = "/home/qi/hc/Puppeteer/zehao_task/vlm_responses.jsonl"
+            resp_log = os.path.join(RUN_DIR, "vlm_responses.jsonl")
             with open(resp_log, "a") as f:
                 f.write(json.dumps({"step": step, "type": "stop_confirm", "image": image_path, "response": text}) + "\n")
             text_upper = text.upper()
@@ -240,18 +242,49 @@ def query_vlm_confirm_stop(image_path: str, out_log: str, step: int = 0) -> str:
 STEP_DISTANCE = 0.25     # meters per MOVE_FORWARD
 TURN_ANGLE = 15.0        # degrees per TURN
 MAX_STEPS = 250        # timeout
-SUCCESS_RADIUS = 2.5     # meters to target for success (sofa is large, 2.5m from center is the edge)
 STOP_CONFIRM_ROUNDS = 2  # require 2 consecutive STOP predictions to accept
 AGENT_HEIGHT = 0.0       # Fix: match dancer's floor-level physical height
 AGENT_EYE_HEIGHT = 1.58  # z for camera (eye level)
 RUNNER_TIME_PER_STEP = 0.5  # seconds of runner animation per nav step
 
-# Target: center of big sofa
-TARGET = [4.38, 6.44]
+# Agent mesh faces +Y by default, but yaw=0 is +X, so offset by -90°
+AGENT_MESH_YAW_OFFSET = -90.0  # degrees
+
+# ============================================================
+# Target configurations
+# ============================================================
+TARGET_CONFIGS = {
+    "sofa": {
+        "coords": [4.43, 6.49],
+        "success_radius": 2.5,  # sofa is large (~2.8m), 2.5m from center = edge
+        "desc": "SOFA (the large light-green couch)",
+    },
+    "bookshelf": {
+        "coords": [0.34, 8.76],
+        "success_radius": 1.5,  # shelf is narrow
+        "desc": "tall white 4-tier SHELF against the left wall (the tall one with items on it, NOT the short 2-tier bookcase)",
+    },
+}
+
+# === SELECT TARGET HERE ===
+TARGET_NAME = "sofa"  # change to "bookshelf" to test bookshelf navigation
+
+_cfg = TARGET_CONFIGS[TARGET_NAME]
+TARGET = _cfg["coords"]
+SUCCESS_RADIUS = _cfg["success_radius"]
+TARGET_DESC = _cfg["desc"]
+SYSTEM_PROMPT = make_system_prompt(TARGET_DESC)
+
 # Agent start: on the rug, facing roughly toward sofa
 AGENT_START_X = 12.0
 AGENT_START_Y = 4.0
 AGENT_START_YAW = 160.0  # degrees, roughly facing the sofa (upper-left)
+
+# === Per-run output directory ===
+import datetime as _dt
+RUN_DIR = os.path.join("/home/qi/hc/Puppeteer/zehao_task/runs",
+                       f"{TARGET_NAME}_{_dt.datetime.now().strftime('%Y%m%d_%H%M%S')}")
+os.makedirs(RUN_DIR, exist_ok=True)
 
 def get_camera_lookat(pos, target):
     from pxr import Gf
@@ -275,8 +308,9 @@ def get_camera_quat_from_yaw(yaw_deg):
 # ============================================================
 # Main
 # ============================================================
-out_log = "/home/qi/hc/Puppeteer/zehao_task/vlm_nav.log"
-with open(out_log, "w") as f: f.write("[NAV] Starting VLM navigation benchmark...\n")
+out_log = os.path.join(RUN_DIR, "vlm_nav.log")
+with open(out_log, "w") as f: f.write(f"[NAV] Starting VLM navigation benchmark (target={TARGET_NAME})...\n")
+with open(out_log, "a") as f: f.write(f"[NAV] Run dir: {RUN_DIR}\n")
 
 try:
     from isaacsim import SimulationApp
@@ -340,8 +374,8 @@ try:
     omni.kit.commands.execute("ChangeSetting", path="/rtx/rendermode", value="PathTracing")
     omni.kit.commands.execute("ChangeSetting", path="/rtx/pathtracing/spp", value=16)
     
-    out_dir_fpv = "/home/qi/hc/Puppeteer/zehao_task/vlm_nav_frames_fpv"
-    out_dir_bird = "/home/qi/hc/Puppeteer/zehao_task/vlm_nav_frames_bird"
+    out_dir_fpv = os.path.join(RUN_DIR, "vlm_nav_frames_fpv")
+    out_dir_bird = os.path.join(RUN_DIR, "vlm_nav_frames_bird")
     
     for d in [out_dir_fpv, out_dir_bird]:
         import shutil
@@ -499,8 +533,10 @@ try:
             
         # 1. Update agent position in scene
         agent_trans.Set(Gf.Vec3d(agent_x, agent_y, AGENT_HEIGHT + agent_root_z))
-        yaw_rad = math.radians(agent_yaw)
-        agent_orient.Set(Gf.Quatf(math.cos(yaw_rad/2), 0, 0, math.sin(yaw_rad/2)))
+        # Apply mesh yaw offset so the body faces the movement direction
+        mesh_yaw = agent_yaw + AGENT_MESH_YAW_OFFSET
+        mesh_yaw_rad = math.radians(mesh_yaw)
+        agent_orient.Set(Gf.Quatf(math.cos(mesh_yaw_rad/2), 0, 0, math.sin(mesh_yaw_rad/2)))
         
         # 2. Update camera to agent's eye position + facing direction
         if nav_cam_prim and nav_cam_prim.IsValid():
@@ -689,9 +725,11 @@ try:
             f.write(f"[NAV] TIMEOUT after {MAX_STEPS} steps. dist={dist_to_target:.2f}m\n")
     
     # === Save navigation log ===
-    log_path = "/home/qi/hc/Puppeteer/zehao_task/vlm_nav_history.json"
+    log_path = os.path.join(RUN_DIR, "vlm_nav_history.json")
     with open(log_path, "w") as f:
         json.dump({
+            "target_name": TARGET_NAME,
+            "target_desc": TARGET_DESC,
             "target": TARGET,
             "start": [AGENT_START_X, AGENT_START_Y, AGENT_START_YAW],
             "success_radius": SUCCESS_RADIUS,
@@ -700,16 +738,10 @@ try:
     with open(out_log, "a") as f: f.write(f"[NAV] History saved: {log_path}\n")
     
     # === Generate media (HD + Preview) via FFmpeg ===
-    # FFmpeg is NOT available inside the Isaac Sim Docker container.
-    # Try to invoke gen_media.sh on the host via subprocess, otherwise print manual instructions.
     import subprocess, shutil
-    base_dir = "/home/qi/hc/Puppeteer/zehao_task"
-    preview_dir = os.path.join(base_dir, "nav_preview")
-    os.makedirs(preview_dir, exist_ok=True)
-    
-    gen_media_script = os.path.join(base_dir, "gen_media.sh")
+    gen_media_script = "/home/qi/hc/Puppeteer/zehao_task/gen_media.sh"
     with open(out_log, "a") as f: f.write("[NAV] Running gen_media.sh for HD + preview media...\n")
-    result = subprocess.run(["bash", gen_media_script], capture_output=True, text=True, timeout=120)
+    result = subprocess.run(["bash", gen_media_script, RUN_DIR], capture_output=True, text=True, timeout=120)
     if result.returncode == 0:
         with open(out_log, "a") as f: f.write("[NAV] Media generation complete.\n")
     else:
@@ -780,7 +812,7 @@ try:
         for spine in ax.spines.values():
             spine.set_color('#444')
         
-        traj_path = os.path.join(preview_dir, "trajectory_2d.png")
+        traj_path = os.path.join(RUN_DIR, "trajectory_2d.png")
         plt.savefig(traj_path, dpi=150, bbox_inches='tight', facecolor=fig.get_facecolor())
         plt.close()
         with open(out_log, "a") as f: f.write(f"[NAV] 2D trajectory map saved: {traj_path}\n")
