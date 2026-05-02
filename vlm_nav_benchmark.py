@@ -291,8 +291,8 @@ try:
     bird_t = bird_xf.AddTranslateOp()
     bird_o = bird_xf.AddOrientOp()
     
-    # Move higher and back to see the whole room
-    bird_pos = Gf.Vec3d(14.0, -1.0, 5.0)
+    # Move higher and back to see the whole room, but KEEP INSIDE walls
+    bird_pos = Gf.Vec3d(11.5, 0.5, 4.5)
     bird_target = Gf.Vec3d(6.0, 4.0, 0.5) # Center of room
     bird_t.Set(bird_pos)
     bird_mat = Gf.Matrix4d().SetLookAt(bird_pos, bird_target, Gf.Vec3d(0,0,1))
@@ -315,7 +315,7 @@ try:
     bird2_t = bird2_xf.AddTranslateOp()
     bird2_o = bird2_xf.AddOrientOp()
     
-    bird2_pos = Gf.Vec3d(0.0, 9.0, 4.0)
+    bird2_pos = Gf.Vec3d(1.5, 7.5, 3.5)
     bird2_target = Gf.Vec3d(6.0, 4.0, 0.5) # Look towards center
     bird2_t.Set(bird2_pos)
     bird2_mat = Gf.Matrix4d().SetLookAt(bird2_pos, bird2_target, Gf.Vec3d(0,0,1))
