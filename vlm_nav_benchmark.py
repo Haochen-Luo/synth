@@ -106,7 +106,7 @@ You can ONLY output ONE of these actions:
 Rules:
 - If you see the sofa directly ahead and close, move toward it.
 - If the sofa is to your left or right, turn toward it first.
-- If a person is blocking your path, wait (output STOP temporarily) or turn to find an alternate route.
+- If a person is blocking your path, turn to find an alternate route. Do NOT use STOP for waiting.
 - When you are very close to the sofa (within arm's reach), output STOP.
 
 First, briefly explain your reasoning based on what you see. 
@@ -180,6 +180,60 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
         with open(out_log, "a") as f: f.write(f"[VLM] API error: {e}\n")
         return "MOVE_FORWARD", True  # Fallback on error
 
+def query_vlm_confirm_stop(image_path: str, out_log: str, step: int = 0) -> str:
+    """Re-query VLM with a skeptical prompt to confirm a STOP decision."""
+    with open(image_path, "rb") as f:
+        img_b64 = base64.b64encode(f.read()).decode("utf-8")
+    
+    confirm_prompt = (
+        "You just chose STOP. Look again carefully: "
+        "is the target IMMEDIATELY in front of you, large in your view, and within arm's reach? "
+        "If it is still distant, continue navigating. "
+        "Output your final action on the last line as: ACTION: <action_name>"
+    )
+    
+    payload = {
+        "model": MODEL_NAME,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": [
+                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}},
+                {"type": "text", "text": confirm_prompt}
+            ]}
+        ],
+        "max_tokens": 4096,
+        "temperature": 0.0,
+    }
+    
+    req = urllib.request.Request(
+        VLLM_URL,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+            text = result["choices"][0]["message"]["content"].strip()
+            resp_log = "/home/qi/hc/Puppeteer/zehao_task/vlm_responses.jsonl"
+            with open(resp_log, "a") as f:
+                f.write(json.dumps({"step": step, "type": "stop_confirm", "image": image_path, "response": text}) + "\n")
+            text_upper = text.upper()
+            import re
+            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP)", text_upper)
+            if match:
+                return match.group(1)
+            best_action, best_idx = "MOVE_FORWARD", -1
+            for a in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP"]:
+                idx = text_upper.rfind(a)
+                if idx > best_idx:
+                    best_idx, best_action = idx, a
+            return best_action
+    except Exception as e:
+        with open(out_log, "a") as f: f.write(f"[VLM] Confirm API error: {e}\n")
+        return "MOVE_FORWARD"  # On error, keep navigating
+
 # ============================================================
 # Navigation config
 # ============================================================
@@ -187,6 +241,7 @@ STEP_DISTANCE = 0.25     # meters per MOVE_FORWARD
 TURN_ANGLE = 15.0        # degrees per TURN
 MAX_STEPS = 250        # timeout
 SUCCESS_RADIUS = 2.5     # meters to target for success (sofa is large, 2.5m from center is the edge)
+STOP_CONFIRM_ROUNDS = 2  # require 2 consecutive STOP predictions to accept
 AGENT_HEIGHT = 0.0       # Fix: match dancer's floor-level physical height
 AGENT_EYE_HEIGHT = 1.58  # z for camera (eye level)
 RUNNER_TIME_PER_STEP = 0.5  # seconds of runner animation per nav step
@@ -510,6 +565,20 @@ try:
         past_actions = [h["action"] for h in nav_history] if nav_history else None
         action, is_fallback = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions, step=step)
         collision_occurred = False # reset after consuming
+        
+        # --- STOP confirmation (Sequential Confirmation, 2 rounds) ---
+        if action == "STOP":
+            for confirm_round in range(1, STOP_CONFIRM_ROUNDS):
+                with open(out_log, "a") as f:
+                    f.write(f"[NAV] Step {step}: STOP requested, confirming ({confirm_round}/{STOP_CONFIRM_ROUNDS-1})...\n")
+                confirm_action = query_vlm_confirm_stop(frame_path, out_log, step=step)
+                if confirm_action != "STOP":
+                    with open(out_log, "a") as f:
+                        f.write(f"[NAV] Step {step}: STOP overridden → {confirm_action}\n")
+                    action = confirm_action
+                    break
+                with open(out_log, "a") as f:
+                    f.write(f"[NAV] Step {step}: STOP confirmed\n")
         
         log_action = f"{action} (fallback)" if is_fallback else action
         with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: VLM action = {log_action}\n")
