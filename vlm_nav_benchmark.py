@@ -256,7 +256,7 @@ AGENT_MESH_YAW_OFFSET = -90.0  # degrees
 TARGET_CONFIGS = {
     "sofa": {
         "coords": [4.43, 6.49],
-        "success_radius": 2.5,  # sofa is large (~2.8m), 2.5m from center = edge
+        "success_radius": 3.0,  # sofa bbox is ~2.8m long; 3m from center = at the near edge
         "desc": "SOFA (the large light-green couch)",
     },
     "bookshelf": {
