@@ -511,66 +511,51 @@ try:
     with open(out_log, "a") as f: f.write(f"[NAV] History saved: {log_path}\n")
     
     # === Generate videos via FFmpeg (HD + Lite preview) ===
-    with open(out_log, "a") as f: f.write("[NAV] Generating MP4/GIF videos via FFmpeg...\n")
-    import subprocess
-    
+    import subprocess, shutil
     base_dir = "/home/qi/hc/Puppeteer/zehao_task"
     preview_dir = os.path.join(base_dir, "nav_preview")
     os.makedirs(preview_dir, exist_ok=True)
     
-    for label, src_dir in [("fpv", out_dir_fpv), ("bird_rear", out_dir_bird), ("bird_front", out_dir_bird2)]:
-        png_files = sorted(glob.glob(os.path.join(src_dir, "rgb_*.png")))
-        if not png_files:
-            continue
+    if shutil.which("ffmpeg"):
+        with open(out_log, "a") as f: f.write("[NAV] Generating MP4/GIF videos via FFmpeg...\n")
         
-        # Find the frame pattern (rgb_0000.png, rgb_0001.png, ...)
-        frame_pattern = os.path.join(src_dir, "rgb_%04d.png")
-        n_frames = len(png_files)
-        
-        # --- HD MP4 (1920x1080, 5fps) ---
-        mp4_hd = os.path.join(base_dir, f"vlm_nav_{label}_hd.mp4")
-        subprocess.run([
-            "ffmpeg", "-y", "-framerate", "5",
-            "-i", frame_pattern, "-frames:v", str(n_frames),
-            "-c:v", "libx264", "-pix_fmt", "yuv420p",
-            "-crf", "18", "-preset", "fast",
-            mp4_hd
-        ], capture_output=True)
-        with open(out_log, "a") as flog: flog.write(f"[NAV] {label} HD MP4: {mp4_hd} ({n_frames} frames)\n")
-        
-        # --- HD GIF (960x540, 5fps, max 100 frames) ---
-        gif_hd = os.path.join(base_dir, f"vlm_nav_{label}_hd.gif")
-        max_gif_hd = min(n_frames, 100)
-        subprocess.run([
-            "ffmpeg", "-y", "-framerate", "5",
-            "-i", frame_pattern, "-frames:v", str(max_gif_hd),
-            "-vf", "scale=960:540,fps=5,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
-            gif_hd
-        ], capture_output=True)
-        with open(out_log, "a") as flog: flog.write(f"[NAV] {label} HD GIF: {gif_hd} ({max_gif_hd} frames)\n")
-        
-        # --- Preview MP4 (480x270, 5fps — nav_preview/) ---
-        mp4_lite = os.path.join(preview_dir, f"{label}_preview.mp4")
-        subprocess.run([
-            "ffmpeg", "-y", "-framerate", "5",
-            "-i", frame_pattern, "-frames:v", str(n_frames),
-            "-c:v", "libx264", "-pix_fmt", "yuv420p",
-            "-vf", "scale=480:270",
-            "-crf", "28", "-preset", "fast",
-            mp4_lite
-        ], capture_output=True)
-        with open(out_log, "a") as flog: flog.write(f"[NAV] {label} Preview MP4: {mp4_lite}\n")
-        
-        # --- Preview GIF (320x180, 5fps, max 100 frames — nav_preview/) ---
-        gif_lite = os.path.join(preview_dir, f"{label}_preview.gif")
-        max_gif_lite = min(n_frames, 100)
-        subprocess.run([
-            "ffmpeg", "-y", "-framerate", "5",
-            "-i", frame_pattern, "-frames:v", str(max_gif_lite),
-            "-vf", "scale=320:180,fps=5,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
-            gif_lite
-        ], capture_output=True)
-        with open(out_log, "a") as flog: flog.write(f"[NAV] {label} Preview GIF: {gif_lite}\n")
+        for label, src_dir in [("fpv", out_dir_fpv), ("bird_rear", out_dir_bird), ("bird_front", out_dir_bird2)]:
+            png_files = sorted(glob.glob(os.path.join(src_dir, "rgb_*.png")))
+            if not png_files:
+                continue
+            frame_pattern = os.path.join(src_dir, "rgb_%04d.png")
+            n_frames = len(png_files)
+            
+            # --- HD MP4 (1920x1080, 5fps) ---
+            mp4_hd = os.path.join(base_dir, f"vlm_nav_{label}_hd.mp4")
+            subprocess.run(["ffmpeg", "-y", "-framerate", "5", "-i", frame_pattern, "-frames:v", str(n_frames),
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", "-preset", "fast", mp4_hd], capture_output=True)
+            with open(out_log, "a") as flog: flog.write(f"[NAV] {label} HD MP4: {mp4_hd} ({n_frames} frames)\n")
+            
+            # --- HD GIF (960x540, 5fps, max 100 frames) ---
+            gif_hd = os.path.join(base_dir, f"vlm_nav_{label}_hd.gif")
+            max_gif_hd = min(n_frames, 100)
+            subprocess.run(["ffmpeg", "-y", "-framerate", "5", "-i", frame_pattern, "-frames:v", str(max_gif_hd),
+                "-vf", "scale=960:540,fps=5,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse", gif_hd], capture_output=True)
+            with open(out_log, "a") as flog: flog.write(f"[NAV] {label} HD GIF: {gif_hd} ({max_gif_hd} frames)\n")
+            
+            # --- Preview MP4 (480x270, 5fps — nav_preview/) ---
+            mp4_lite = os.path.join(preview_dir, f"{label}_preview.mp4")
+            subprocess.run(["ffmpeg", "-y", "-framerate", "5", "-i", frame_pattern, "-frames:v", str(n_frames),
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-vf", "scale=480:270",
+                "-crf", "28", "-preset", "fast", mp4_lite], capture_output=True)
+            with open(out_log, "a") as flog: flog.write(f"[NAV] {label} Preview MP4: {mp4_lite}\n")
+            
+            # --- Preview GIF (320x180, 5fps, max 100 frames — nav_preview/) ---
+            gif_lite = os.path.join(preview_dir, f"{label}_preview.gif")
+            max_gif_lite = min(n_frames, 100)
+            subprocess.run(["ffmpeg", "-y", "-framerate", "5", "-i", frame_pattern, "-frames:v", str(max_gif_lite),
+                "-vf", "scale=320:180,fps=5,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse", gif_lite], capture_output=True)
+            with open(out_log, "a") as flog: flog.write(f"[NAV] {label} Preview GIF: {gif_lite}\n")
+    else:
+        with open(out_log, "a") as f:
+            f.write("[NAV] ffmpeg not found in container. Run post-processing from host:\n")
+            f.write("[NAV]   ssh GPU-843 'source ~/miniconda3/etc/profile.d/conda.sh && conda activate pp && cd /home/qi/hc/Puppeteer/zehao_task && bash gen_videos.sh'\n")
     
     # === Generate 2D Trajectory Map ===
     with open(out_log, "a") as f: f.write("[NAV] Generating 2D trajectory map...\n")
