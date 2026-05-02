@@ -223,9 +223,12 @@ After a benchmark run, the following are generated:
 1. **OptixDenoiser warnings** (`nvoptix.bin` not found) — harmless; denoiser is optional and not used.
 2. **`shutil` must be imported** inside the `try` block of `vlm_nav_benchmark.py` (it runs inside Isaac Sim's embedded Python).
 3. **Frame directory cleanup** — Both scripts call `shutil.rmtree()` before each run to prevent stale frames from previous runs contaminating the output video.
-4. **Camera default facing direction** — In USD, a camera at `rotation=(0,0,0)` faces along -Z (forward). Applying `lookat_to_quatf` rotates the +X axis instead, causing a 90° downward pitch. Always use pure Z-axis yaw rotation for FPV.
+4. **Isaac Sim Camera Coordinate Frame Differences**:
+   - Standard USD cameras expect **-Z forward, +Y up**.
+   - `rep.create.camera` (Replicator cameras) expect **+X forward, +Z up** (World frame convention).
+   - **DO NOT use** `SetLookAt` or complex pitch/roll quaternions for the FPV camera. Doing so aligns the USD +Y up vector with the World +Z sky, causing a 90-degree sideways rotated image. **Always use a pure Z-axis yaw rotation** (e.g. `Gf.Rotation(Gf.Vec3d(0, 0, 1), yaw)`) for the Replicator FPV camera.
 5. **VLM oscillation** — The VLM sometimes oscillates between TURN_LEFT and TURN_RIGHT indefinitely. This is a model-level limitation, not a physics bug.
-
+6. **Thumbnail Generation (PIL)** — If saving PNGs (which have an RGBA alpha channel) as JPEG thumbnails using PIL, you must first convert the image to RGB (`img.convert('RGB')`). Failing to do so will cause a silent `OSError` if caught inside a blind `try-except` block, resulting in missing thumbnails.
 ---
 
 ## Conda Environment: `pp`
