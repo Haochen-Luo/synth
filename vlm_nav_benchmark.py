@@ -275,22 +275,48 @@ try:
     writer_fpv.initialize(output_dir=out_dir_fpv, rgb=True)
     writer_fpv.attach([rp_fpv])
 
-    # === Third-Person Camera (rear corner — validated by grid search) ===
-    # CRITICAL: Must use rep.modify.pose inside 'with cam:' block.
-    # rep.create.camera(look_at=...) silently fails to orient the camera.
-    cam_bird = rep.create.camera(position=(13.0, 7.0, 2.7), name="BirdEyeCamera")
-    with cam_bird:
-        rep.modify.pose(position=(13.0, 7.0, 2.7), look_at=(6.0, 5.0, 0.5))
-    rp_bird = rep.create.render_product(cam_bird, (1920, 1080))
+    # === Third-Person Camera (rear corner) ===
+    bird_cam_path = "/World/BirdEyeCamera"
+    cam_bird_prim = UsdGeom.Camera.Define(stage, bird_cam_path)
+    cam_bird_prim.CreateFocalLengthAttr().Set(17.0)
+    cam_bird_prim.CreateHorizontalApertureAttr().Set(34.0)
+    
+    bird_xf = UsdGeom.Xformable(cam_bird_prim)
+    bird_xf.ClearXformOpOrder()
+    bird_t = bird_xf.AddTranslateOp()
+    bird_o = bird_xf.AddOrientOp()
+    
+    bird_pos = Gf.Vec3d(13.0, 7.0, 2.7)
+    bird_target = Gf.Vec3d(6.0, 5.0, 0.5)
+    bird_t.Set(bird_pos)
+    bird_mat = Gf.Matrix4d().SetLookAt(bird_pos, bird_target, Gf.Vec3d(0,0,1))
+    bird_qd = bird_mat.GetInverse().ExtractRotation().GetQuat()
+    bird_o.Set(Gf.Quatf(bird_qd.GetReal(), *bird_qd.GetImaginary()))
+    
+    rp_bird = rep.create.render_product(str(bird_cam_path), (1920, 1080))
     writer_bird = rep.WriterRegistry.get("BasicWriter")
     writer_bird.initialize(output_dir=out_dir_bird, rgb=True)
     writer_bird.attach([rp_bird])
 
-    # === Second Bird Camera (sofa-side corner — opposite angle) ===
-    cam_bird2 = rep.create.camera(position=(2.0, 7.0, 2.7), name="BirdEyeCamera2")
-    with cam_bird2:
-        rep.modify.pose(position=(2.0, 7.0, 2.7), look_at=(8.0, 4.0, 0.5))
-    rp_bird2 = rep.create.render_product(cam_bird2, (1920, 1080))
+    # === Second Bird Camera (sofa-side corner) ===
+    bird2_cam_path = "/World/BirdEyeCamera2"
+    cam_bird2_prim = UsdGeom.Camera.Define(stage, bird2_cam_path)
+    cam_bird2_prim.CreateFocalLengthAttr().Set(17.0)
+    cam_bird2_prim.CreateHorizontalApertureAttr().Set(34.0)
+    
+    bird2_xf = UsdGeom.Xformable(cam_bird2_prim)
+    bird2_xf.ClearXformOpOrder()
+    bird2_t = bird2_xf.AddTranslateOp()
+    bird2_o = bird2_xf.AddOrientOp()
+    
+    bird2_pos = Gf.Vec3d(2.0, 7.0, 2.7)
+    bird2_target = Gf.Vec3d(8.0, 4.0, 0.5)
+    bird2_t.Set(bird2_pos)
+    bird2_mat = Gf.Matrix4d().SetLookAt(bird2_pos, bird2_target, Gf.Vec3d(0,0,1))
+    bird2_qd = bird2_mat.GetInverse().ExtractRotation().GetQuat()
+    bird2_o.Set(Gf.Quatf(bird2_qd.GetReal(), *bird2_qd.GetImaginary()))
+    
+    rp_bird2 = rep.create.render_product(str(bird2_cam_path), (1920, 1080))
     writer_bird2 = rep.WriterRegistry.get("BasicWriter")
     writer_bird2.initialize(output_dir=out_dir_bird2, rgb=True)
     writer_bird2.attach([rp_bird2])
