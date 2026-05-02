@@ -176,12 +176,17 @@ AGENT_START_Y = 4.0
 AGENT_START_YAW = 160.0  # degrees, roughly facing the sofa (upper-left)
 
 def get_camera_quat_from_yaw(yaw_deg):
-    """Generates a camera orientation for Isaac Sim Replicator cameras (+X forward, +Z up)."""
+    """Generates a camera orientation looking in the yaw direction, keeping the horizon level."""
     from pxr import Gf
-    # Replicator cameras naturally look down +X with +Z as up. 
-    # Therefore, we ONLY need a pure Z-axis rotation to set the yaw!
-    rot_z = Gf.Rotation(Gf.Vec3d(0.0, 0.0, 1.0), float(yaw_deg))
-    qd = rot_z.GetQuat()
+    import math
+    yaw_rad = math.radians(yaw_deg)
+    
+    eye = Gf.Vec3d(0.0, 0.0, 0.0)
+    target = Gf.Vec3d(math.cos(yaw_rad), math.sin(yaw_rad), 0.0)
+    up = Gf.Vec3d(0.0, 0.0, 1.0)
+    
+    mat = Gf.Matrix4d().SetLookAt(eye, target, up)
+    qd = mat.GetInverse().ExtractRotation().GetQuat()
     return Gf.Quatf(qd.GetReal(), *qd.GetImaginary())
 
 # ============================================================
@@ -256,13 +261,11 @@ try:
         os.makedirs(d, exist_ok=True)
     
     # === Setup FPV camera (VLM input) ===
-    # No look_at so we can manually orient it
-    cam_fpv = rep.create.camera(
-        position=(AGENT_START_X, AGENT_START_Y, AGENT_EYE_HEIGHT),
-        rotation=(0,0,0),
-        name="NavCamera"
-    )
-    rp_fpv = rep.create.render_product(cam_fpv, (1920, 1080))
+    # Use pure USD Camera instead of rep.create.camera to prevent Replicator OmniGraph
+    # from overriding our manual per-step pose updates.
+    nav_cam_path = "/World/NavCamera"
+    cam_fpv_prim = UsdGeom.Camera.Define(stage, nav_cam_path)
+    rp_fpv = rep.create.render_product(str(nav_cam_path), (1920, 1080))
     writer_fpv = rep.WriterRegistry.get("BasicWriter")
     writer_fpv.initialize(output_dir=out_dir_fpv, rgb=True)
     writer_fpv.attach([rp_fpv])
