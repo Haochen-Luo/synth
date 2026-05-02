@@ -6,7 +6,7 @@
 #   ssh GPU-843 'source ~/miniconda3/etc/profile.d/conda.sh && conda activate pp && \
 #     bash /home/qi/hc/Puppeteer/zehao_task/gen_media.sh'
 
-set -euo pipefail
+set -u
 
 BASE="/home/qi/hc/Puppeteer/zehao_task"
 PREVIEW="$BASE/nav_preview"
@@ -55,6 +55,17 @@ for VIEW in fpv birdseye; do
     ffmpeg -y -framerate $FPS -i "$PAT" -frames:v "$GN" \
         -vf "scale=320:180,fps=$FPS,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" \
         "$PREVIEW/${VIEW}_preview.gif" 2>/dev/null
+
+    # ─── Backfill per-frame thumbnails (480x270 JPEG) ───
+    MISSING=0
+    for png in "$SRC"/rgb_*.png; do
+        thumb="${png%.png}_thumb.jpg"
+        if [ ! -f "$thumb" ]; then
+            ffmpeg -y -i "$png" -vf "scale=480:270" -q:v 5 "$thumb" 2>/dev/null
+            MISSING=$((MISSING + 1))
+        fi
+    done
+    [ "$MISSING" -gt 0 ] && echo "  -> Backfilled $MISSING missing thumbnails" || true
 
     echo "  [DONE] $VIEW"
 done
