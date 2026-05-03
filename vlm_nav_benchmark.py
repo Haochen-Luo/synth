@@ -287,8 +287,10 @@ AGENT_HEIGHT = 0.0       # Fix: match dancer's floor-level physical height
 AGENT_EYE_HEIGHT = 1.58  # z for camera (eye level)
 RUNNER_TIME_PER_STEP = 0.5  # seconds of runner animation per nav step
 
-# Agent mesh faces +Y by default, but yaw=0 is +X, so offset by -90°
-AGENT_MESH_YAW_OFFSET = -90.0  # degrees
+# Agent mesh default facing direction → yaw=0 is +X.
+# The mesh actually faces -Y, so we rotate +90° to align with +X.
+# (was -90° which caused the agent to face backwards)
+AGENT_MESH_YAW_OFFSET = +90.0  # degrees
 
 # ============================================================
 # Target configurations
@@ -571,6 +573,10 @@ try:
     nav_history = []
     collision_occurred = False
     
+    # === Turn-lock anti-oscillation state ===
+    turn_lock_dir = None    # which direction is LOCKED ("TURN_LEFT" or "TURN_RIGHT")
+    turn_lock_until = -1    # step at which the lock expires
+    
     for step in range(MAX_STEPS):
         # Root offset keeps feet on the ground (pelvis-to-feet distance)
         agent_root_z = runner_root_offset[2] if runner_root_offset else 0.0
@@ -705,22 +711,28 @@ try:
                     agent_yaw -= 60
                     action = "TURN_RIGHT"
                     with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK ({blocked_moves} blocked moves)! Forcing 90° RIGHT\n")
-        # --- Turn oscillation detector (independent) ---
-        # If the VLM flip-flops L→R→L or R→L→R, it's confused about direction.
-        # Fix: commit to the FIRST direction with a bigger turn (2× angle), NOT move forward.
-        # Moving forward during oscillation often walks into walls.
+        # --- Turn oscillation detector: TURN LOCK mechanism ---
+        # If VLM flip-flops L→R→L or R→L→R, lock out the opposite turn for N steps.
+        # This prevents the VLM from immediately undoing a turn, which is the root cause.
+        TURN_LOCK_DURATION = 3  # steps to block the opposite direction
+        
+        # Check if current action is locked
+        if action == turn_lock_dir and step < turn_lock_until:
+            # Override: force the OPPOSITE direction (the one we committed to)
+            committed_dir = "TURN_RIGHT" if turn_lock_dir == "TURN_LEFT" else "TURN_LEFT"
+            with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: Turn lock active! {action} blocked, forcing {committed_dir} (lock expires step {turn_lock_until})\n")
+            action = committed_dir
+        
+        # Detect new oscillation and set lock
         if action in ("TURN_LEFT", "TURN_RIGHT") and len(nav_history) >= 2:
             last_actions = [h["action"] for h in nav_history[-2:]]
             if (last_actions == ["TURN_LEFT", "TURN_RIGHT"] and action == "TURN_LEFT") or \
                (last_actions == ["TURN_RIGHT", "TURN_LEFT"] and action == "TURN_RIGHT"):
-                # Commit to the current turn direction with a bigger angle to break the deadlock
-                extra_angle = TURN_ANGLE  # apply one additional turn increment
-                if action == "TURN_LEFT":
-                    agent_yaw += extra_angle
-                else:
-                    agent_yaw -= extra_angle
-                agent_yaw = wrap_angle_deg(agent_yaw)
-                with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: Turn oscillation detected! Committing {action} with 2×angle ({2*TURN_ANGLE}°)\n")
+                # Lock out the opposite direction
+                opposite = "TURN_RIGHT" if action == "TURN_LEFT" else "TURN_LEFT"
+                turn_lock_dir = opposite
+                turn_lock_until = step + TURN_LOCK_DURATION
+                with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: Turn oscillation detected! Locking {opposite} for {TURN_LOCK_DURATION} steps (until step {turn_lock_until})\n")
         
         nav_history.append({
             "step": step,
