@@ -152,15 +152,23 @@ First, briefly explain your reasoning based on what you see.
 Then, as the VERY LAST line of your response, output ONLY the single chosen action in this exact format:
 ACTION: <action_name>"""
 
-def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, action_history: list = None, step: int = 0, frame_quality: dict = None) -> tuple:
+def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, action_history: list = None, step: int = 0, frame_quality: dict = None, nav_history_records: list = None) -> tuple:
     """Send image to VLM, return (action_string, is_fallback)."""
     with open(image_path, "rb") as f:
         img_b64 = base64.b64encode(f.read()).decode("utf-8")
     
     prompt = f"You are navigating an indoor environment to reach the {TARGET_DESC}. Based on this first-person view, what action should you take? First explain your reasoning, then output the action."
-    if action_history:
-        recent = action_history[-5:]  # last 5 actions
-        prompt += f" Your recent actions were: {', '.join(recent)}. Avoid repeating unhelpful patterns."
+    if action_history and nav_history_records:
+        recent = nav_history_records[-8:]  # last 8 steps
+        history_lines = []
+        for h in recent:
+            moved = "moved" if h.get("moved", False) else "no movement"
+            history_lines.append(f"Step {h['step']}: {h['action']} ({moved}, yaw={h['yaw']:.0f}°)")
+        prompt += f" Recent navigation history:\n" + "\n".join(history_lines)
+        # Detect if agent has been stuck (no movement for 3+ steps)
+        recent_moved = [h.get("moved", True) for h in nav_history_records[-3:]]
+        if len(recent_moved) >= 3 and not any(recent_moved):
+            prompt += "\n⚠ WARNING: You have NOT moved for the last 3+ steps. You are likely stuck. Try a different direction."
     if collision_alert:
         prompt += " WARNING: Your path is currently blocked by an obstacle. You MUST turn to find a clear path."
     # Inject frame quality guidance (pixel-analysis driven)
@@ -573,9 +581,6 @@ try:
     nav_history = []
     collision_occurred = False
     
-    # === Turn-lock anti-oscillation state ===
-    turn_lock_dir = None    # which direction is LOCKED ("TURN_LEFT" or "TURN_RIGHT")
-    turn_lock_until = -1    # step at which the lock expires
     
     for step in range(MAX_STEPS):
         # Root offset keeps feet on the ground (pelvis-to-feet distance)
@@ -656,7 +661,7 @@ try:
                 f.write(f"[NAV] Step {step}: Frame quality: {fq_label} (mean={fq['mean_brightness']:.1f})\n")
         
         past_actions = [h["action"] for h in nav_history] if nav_history else None
-        action, is_fallback = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions, step=step, frame_quality=fq)
+        action, is_fallback = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions, step=step, frame_quality=fq, nav_history_records=nav_history)
         collision_occurred = False # reset after consuming
         
         # --- STOP confirmation (Sequential Confirmation, 2 rounds) ---
@@ -711,28 +716,10 @@ try:
                     agent_yaw -= 60
                     action = "TURN_RIGHT"
                     with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK ({blocked_moves} blocked moves)! Forcing 90° RIGHT\n")
-        # --- Turn oscillation detector: TURN LOCK mechanism ---
-        # If VLM flip-flops L→R→L or R→L→R, lock out the opposite turn for N steps.
-        # This prevents the VLM from immediately undoing a turn, which is the root cause.
-        TURN_LOCK_DURATION = 3  # steps to block the opposite direction
+
         
-        # Check if current action is locked
-        if action == turn_lock_dir and step < turn_lock_until:
-            # Override: force the OPPOSITE direction (the one we committed to)
-            committed_dir = "TURN_RIGHT" if turn_lock_dir == "TURN_LEFT" else "TURN_LEFT"
-            with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: Turn lock active! {action} blocked, forcing {committed_dir} (lock expires step {turn_lock_until})\n")
-            action = committed_dir
-        
-        # Detect new oscillation and set lock
-        if action in ("TURN_LEFT", "TURN_RIGHT") and len(nav_history) >= 2:
-            last_actions = [h["action"] for h in nav_history[-2:]]
-            if (last_actions == ["TURN_LEFT", "TURN_RIGHT"] and action == "TURN_LEFT") or \
-               (last_actions == ["TURN_RIGHT", "TURN_LEFT"] and action == "TURN_RIGHT"):
-                # Lock out the opposite direction
-                opposite = "TURN_RIGHT" if action == "TURN_LEFT" else "TURN_LEFT"
-                turn_lock_dir = opposite
-                turn_lock_until = step + TURN_LOCK_DURATION
-                with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: Turn oscillation detected! Locking {opposite} for {TURN_LOCK_DURATION} steps (until step {turn_lock_until})\n")
+        # Save pre-action position to compute 'moved' later
+        pre_x, pre_y = agent_x, agent_y
         
         nav_history.append({
             "step": step,
@@ -741,6 +728,7 @@ try:
             "yaw": round(agent_yaw, 1),
             "dist_to_target": round(dist_to_target, 3),
             "action": action,
+            "moved": False,  # will be updated after action execution
         })
         
         # 8. Check STOP
@@ -788,6 +776,10 @@ try:
         
         # Keep yaw in [-180, 180]
         agent_yaw = wrap_angle_deg(agent_yaw)
+        
+        # Update 'moved' field in nav_history
+        did_move = (abs(agent_x - pre_x) > 0.001 or abs(agent_y - pre_y) > 0.001)
+        nav_history[-1]["moved"] = did_move
         
         # 10. Advance simulation time (runner keeps moving)
         sim_time += RUNNER_TIME_PER_STEP
