@@ -295,6 +295,11 @@ AGENT_HEIGHT = 0.07      # Empirical lift: fresh USD-ref skeleton rest-pose root
 AGENT_EYE_HEIGHT = 1.58  # z for camera (eye level)
 RUNNER_TIME_PER_STEP = 0.5  # seconds of runner animation per nav step
 
+# Dark-frame escape: if agent faces a wall (black frames), force 180° turn
+DARK_WINDOW_SIZE = 4     # sliding window size
+DARK_THRESHOLD = 3       # trigger if >= this many dark frames in window
+DARK_ESCAPE_COOLDOWN = 3 # steps to skip dark-check after a 180° escape
+
 # Agent mesh default facing direction → yaw=0 is +X.
 # The mesh actually faces -Y, so we rotate +90° to align with +X.
 # (was -90° which caused the agent to face backwards)
@@ -582,7 +587,8 @@ try:
     # === Navigation log ===
     nav_history = []
     collision_occurred = False
-    
+    dark_frame_history = []          # bool per step: True = dark frame
+    dark_escape_cooldown = 0         # countdown after 180° escape
     
     for step in range(MAX_STEPS):
         # Root offset keeps feet on the ground (pelvis-to-feet distance)
@@ -657,8 +663,10 @@ try:
         
         # Check frame quality (pixel analysis for black/overexposed frames)
         fq = check_frame_quality(frame_path)
-        if fq.get('is_dark') or fq.get('is_overexposed'):
-            fq_label = 'DARK' if fq.get('is_dark') else 'OVEREXPOSED'
+        is_dark_frame = fq.get('is_dark', False)
+        dark_frame_history.append(is_dark_frame)
+        if is_dark_frame or fq.get('is_overexposed'):
+            fq_label = 'DARK' if is_dark_frame else 'OVEREXPOSED'
             with open(out_log, "a") as f:
                 f.write(f"[NAV] Step {step}: Frame quality: {fq_label} (mean={fq['mean_brightness']:.1f})\n")
         
@@ -682,6 +690,21 @@ try:
         
         log_action = f"{action} (fallback)" if is_fallback else action
         with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: VLM action = {log_action}\n")
+        
+        # --- Dark-frame escape: 3-of-4 sliding window → 180° about-face + MOVE_FORWARD ---
+        if dark_escape_cooldown > 0:
+            dark_escape_cooldown -= 1
+        else:
+            window = dark_frame_history[-DARK_WINDOW_SIZE:]
+            if len(window) >= DARK_WINDOW_SIZE and sum(window) >= DARK_THRESHOLD:
+                old_yaw = agent_yaw
+                agent_yaw = wrap_angle_deg(agent_yaw + 180)
+                action = "MOVE_FORWARD"  # move away from the wall after turning
+                dark_escape_cooldown = DARK_ESCAPE_COOLDOWN
+                with open(out_log, "a") as f:
+                    f.write(f"[NAV] Step {step}: DARK ESCAPE! {sum(window)}/{len(window)} dark frames "
+                            f"→ 180° turn ({old_yaw:.0f}°→{agent_yaw:.0f}°) + MOVE_FORWARD "
+                            f"(cooldown={DARK_ESCAPE_COOLDOWN} steps)\n")
         
         # Anti-oscillation guard v4: track collision-blocked moves, not just position
         # --- Stuck detector: only fires after consecutive collision-blocked moves ---
