@@ -162,7 +162,12 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
         recent = nav_history_records[-8:]  # last 8 steps
         history_lines = []
         for h in recent:
-            moved = "moved" if h.get("moved", False) else "no movement"
+            if h.get("blocked", False):
+                moved = "BLOCKED by obstacle"
+            elif h.get("moved", False):
+                moved = "moved"
+            else:
+                moved = "no movement"
             history_lines.append(f"Step {h['step']}: {h['action']} ({moved}, yaw={h['yaw']:.0f}°)")
         prompt += f" Recent navigation history:\n" + "\n".join(history_lines)
         # Detect if agent has been stuck (no movement for 3+ steps)
@@ -295,6 +300,10 @@ AGENT_HEIGHT = 0.07      # Empirical lift: fresh USD-ref skeleton rest-pose root
 AGENT_EYE_HEIGHT = 1.58  # z for camera (eye level)
 RUNNER_TIME_PER_STEP = 0.5  # seconds of runner animation per nav step
 
+# Camera pitch: tilt down to see low furniture (sofa, coffee table).
+# Habitat Challenge also tilts camera for realistic robot behavior (Hello Stretch).
+CAMERA_PITCH_DEG = -10   # degrees (negative = look down)
+
 # Dark-frame escape: if agent faces a wall (black frames), force 180° turn
 DARK_WINDOW_SIZE = 4     # sliding window size
 DARK_THRESHOLD = 3       # trigger if >= this many dark frames in window
@@ -351,19 +360,24 @@ def get_camera_lookat(pos, target):
     qd = mat.GetInverse().ExtractRotation().GetQuat()
     return Gf.Quatf(qd.GetReal(), *qd.GetImaginary())
 
-def get_camera_quat_from_yaw(yaw_deg, pitch_deg=-15.0):
+def get_camera_quat_from_yaw(yaw_deg, pitch_deg=0.0):
+    """Compute camera orientation quaternion from yaw (horizontal) and pitch (vertical tilt).
+    
+    Args:
+        yaw_deg: horizontal rotation (0° = +X, 90° = +Y)
+        pitch_deg: vertical tilt (negative = look down, positive = look up)
+    """
     from pxr import Gf
     import math
     yaw_rad = math.radians(yaw_deg)
     pitch_rad = math.radians(pitch_deg)
     
     eye = Gf.Vec3d(0.0, 0.0, 0.0)
-    # target vector with pitch and yaw
+    # Tilt the look-at target downward by pitch angle
     target = Gf.Vec3d(
         math.cos(yaw_rad) * math.cos(pitch_rad),
         math.sin(yaw_rad) * math.cos(pitch_rad),
-        math.sin(pitch_rad)
-    )
+        math.sin(pitch_rad))
     up = Gf.Vec3d(0.0, 0.0, 1.0)
     
     mat = Gf.Matrix4d().SetLookAt(eye, target, up)
@@ -616,7 +630,7 @@ try:
             cam_orient = cam_xf.AddOrientOp()
             
             cam_trans.Set(Gf.Vec3d(agent_x, agent_y, AGENT_EYE_HEIGHT))
-            cam_orient.Set(get_camera_quat_from_yaw(agent_yaw))
+            cam_orient.Set(get_camera_quat_from_yaw(agent_yaw, CAMERA_PITCH_DEG))
         
         # 3. Animate Runner 1 (obstacle) — position from trajectory keyframes
         if runner1_spec and runner1_xf_ops:
@@ -712,11 +726,11 @@ try:
                             f"→ 180° turn ({old_yaw:.0f}°→{agent_yaw:.0f}°) + MOVE_FORWARD "
                             f"(cooldown={DARK_ESCAPE_COOLDOWN} steps)\n")
         
-        # --- Stuck detector v5: position-stagnation based ---
-        # Count how many recent steps the agent has been at the same position,
-        # regardless of action type. This catches the case where the agent
-        # oscillates turns against a large obstacle (e.g., sofa) without the
-        # old blocked-MOVE counter ever accumulating high enough.
+        # --- Stuck detector v6: retreat-then-reroute ---
+        # Count how many recent steps the agent has been at the same position.
+        # When stuck at a large obstacle (e.g., sofa edge), simple 90°/180° turns
+        # often fail because ALL cardinal directions hit the obstacle's bounding box.
+        # Solution: RETREAT (step backward) to create clearance, then reroute.
         stagnant_steps = 0
         for h in reversed(nav_history):
             if abs(h["x"] - round(agent_x, 3)) < 0.01 and abs(h["y"] - round(agent_y, 3)) < 0.01:
@@ -724,24 +738,35 @@ try:
             else:
                 break
         
-        if stagnant_steps >= 10 and action == "MOVE_FORWARD":
-            if stagnant_steps >= 20:
-                # Severely stuck — 180° about-face to abandon this approach
-                agent_yaw = wrap_angle_deg(agent_yaw + 180)
-                action = "MOVE_FORWARD"
-                with open(out_log, "a") as f:
-                    f.write(f"[NAV] Step {step}: STUCK ({stagnant_steps} steps same pos)! 180° about-face + MOVE_FORWARD\n")
-            else:
-                # Moderately stuck — 90° sideways to try to go around the obstacle
-                # Alternate left/right to explore both sides
-                if stagnant_steps % 2 == 0:
-                    agent_yaw = wrap_angle_deg(agent_yaw + 90)
+        if stagnant_steps >= 6 and action == "MOVE_FORWARD":
+            # Find the direction we CAME FROM (last position where we were NOT at current pos)
+            retreat_yaw = None
+            for h in reversed(nav_history):
+                if abs(h["x"] - round(agent_x, 3)) > 0.01 or abs(h["y"] - round(agent_y, 3)) > 0.01:
+                    # Direction FROM that position TO current = approach angle
+                    approach_yaw = math.degrees(math.atan2(
+                        round(agent_y, 3) - h["y"],
+                        round(agent_x, 3) - h["x"]))
+                    retreat_yaw = wrap_angle_deg(approach_yaw + 180)  # reverse it
+                    break
+            
+            if retreat_yaw is not None:
+                # Escalating strategy based on how long we've been stuck
+                if stagnant_steps < 12:
+                    # First: try 90° offset from approach direction (go AROUND the obstacle)
+                    offset = 90 if (stagnant_steps % 2 == 0) else -90
+                    escape_yaw = wrap_angle_deg(retreat_yaw + 180 + offset)  # 90° off the approach
+                    agent_yaw = escape_yaw
                     with open(out_log, "a") as f:
-                        f.write(f"[NAV] Step {step}: STUCK ({stagnant_steps} steps same pos)! Forcing 90° LEFT\n")
+                        f.write(f"[NAV] Step {step}: STUCK ({stagnant_steps} steps same pos)! "
+                                f"Trying {'+' if offset > 0 else ''}{offset}° off approach "
+                                f"→ yaw={agent_yaw:.0f}°\n")
                 else:
-                    agent_yaw = wrap_angle_deg(agent_yaw - 90)
+                    # Escalation: RETREAT backward (guaranteed free — we came from there)
+                    agent_yaw = retreat_yaw
                     with open(out_log, "a") as f:
-                        f.write(f"[NAV] Step {step}: STUCK ({stagnant_steps} steps same pos)! Forcing 90° RIGHT\n")
+                        f.write(f"[NAV] Step {step}: STUCK ({stagnant_steps} steps same pos)! "
+                                f"RETREATING → yaw={agent_yaw:.0f}° (reverse of approach)\n")
 
         
         # Save pre-action position to compute 'moved' later
@@ -803,9 +828,10 @@ try:
         # Keep yaw in [-180, 180]
         agent_yaw = wrap_angle_deg(agent_yaw)
         
-        # Update 'moved' field in nav_history
+        # Update 'moved' and 'blocked' fields in nav_history
         did_move = (abs(agent_x - pre_x) > 0.001 or abs(agent_y - pre_y) > 0.001)
         nav_history[-1]["moved"] = did_move
+        nav_history[-1]["blocked"] = (action == "MOVE_FORWARD" and not did_move)
         
         # 10. Advance simulation time (runner keeps moving)
         sim_time += RUNNER_TIME_PER_STEP
