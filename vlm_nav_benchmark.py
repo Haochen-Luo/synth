@@ -291,7 +291,7 @@ STEP_DISTANCE = 0.25     # meters per MOVE_FORWARD
 TURN_ANGLE = 15.0        # degrees per TURN
 MAX_STEPS = 250        # timeout
 STOP_CONFIRM_ROUNDS = 2  # require 2 consecutive STOP predictions to accept
-AGENT_HEIGHT = 0.0       # Fix: match dancer's floor-level physical height
+AGENT_HEIGHT = 0.07      # Empirical lift: fresh USD-ref skeleton rest-pose root is ~7cm lower than animated runner
 AGENT_EYE_HEIGHT = 1.58  # z for camera (eye level)
 RUNNER_TIME_PER_STEP = 0.5  # seconds of runner animation per nav step
 
@@ -314,7 +314,7 @@ TARGET_CONFIGS = {
     "bookshelf": {
         "coords": [0.34, 8.76],
         "success_radius": 1.5,  # shelf is narrow (~0.27m deep, 1.19m wide)
-        "desc": "tall white 4-tier SHELF against the left wall (the tall one with items on it, NOT the short 2-tier bookcase)",
+        "desc": "tall white 4-tier SHELF (the tall one with items on it, NOT the short 2-tier bookcase)",
         # Ground truth from scene_inventory.json
         "bbox": [0.20, 8.16, 0.47, 9.36],
     },
@@ -516,11 +516,13 @@ try:
         d_trans = d_xf.AddTranslateOp()
         d_orient = d_xf.AddOrientOp()
         d_scale = d_xf.AddScaleOp()
-        d_trans.Set(Gf.Vec3d(d_pos[0], d_pos[1], d_root_off[2]))
+        # Use runner's root_offset since we've scaled the dancer to runner_scale,
+        # NOT the dancer's own root_offset (which was computed for the dancer's original scale).
+        d_trans.Set(Gf.Vec3d(d_pos[0], d_pos[1], runner_root_offset[2]))
         d_yaw_rad = math.radians(d_rot[2])
         d_orient.Set(Gf.Quatf(math.cos(d_yaw_rad/2), 0, 0, math.sin(d_yaw_rad/2)))
         d_scale.Set(Gf.Vec3d(runner_scale[0], runner_scale[1], runner_scale[2]))
-        with open(out_log, "a") as f: f.write(f"[NAV] Dancer scale set to {runner_scale} to match runner\n")
+        with open(out_log, "a") as f: f.write(f"[NAV] Dancer: scale={runner_scale}, Z={runner_root_offset[2]:.3f} (using runner root_offset, was {d_root_off[2]:.3f})\n")
     
     # === Setup Runner 1 (obstacle) — override scale + animate manually ===
     runner1_prim = None
