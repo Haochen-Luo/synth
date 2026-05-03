@@ -295,18 +295,18 @@ AGENT_MESH_YAW_OFFSET = -90.0  # degrees
 # ============================================================
 TARGET_CONFIGS = {
     "sofa": {
-        "coords": [4.43, 6.49],
-        "success_radius": 3.0,  # sofa bbox is ~2.8m long; 3m from center = at the near edge
+        "coords": [4.37, 6.43],
+        "success_radius": 3.0,  # sofa bbox is ~2.58m; 3m from center = at the near edge
         "desc": "SOFA (the large light-green couch)",
-        # Approximate sofa bounding box (x_min, y_min, x_max, y_max) for trajectory plot
-        "bbox": [3.0, 5.5, 5.9, 7.5],
+        # Ground truth from scene_inventory.json (bbox_min/max in meters)
+        "bbox": [3.08, 5.14, 5.66, 7.72],
     },
     "bookshelf": {
         "coords": [0.34, 8.76],
-        "success_radius": 1.5,  # shelf is narrow
+        "success_radius": 1.5,  # shelf is narrow (~0.27m deep, 1.19m wide)
         "desc": "tall white 4-tier SHELF against the left wall (the tall one with items on it, NOT the short 2-tier bookcase)",
-        # Approximate bookshelf bounding box
-        "bbox": [0.0, 8.0, 0.7, 9.5],
+        # Ground truth from scene_inventory.json
+        "bbox": [0.20, 8.16, 0.47, 9.36],
     },
 }
 
