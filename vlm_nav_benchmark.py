@@ -111,7 +111,7 @@ def check_frame_quality(image_path: str) -> dict:
 
         result = {'mean_brightness': mean_val, 'is_dark': False, 'is_overexposed': False, 'guidance': ''}
 
-        if mean_val < 12 or dark_frac > 0.92:
+        if mean_val < 12 or dark_frac > 0.85:
             result['is_dark'] = True
             result['guidance'] = (
                 " VISUAL WARNING: The current camera frame is almost entirely BLACK — "
@@ -706,12 +706,21 @@ try:
                     action = "TURN_RIGHT"
                     with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK ({blocked_moves} blocked moves)! Forcing 90° RIGHT\n")
         # --- Turn oscillation detector (independent) ---
+        # If the VLM flip-flops L→R→L or R→L→R, it's confused about direction.
+        # Fix: commit to the FIRST direction with a bigger turn (2× angle), NOT move forward.
+        # Moving forward during oscillation often walks into walls.
         if action in ("TURN_LEFT", "TURN_RIGHT") and len(nav_history) >= 2:
             last_actions = [h["action"] for h in nav_history[-2:]]
             if (last_actions == ["TURN_LEFT", "TURN_RIGHT"] and action == "TURN_LEFT") or \
                (last_actions == ["TURN_RIGHT", "TURN_LEFT"] and action == "TURN_RIGHT"):
-                with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: Turn oscillation detected! Overriding to MOVE_FORWARD\n")
-                action = "MOVE_FORWARD"
+                # Commit to the current turn direction with a bigger angle to break the deadlock
+                extra_angle = TURN_ANGLE  # apply one additional turn increment
+                if action == "TURN_LEFT":
+                    agent_yaw += extra_angle
+                else:
+                    agent_yaw -= extra_angle
+                agent_yaw = wrap_angle_deg(agent_yaw)
+                with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: Turn oscillation detected! Committing {action} with 2×angle ({2*TURN_ANGLE}°)\n")
         
         nav_history.append({
             "step": step,
