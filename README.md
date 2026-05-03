@@ -1,8 +1,8 @@
 # VLM Navigation Benchmark
 
-Closed-loop indoor navigation benchmark powered by a Vision-Language Model (VLM) running inside NVIDIA Isaac Sim.
+Closed-loop indoor navigation benchmark powered by a Vision-Language Model (VLM) running inside NVIDIA Isaac Sim. A human-mesh agent navigates a physically-accurate living room to reach a target object, while avoiding a dynamically-moving obstacle (runner).
 
-An agent (human mesh) navigates a physically-accurate living room to reach a **sofa**, while avoiding a dynamically-moving obstacle (runner). The VLM receives first-person camera frames each step and outputs discrete navigation actions.
+The benchmark follows **Habitat ObjectNav** conventions: the VLM receives egocentric RGB frames, outputs discrete actions, and relies on its own visual reasoning for all navigation decisions. No oracle planner, no pre-built map, no distance-to-target leakage.
 
 ---
 
@@ -24,9 +24,9 @@ An agent (human mesh) navigates a physically-accurate living room to reach a **s
      ┌─────────────────────────────────────────────┐
      │            Navigation Loop (Python)          │
      │  1. Update agent pose in scene               │
-     │  2. Update FPV camera (pure Yaw rotation)    │
+     │  2. Update FPV camera (yaw + pitch tilt)     │
      │  3. Render frame (PathTracing, 16 subframes)  │
-     │  4. Send frame to VLM API                    │
+     │  4. Send frame + history to VLM API          │
      │  5. Apply action (MOVE/TURN/STOP)            │
      │  6. PhysX sweep_sphere_closest collision      │
      └──────────────────────┬──────────────────────┘
@@ -35,7 +35,7 @@ An agent (human mesh) navigates a physically-accurate living room to reach a **s
      ┌─────────────────────────────────────────────┐
      │          VLM (vLLM on localhost:8300)         │
      │  Model: Qwen/Qwen3-VL-30B-A3B-Instruct-FP8  │
-     │  Input: Base64 PNG frame                     │
+     │  Input: Base64 PNG frame + nav history       │
      │  Output: MOVE_FORWARD | TURN_LEFT |          │
      │          TURN_RIGHT | STOP                   │
      └─────────────────────────────────────────────┘
@@ -47,37 +47,99 @@ An agent (human mesh) navigates a physically-accurate living room to reach a **s
 
 | File | Purpose |
 |------|---------|
-| `vlm_nav_benchmark.py` | **Headless benchmark script.** Runs the full loop end-to-end in Docker, writes logs to `vlm_nav.log`, and generates MP4/GIF outputs. Best for automated batch testing. |
-| `vlm_nav_interactive.py` | **Jupyter Notebook script** (`.py` with `# %%` cell markers). Same logic split into 5 cells for interactive step-by-step debugging in the browser. |
-| `start_jupyter.sh` | Launches the Isaac Sim Docker container with Jupyter Notebook server on port 8888. |
-| `render_demo_nav.py` | Earlier demo rendering script (reference only). |
-
-### Supporting / Test Files (can be archived)
-
-| File | Purpose |
-|------|---------|
-| `test_cameras_orient.py` | Camera orientation debugging (quaternion experiments) |
-| `test_quat.py` | Quaternion math validation |
-| `test_issac_quick.py` | Minimal Isaac Sim startup test |
-| `camera_grid_search.py` | Bird's-eye camera position sweep |
+| `vlm_nav_benchmark.py` | **Headless benchmark script.** Runs the full loop, writes logs/media to a timestamped `runs/<target>_<timestamp>/` directory. |
+| `vlm_nav_interactive.py` | **Jupyter Notebook script** (`.py` with `# %%` cell markers). Same logic split into cells for interactive debugging. |
+| `gen_media.sh` | FFmpeg-based media post-processing. Called automatically at end of benchmark run. |
+| `regen_trajectory_plot.py` | Standalone 2D trajectory plotter. Can regenerate trajectory maps from any run's `vlm_nav_history.json`. |
+| `start_jupyter.sh` | Launches the Isaac Sim Docker container with Jupyter on port 8888. |
 
 ---
 
 ## Navigation Parameters
 
 ```python
-STEP_DISTANCE   = 0.25    # meters per MOVE_FORWARD
-TURN_ANGLE      = 15.0    # degrees per TURN_LEFT / TURN_RIGHT
-SUCCESS_RADIUS  = 0.8     # agent STOPs within 0.8m → SUCCESS
-MAX_STEPS       = 250     # timeout limit (interactive) / 5 (quick test in benchmark)
+STEP_DISTANCE      = 0.25    # meters per MOVE_FORWARD
+TURN_ANGLE         = 15.0    # degrees per TURN_LEFT / TURN_RIGHT
+MAX_STEPS          = 250     # timeout limit
+STOP_CONFIRM_ROUNDS = 2      # require 2 consecutive STOP predictions
 
-AGENT_HEIGHT    = 0.0     # Z-position of agent root (floor level)
-AGENT_EYE_HEIGHT = 1.58   # Z-position of FPV camera (human eye level)
+AGENT_HEIGHT       = 0.07    # Z-offset for agent mesh (skeleton rest-pose correction)
+AGENT_EYE_HEIGHT   = 1.58    # Z of FPV camera (human eye level)
+CAMERA_PITCH_DEG   = -10     # degrees downward tilt (see low furniture)
 
-TARGET          = [4.38, 6.44]  # Sofa center coordinates
-AGENT_START     = (12.0, 4.0)   # Start on the rug
-AGENT_START_YAW = 160.0         # Facing roughly toward sofa
+AGENT_START        = (12.0, 4.0)
+AGENT_START_YAW    = 160.0   # degrees
 ```
+
+## Multi-Target Support
+
+Target is selected via environment variable:
+
+```bash
+# Sofa (default)
+docker exec vlm-jupyter /isaac-sim/python.sh vlm_nav_benchmark.py
+
+# Bookshelf
+NAV_TARGET=bookshelf docker exec vlm-jupyter /isaac-sim/python.sh vlm_nav_benchmark.py
+```
+
+| Target | Coords | Success Radius | Description |
+|--------|--------|---------------|-------------|
+| `sofa` | (4.37, 6.43) | 3.0m | Large light-green couch (easy — direct path) |
+| `bookshelf` | (0.34, 8.76) | 1.5m | Tall white 4-tier shelf (hard — sofa blocks direct path) |
+
+---
+
+## Design Decisions (Habitat-Aligned)
+
+### 1. Pure VLM Reasoning — No Oracle Planner
+
+Following Habitat ObjectNav conventions, the VLM has full agency over navigation decisions. We intentionally do **not** provide:
+- Distance to target (would leak oracle info)
+- Pre-built occupancy map
+- Action masking based on ground truth
+
+The VLM receives only: **egocentric RGB frame + recent action history**.
+
+### 2. Camera Pitch Tilt (-10°)
+
+The camera is tilted 10° downward from horizontal. This is aligned with Habitat Challenge conventions (Hello Stretch robot configuration) where cameras are tilted to see the ground/obstacles ahead.
+
+**Rationale**: At a perfectly horizontal 1.58m eye height, low furniture like sofas (~0.8m) barely appears in the FOV. The VLM sees the target *over* the sofa and walks straight into it. The -10° pitch makes obstacles significantly more visible.
+
+### 3. Collision Feedback in Prompt (Not Oracle Planner)
+
+When `MOVE_FORWARD` is blocked by physics collision, the nav history reports **"BLOCKED by obstacle"** instead of generic "no movement":
+
+```
+Step 103: MOVE_FORWARD (BLOCKED by obstacle, yaw=145°)
+Step 104: MOVE_FORWARD (BLOCKED by obstacle, yaw=160°)
+⚠ WARNING: You have NOT moved for the last 3+ steps. You are likely stuck.
+```
+
+This is equivalent to proprioceptive feedback (robot knows its wheels stopped turning) — not an oracle. The VLM still decides *how* to respond.
+
+### 4. No VLM-Level Anti-Oscillation Override
+
+VLM oscillation (repeating TURN_LEFT/TURN_RIGHT) is treated as a **diagnostic metric of model reasoning failure**, not something to paper over with code. This aligns with Habitat research where oscillation rates are reported as evaluation metrics.
+
+### 5. Physics-Level Safety Mechanisms
+
+Two safety mechanisms operate below the VLM decision layer. These are analogous to hardware-level safety (e.g., bumper sensors) and do not interfere with VLM reasoning during normal navigation:
+
+#### Dark-Frame Escape
+When 3 of the last 4 rendered frames are dark (camera facing a wall at close range), forces a 180° about-face + MOVE_FORWARD. After triggering, a 3-step cooldown prevents re-triggering.
+
+```python
+DARK_WINDOW_SIZE   = 4    # sliding window
+DARK_THRESHOLD     = 3    # trigger threshold
+DARK_ESCAPE_COOLDOWN = 3  # cooldown steps after trigger
+```
+
+#### Stuck Detector (Position Stagnation)
+When the agent's position hasn't changed for 6+ steps (regardless of action type), intervenes on blocked MOVE_FORWARD actions. Uses the agent's actual approach direction to compute escape angles:
+- **6–11 steps stuck**: Try ±90° off the approach direction (alternate sides)
+- **12+ steps stuck**: Retreat backward (reverse of approach — guaranteed free path)
 
 ---
 
@@ -85,29 +147,21 @@ AGENT_START_YAW = 160.0         # Facing roughly toward sofa
 
 ### Collision Detection: PhysX Sphere Sweep
 
-Instead of a thin 1D raycast, we use a **volumetric sphere sweep** (`sweep_sphere_closest`) that wraps the agent in an invisible 0.4m-diameter collision shell:
+Volumetric sphere sweep at two heights (waist=0.5m, chest=1.0m) to catch both low and high obstacles:
 
 ```python
-import omni.physx, carb
 query = omni.physx.get_physx_scene_query_interface()
-
-origin    = carb.Float3(agent_x, agent_y, 0.5)     # sphere center at knee/waist height
-direction = carb.Float3(dir_x, dir_y, 0.0)          # forward direction
-hit       = query.sweep_sphere_closest(0.2, origin, direction, 0.25)  # radius=0.2m, dist=0.25m
-
-if hit["hit"]:
-    # BLOCKED — agent stays in place, VLM receives collision warning
+for sweep_z in [0.5, 1.0]:
+    origin = carb.Float3(agent_x, agent_y, sweep_z)
+    direction = carb.Float3(dir_x, dir_y, 0.0)
+    hit = query.sweep_sphere_closest(0.2, origin, direction, STEP_DISTANCE)
 ```
 
 ### Human Mesh Scaling
 
-All human `.usdc` meshes are authored in **centimeter** units. Isaac Sim uses **meters**. Both the agent and the obstacle runner must have:
+All human `.usdc` meshes use the runner's `animation_binding` scale (`0.53`). Root Z-offset (`runner_root_offset[2] ≈ 0.534m`) keeps feet on the ground.
 
-```python
-scale_op.Set(Gf.Vec3d(0.01, 0.01, 0.01))  # cm → m conversion
-```
-
-Without this, humans appear as 180m giants and all physics thresholds become meaningless.
+The VLM agent mesh (`agent_runner`) is a fresh USD reference instance. Its skeleton rest-pose root sits ~7cm lower than the animated runner, corrected by `AGENT_HEIGHT = 0.07`.
 
 ---
 
@@ -115,37 +169,49 @@ Without this, humans appear as 180m giants and all physics thresholds become mea
 
 ### FPV Camera (VLM Input)
 
-- **Position**: Follows agent at `(agent_x, agent_y, 1.58)` — simulating human eye height.
-- **Orientation**: Pure Z-axis yaw rotation only. No pitch, no roll.
-  ```python
-  q_yaw = Gf.Rotation(Gf.Vec3d(0, 0, 1), float(agent_yaw)).GetQuat()
-  ```
+- **Position**: `(agent_x, agent_y, 1.58)` — human eye height
+- **Orientation**: Yaw rotation + pitch tilt (-10° downward)
 - **Resolution**: 1920 × 1080 (PathTracing, 16 SPP subframes)
 
-> **Design note**: The default USD camera at `rotation=(0,0,0)` already looks horizontally forward. Applying only yaw rotation keeps the horizon perfectly level. Using `lookat_to_quatf` causes a 90° pitch-down because it aligns the +X axis (not -Z lens axis) toward the target.
+### Bird's-Eye Camera (Visualization Only)
 
-### Bird's-Eye Camera (Visualization)
-
-- **Position**: `(13.0, 7.0, 2.7)` — elevated corner of the room
-- **Look-at**: `(5.0, 5.0, 0.5)` — center of the living room
-- **Purpose**: Third-person visualization only; not fed to VLM.
+- **Position**: `(13.0, 7.0, 2.7)` — elevated corner of room
+- **Purpose**: Third-person view for trajectory analysis. Never fed to VLM.
 
 ---
 
-## Scene Assets
+## Output Structure
 
-All scene data lives under:
+Each run produces a self-contained directory:
+
 ```
-/home/qi/hc/Puppeteer/zehao_new_folder/phy_env/case11_multi_surface_turn_right_full_physics_scene/
+runs/bookshelf_20260503_051350/
+├── vlm_nav.log              # Step-by-step log (positions, actions, collisions)
+├── vlm_nav_history.json     # Structured trajectory data
+├── vlm_responses.jsonl      # Raw VLM API responses
+├── trajectory_2d.png        # Top-down trajectory visualization
+├── vlm_nav_frames_fpv/      # Per-step FPV frames (rgb_0000.png, ...)
+├── vlm_nav_frames_bird/     # Per-step bird's-eye frames
+├── demo_fpv_hd.mp4          # HD FPV video
+├── demo_fpv_lite.mp4        # Compressed FPV video
+├── demo_birdseye_hd.mp4     # HD bird's-eye video
+└── demo_birdseye_lite.mp4   # Compressed bird's-eye video
 ```
 
-| Path | Contents |
-|------|----------|
-| `compiled_stages/*.usda` | Main USD stage (room geometry, furniture, walls, floor) |
-| `compiled_specs/*.spec.json` | Human trajectory keyframes, animation FPS, loop modes |
-| `assets/humans/obj_1_run_anim_1.usdc` | Animated human mesh (runner/agent, centimeter-scale) |
-| `metadata/` | Scene metadata |
-| `runtime/` | Runtime intent and validation data |
+---
+
+## Run Results
+
+| Run | Target | Result | Steps | Final Dist | Notes |
+|-----|--------|--------|-------|-----------|-------|
+| `sofa_20260503_040344` | Sofa | ✅ SUCCESS | 33 | 2.82m | Clean path, STOP confirmed |
+| `bookshelf_20260503_051350` | Bookshelf | ❌ TIMEOUT | 250 | 5.25m | Navigated correctly but got stuck at sofa edge (obstacle in path) |
+| `bookshelf_20260503_041038` | Bookshelf | ❌ TIMEOUT | 250 | 12.4m | "Left wall" bias in prompt caused wrong turn from start (fixed) |
+| `bookshelf_20260503_074526` | Bookshelf | ❌ TIMEOUT | 250 | 14.92m | VLM navigation failure (walked wrong direction) |
+
+### Known Failure Mode: Sofa Obstruction
+
+The bookshelf is behind the sofa. The VLM navigates correctly toward the bookshelf but gets physically blocked by the sofa. From the agent's eye level, the sofa appears below the bookshelf and the VLM doesn't recognize it as an obstacle. The camera tilt (-10°) and collision feedback ("BLOCKED by obstacle") were added to address this. Full validation pending next run with these changes.
 
 ---
 
@@ -154,35 +220,29 @@ All scene data lives under:
 ### Container: `vlm-jupyter`
 
 ```bash
-# Launch (run on GPU-843):
+# Launch (on GPU-843):
 bash /home/qi/hc/Puppeteer/zehao_task/start_jupyter.sh
 ```
 
-This starts:
 - **Image**: `nvcr.io/nvidia/isaac-sim:4.5.0`
 - **GPU**: Device 4 (`--gpus '"device=4"'`)
-- **Network**: Host mode (port 8888 for Jupyter, port 8300 for vLLM)
-- **Volume mount**: `/home/qi/hc/Puppeteer` → same path inside container
-- **Working dir**: `/home/qi/hc/Puppeteer/zehao_task`
+- **Network**: Host mode (port 8888 Jupyter, port 8300 vLLM)
 
-### Running the Benchmark (Headless)
+### Running the Benchmark
 
 ```bash
-# From login node:
+# From login node — sofa target:
 ssh GPU-843 "docker exec vlm-jupyter /isaac-sim/python.sh \
+  /home/qi/hc/Puppeteer/zehao_task/vlm_nav_benchmark.py"
+
+# Bookshelf target:
+ssh GPU-843 "docker exec -e NAV_TARGET=bookshelf vlm-jupyter /isaac-sim/python.sh \
   /home/qi/hc/Puppeteer/zehao_task/vlm_nav_benchmark.py"
 ```
 
-### Running Interactively (Jupyter)
-
-1. SSH port-forward: `ssh -L 8888:localhost:8888 GPU-843`
-2. Open `http://localhost:8888` in browser
-3. Open `vlm_nav_interactive.py`
-4. Run cells sequentially (Cell 1 → Cell 5)
-
 ### VLM Server (vLLM)
 
-The VLM must be running separately on `localhost:8300`:
+Must be running on `localhost:8300`:
 ```
 Model: Qwen/Qwen3-VL-30B-A3B-Instruct-FP8
 Endpoint: http://localhost:8300/v1/chat/completions
@@ -190,64 +250,19 @@ Endpoint: http://localhost:8300/v1/chat/completions
 
 ---
 
-## Output Files
-
-After a benchmark run, the following are generated:
-
-### Frame Directories
-| Directory | Contents |
-|-----------|----------|
-| `vlm_nav_frames_fpv/` | Per-step FPV camera frames (`rgb_0000.png`, ...) |
-| `vlm_nav_frames_bird/` | Per-step bird's-eye camera frames |
-
-### Media (Auto-generated via FFmpeg in `pp` conda env)
-
-| File | Type | Resolution | Use Case |
-|------|------|-----------|----------|
-| `demo_fpv_hd.mp4` | H.264 MP4 | 1920×1080 | Archival / paper figures |
-| `demo_fpv_lite.mp4` | H.264 MP4 | 640p | Quick browser preview |
-| `demo_fpv_hd.gif` | GIF | 960p | Slides / README embedding |
-| `demo_fpv_lite.gif` | GIF | 480p | Instant preview |
-| `demo_birdseye_hd.*` | Same 4 variants for bird's-eye view | | |
-
-### Logs
-| File | Contents |
-|------|----------|
-| `vlm_nav.log` | Step-by-step navigation log (positions, actions, collisions) |
-| `vlm_nav_history.json` | Structured JSON log of the full trajectory |
-
----
-
-## Known Issues & Gotchas
-
-1. **OptixDenoiser warnings** (`nvoptix.bin` not found) — harmless; denoiser is optional and not used.
-2. **`shutil` must be imported** inside the `try` block of `vlm_nav_benchmark.py` (it runs inside Isaac Sim's embedded Python).
-3. **Frame directory cleanup** — Both scripts call `shutil.rmtree()` before each run to prevent stale frames from previous runs contaminating the output video.
-4. **Isaac Sim Camera Coordinate Frame Differences**:
-   - Standard USD cameras expect **-Z forward, +Y up**.
-   - `rep.create.camera` (Replicator cameras) expect **+X forward, +Z up** (World frame convention).
-   - **DO NOT use** `SetLookAt` or complex pitch/roll quaternions for the FPV camera. Doing so aligns the USD +Y up vector with the World +Z sky, causing a 90-degree sideways rotated image. **Always use a pure Z-axis yaw rotation** (e.g. `Gf.Rotation(Gf.Vec3d(0, 0, 1), yaw)`) for the Replicator FPV camera.
-5. **VLM oscillation** — The VLM sometimes oscillates between TURN_LEFT and TURN_RIGHT indefinitely. This is a model-level limitation, not a physics bug.
-6. **Thumbnail Generation (PIL)** — If saving PNGs (which have an RGBA alpha channel) as JPEG thumbnails using PIL, you must first convert the image to RGB (`img.convert('RGB')`). Failing to do so will cause a silent `OSError` if caught inside a blind `try-except` block, resulting in missing thumbnails.
-7. **Double-Scaling of Physics Human Models** — The 4D human assets (like `obj_1_run_anim_1.usdc`) may have a native `scale` (e.g. `0.53`) baked directly into their USD `Xform` node. If the `compiled.spec.json` *also* contains `"scale_xyz": [0.53, 0.53, 0.53]` at the top level, the `human_physics` extension will read the JSON and apply a *second* `0.53` scale to the physical colliders and the root. This results in `0.53 * 0.53 = 0.28`, turning the human into a tiny "ant" that appears sunken into the floor because its pelvis rests on the floor instead of its feet. **Fix:** Ensure the top-level `scale_xyz` in the `.spec.json` is set to `[1.0, 1.0, 1.0]` for models that already have baked USD scales.
----
-
 ## Conda Environment: `pp`
 
-FFmpeg for media post-processing is available in the `pp` conda environment:
+FFmpeg for media post-processing:
 ```bash
 source /home/qi/miniconda3/etc/profile.d/conda.sh && conda activate pp
-ffmpeg -version  # should work
 ```
-
-This is used both by the interactive script's Cell 5 and by manual command-line media generation.
 
 ---
 
-## Progress Updates
+## Known Issues
 
-### [2026-05-02] Navigation Benchmark Stabilization Complete
-- **Success Threshold Calibration**: Increased `SUCCESS_RADIUS` to `2.5m` to reliably detect when the VLM agent reaches the edge of large target objects (e.g. Sofa).
-- **Physical Realism & Scaling**: Resolved a critical "double-scaling" bug where background physics actors (`runner1`) were shrunk to `0.28` scale due to conflicting USD baked scales and JSON spec scales. Ensured all characters are rendered at `0.53` scale with feet perfectly grounded on the `Z=0` floor plane.
-- **Camera Pose Optimization**: Repositioned `bird` and `bird2` cameras to `Z=2.9` (below the ceiling) and implemented a robust `get_camera_lookat()` utility. This permanently fixed the "black screen / clipping" artifacts caused by placing ultra-wide FOV cameras outside the room boundaries.
-- **Orientation Stability**: Restored `get_camera_quat_from_yaw()` to enforce pure Z-axis yaw rotations for the FPV camera, preventing the agent from tilting its head into the floor during movement.
+1. **OptixDenoiser warnings** — Harmless; denoiser is optional.
+2. **VLM oscillation** — Model sometimes alternates TURN_LEFT/TURN_RIGHT. This is a VLM reasoning limitation, not a code bug. Reported as a diagnostic metric.
+3. **Low-obstacle blindness** — Even with -10° camera tilt, the VLM may not recognize low furniture as obstacles. This is a known limitation in VLM-only navigation (Habitat research uses separate geometric planners for this).
+4. **Agent mesh Z-offset** — The `AGENT_HEIGHT = 0.07` correction is empirical. May need fine-tuning if the mesh USD changes.
+5. **Double-Scaling** — The 4D human `.usdc` meshes may have baked USD scales. Ensure `scale_xyz` in `.spec.json` is `[1.0, 1.0, 1.0]` for models with baked scales.
