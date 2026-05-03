@@ -351,13 +351,19 @@ def get_camera_lookat(pos, target):
     qd = mat.GetInverse().ExtractRotation().GetQuat()
     return Gf.Quatf(qd.GetReal(), *qd.GetImaginary())
 
-def get_camera_quat_from_yaw(yaw_deg):
+def get_camera_quat_from_yaw(yaw_deg, pitch_deg=-15.0):
     from pxr import Gf
     import math
     yaw_rad = math.radians(yaw_deg)
+    pitch_rad = math.radians(pitch_deg)
     
     eye = Gf.Vec3d(0.0, 0.0, 0.0)
-    target = Gf.Vec3d(math.cos(yaw_rad), math.sin(yaw_rad), 0.0)
+    # target vector with pitch and yaw
+    target = Gf.Vec3d(
+        math.cos(yaw_rad) * math.cos(pitch_rad),
+        math.sin(yaw_rad) * math.cos(pitch_rad),
+        math.sin(pitch_rad)
+    )
     up = Gf.Vec3d(0.0, 0.0, 1.0)
     
     mat = Gf.Matrix4d().SetLookAt(eye, target, up)
