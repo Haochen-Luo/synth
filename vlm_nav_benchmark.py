@@ -93,6 +93,43 @@ def sample_human_motion(hs, elapsed_s, fps):
 VLLM_URL = "http://localhost:8300/v1/chat/completions"
 MODEL_NAME = "Qwen/Qwen3-VL-30B-A3B-Instruct-FP8"
 
+# ============================================================
+# Frame quality analysis (pixel-based black/blank detection)
+# ============================================================
+def check_frame_quality(image_path: str) -> dict:
+    """Analyse frame brightness to detect black/overexposed frames.
+    Returns dict with 'mean_brightness', 'is_dark', 'is_overexposed', 'guidance'.
+    """
+    try:
+        from PIL import Image
+        import numpy as np
+        img = Image.open(image_path).convert('L')  # grayscale
+        pixels = np.array(img)
+        mean_val = float(pixels.mean())
+        dark_frac = float((pixels < 15).sum()) / pixels.size
+        bright_frac = float((pixels > 240).sum()) / pixels.size
+
+        result = {'mean_brightness': mean_val, 'is_dark': False, 'is_overexposed': False, 'guidance': ''}
+
+        if mean_val < 12 or dark_frac > 0.92:
+            result['is_dark'] = True
+            result['guidance'] = (
+                " VISUAL WARNING: The current camera frame is almost entirely BLACK — "
+                "you are likely facing a wall at very close range or have clipped outside the room boundary. "
+                "Do NOT move forward (you will hit the wall). You MUST TURN (left or right) to find "
+                "an open area with visible room features before moving."
+            )
+        elif mean_val > 235 or bright_frac > 0.85:
+            result['is_overexposed'] = True
+            result['guidance'] = (
+                " VISUAL WARNING: The current camera frame is almost entirely WHITE/overexposed — "
+                "you are likely pressed against a wall. Do NOT move forward. "
+                "You MUST TURN to find an open area with visible furniture and room features."
+            )
+        return result
+    except Exception:
+        return {'mean_brightness': -1, 'is_dark': False, 'is_overexposed': False, 'guidance': ''}
+
 def make_system_prompt(target_desc: str) -> str:
     """Generate a target-aware system prompt."""
     return f"""You are a navigation robot inside a living room. Your goal is to reach the {target_desc}.
@@ -101,8 +138,8 @@ You see the room from your first-person camera. There may be a person running ac
 
 You can ONLY output ONE of these actions:
 - MOVE_FORWARD (move 0.25 meters in your current facing direction)
-- TURN_LEFT (rotate 30 degrees to the left)  
-- TURN_RIGHT (rotate 30 degrees to the right)
+- TURN_LEFT (rotate 15 degrees to the left)  
+- TURN_RIGHT (rotate 15 degrees to the right)
 - STOP (you believe you have reached the target)
 
 Rules:
@@ -115,7 +152,7 @@ First, briefly explain your reasoning based on what you see.
 Then, as the VERY LAST line of your response, output ONLY the single chosen action in this exact format:
 ACTION: <action_name>"""
 
-def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, action_history: list = None, step: int = 0) -> tuple:
+def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, action_history: list = None, step: int = 0, frame_quality: dict = None) -> tuple:
     """Send image to VLM, return (action_string, is_fallback)."""
     with open(image_path, "rb") as f:
         img_b64 = base64.b64encode(f.read()).decode("utf-8")
@@ -126,6 +163,9 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
         prompt += f" Your recent actions were: {', '.join(recent)}. Avoid repeating unhelpful patterns."
     if collision_alert:
         prompt += " WARNING: Your path is currently blocked by an obstacle. You MUST turn to find a clear path."
+    # Inject frame quality guidance (pixel-analysis driven)
+    if frame_quality and frame_quality.get('guidance'):
+        prompt += frame_quality['guidance']
 
     payload = {
         "model": MODEL_NAME,
@@ -258,11 +298,15 @@ TARGET_CONFIGS = {
         "coords": [4.43, 6.49],
         "success_radius": 3.0,  # sofa bbox is ~2.8m long; 3m from center = at the near edge
         "desc": "SOFA (the large light-green couch)",
+        # Approximate sofa bounding box (x_min, y_min, x_max, y_max) for trajectory plot
+        "bbox": [3.0, 5.5, 5.9, 7.5],
     },
     "bookshelf": {
         "coords": [0.34, 8.76],
         "success_radius": 1.5,  # shelf is narrow
         "desc": "tall white 4-tier SHELF against the left wall (the tall one with items on it, NOT the short 2-tier bookcase)",
+        # Approximate bookshelf bounding box
+        "bbox": [0.0, 8.0, 0.7, 9.5],
     },
 }
 
@@ -598,8 +642,15 @@ try:
         with open(out_log, "a") as f: 
             f.write(f"[NAV] Step {step}: pos=({agent_x:.2f},{agent_y:.2f}) yaw={agent_yaw:.0f}° dist={dist_to_target:.2f}m\n")
         
+        # Check frame quality (pixel analysis for black/overexposed frames)
+        fq = check_frame_quality(frame_path)
+        if fq.get('is_dark') or fq.get('is_overexposed'):
+            fq_label = 'DARK' if fq.get('is_dark') else 'OVEREXPOSED'
+            with open(out_log, "a") as f:
+                f.write(f"[NAV] Step {step}: Frame quality: {fq_label} (mean={fq['mean_brightness']:.1f})\n")
+        
         past_actions = [h["action"] for h in nav_history] if nav_history else None
-        action, is_fallback = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions, step=step)
+        action, is_fallback = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions, step=step, frame_quality=fq)
         collision_occurred = False # reset after consuming
         
         # --- STOP confirmation (Sequential Confirmation, 2 rounds) ---
@@ -782,7 +833,24 @@ try:
         
         # Mark start and target
         ax.scatter(AGENT_START_X, AGENT_START_Y, c='#ff4444', s=200, marker='*', zorder=10, label='Start', edgecolors='white', linewidths=1)
-        ax.scatter(TARGET[0], TARGET[1], c='#44ff44', s=200, marker='s', zorder=10, label='Target (Sofa)', edgecolors='white', linewidths=1)
+        ax.scatter(TARGET[0], TARGET[1], c='#44ff44', s=200, marker='s', zorder=10, label=f'Target ({TARGET_NAME.title()})', edgecolors='white', linewidths=1)
+        
+        # Draw target bounding box outline
+        target_bbox = _cfg.get("bbox")
+        if target_bbox:
+            bx0, by0, bx1, by1 = target_bbox
+            rect = mpatches.Rectangle((bx0, by0), bx1 - bx0, by1 - by0,
+                                       linewidth=2, edgecolor='#44ff44', facecolor='#44ff44',
+                                       alpha=0.18, zorder=3, linestyle='--',
+                                       label=f'{TARGET_NAME.title()} bbox')
+            ax.add_patch(rect)
+        
+        # Draw success radius circle
+        success_circle = mpatches.Circle((TARGET[0], TARGET[1]), SUCCESS_RADIUS,
+                                          linewidth=1.5, edgecolor='#44ff44', facecolor='none',
+                                          alpha=0.5, zorder=3, linestyle=':',
+                                          label=f'Success r={SUCCESS_RADIUS}m')
+        ax.add_patch(success_circle)
         
         # Mark final position
         if xs:

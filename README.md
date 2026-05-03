@@ -67,7 +67,7 @@ An agent (human mesh) navigates a physically-accurate living room to reach a **s
 
 ```python
 STEP_DISTANCE   = 0.25    # meters per MOVE_FORWARD
-TURN_ANGLE      = 30.0    # degrees per TURN_LEFT / TURN_RIGHT
+TURN_ANGLE      = 15.0    # degrees per TURN_LEFT / TURN_RIGHT
 SUCCESS_RADIUS  = 0.8     # agent STOPs within 0.8m → SUCCESS
 MAX_STEPS       = 250     # timeout limit (interactive) / 5 (quick test in benchmark)
 
