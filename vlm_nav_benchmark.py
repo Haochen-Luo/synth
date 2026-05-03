@@ -706,41 +706,36 @@ try:
                             f"→ 180° turn ({old_yaw:.0f}°→{agent_yaw:.0f}°) + MOVE_FORWARD "
                             f"(cooldown={DARK_ESCAPE_COOLDOWN} steps)\n")
         
-        # Anti-oscillation guard v4: track collision-blocked moves, not just position
-        # --- Stuck detector: only fires after consecutive collision-blocked moves ---
-        if len(nav_history) >= 3:
-            # Count recent consecutive collision-blocked moves (action was MOVE but position didn't change)
-            blocked_moves = 0
-            for h in reversed(nav_history):
-                if h["action"] == "MOVE_FORWARD" and blocked_moves == 0:
-                    # Check if this move was blocked (same pos as current)
-                    if abs(h["x"] - round(agent_x, 3)) < 0.01 and abs(h["y"] - round(agent_y, 3)) < 0.01:
-                        blocked_moves += 1
-                    else:
-                        break
-                elif h["action"] in ("TURN_LEFT", "TURN_RIGHT"):
-                    continue  # skip turns — they don't indicate stuck
-                elif h["action"] == "MOVE_FORWARD":
-                    if abs(h["x"] - round(agent_x, 3)) < 0.01 and abs(h["y"] - round(agent_y, 3)) < 0.01:
-                        blocked_moves += 1
-                    else:
-                        break
+        # --- Stuck detector v5: position-stagnation based ---
+        # Count how many recent steps the agent has been at the same position,
+        # regardless of action type. This catches the case where the agent
+        # oscillates turns against a large obstacle (e.g., sofa) without the
+        # old blocked-MOVE counter ever accumulating high enough.
+        stagnant_steps = 0
+        for h in reversed(nav_history):
+            if abs(h["x"] - round(agent_x, 3)) < 0.01 and abs(h["y"] - round(agent_y, 3)) < 0.01:
+                stagnant_steps += 1
+            else:
+                break
+        
+        if stagnant_steps >= 10 and action == "MOVE_FORWARD":
+            if stagnant_steps >= 20:
+                # Severely stuck — 180° about-face to abandon this approach
+                agent_yaw = wrap_angle_deg(agent_yaw + 180)
+                action = "MOVE_FORWARD"
+                with open(out_log, "a") as f:
+                    f.write(f"[NAV] Step {step}: STUCK ({stagnant_steps} steps same pos)! 180° about-face + MOVE_FORWARD\n")
+            else:
+                # Moderately stuck — 90° sideways to try to go around the obstacle
+                # Alternate left/right to explore both sides
+                if stagnant_steps % 2 == 0:
+                    agent_yaw = wrap_angle_deg(agent_yaw + 90)
+                    with open(out_log, "a") as f:
+                        f.write(f"[NAV] Step {step}: STUCK ({stagnant_steps} steps same pos)! Forcing 90° LEFT\n")
                 else:
-                    break
-            
-            if blocked_moves >= 3 and action == "MOVE_FORWARD":
-                # Only override MOVE_FORWARD, let VLM-requested turns proceed naturally
-                if blocked_moves >= 8:
-                    agent_yaw = wrap_angle_deg(agent_yaw + 180)
-                    with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK ({blocked_moves} blocked moves)! 180° about-face\n")
-                elif blocked_moves % 2 == 1:
-                    agent_yaw += 60
-                    action = "TURN_LEFT"
-                    with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK ({blocked_moves} blocked moves)! Forcing 90° LEFT\n")
-                else:
-                    agent_yaw -= 60
-                    action = "TURN_RIGHT"
-                    with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: STUCK ({blocked_moves} blocked moves)! Forcing 90° RIGHT\n")
+                    agent_yaw = wrap_angle_deg(agent_yaw - 90)
+                    with open(out_log, "a") as f:
+                        f.write(f"[NAV] Step {step}: STUCK ({stagnant_steps} steps same pos)! Forcing 90° RIGHT\n")
 
         
         # Save pre-action position to compute 'moved' later
