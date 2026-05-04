@@ -123,23 +123,18 @@ This is equivalent to proprioceptive feedback (robot knows its wheels stopped tu
 
 VLM oscillation (repeating TURN_LEFT/TURN_RIGHT) is treated as a **diagnostic metric of model reasoning failure**, not something to paper over with code. This aligns with Habitat research where oscillation rates are reported as evaluation metrics.
 
-### 5. Physics-Level Safety Mechanisms
+### 5. Prompt-Based Situational Awareness (No Forced Interventions)
 
-Two safety mechanisms operate below the VLM decision layer. These are analogous to hardware-level safety (e.g., bumper sensors) and do not interfere with VLM reasoning during normal navigation:
+All navigation decisions are made by the VLM. The system provides **advisory prompt hints** to help the VLM reason about difficult situations, but never overrides the VLM's chosen action:
 
-#### Dark-Frame Escape
-When 3 of the last 4 rendered frames are dark (camera facing a wall at close range), forces a 180° about-face + MOVE_FORWARD. After triggering, a 3-step cooldown prevents re-triggering.
+#### Frame Quality Hints
+When rendered frames are abnormally dark (facing a wall) or overexposed (pressed against a bright surface), the VLM receives an advisory warning suggesting it consider turning. The VLM decides whether and how to act on this.
 
-```python
-DARK_WINDOW_SIZE   = 4    # sliding window
-DARK_THRESHOLD     = 3    # trigger threshold
-DARK_ESCAPE_COOLDOWN = 3  # cooldown steps after trigger
-```
+#### Collision Feedback
+When `MOVE_FORWARD` is blocked by PhysX collision, the navigation history reports `BLOCKED by obstacle`. After 3+ consecutive blocked steps, an additional `⚠ WARNING: You have NOT moved for the last 3+ steps` hint is appended.
 
-#### Stuck Detector (Position Stagnation)
-When the agent's position hasn't changed for 6+ steps (regardless of action type), intervenes on blocked MOVE_FORWARD actions. Uses the agent's actual approach direction to compute escape angles:
-- **6–11 steps stuck**: Try ±90° off the approach direction (alternate sides)
-- **12+ steps stuck**: Retreat backward (reverse of approach — guaranteed free path)
+#### Design Rationale
+Previous versions used forced escape heuristics (180° about-face on dark frames, ±90° turns on position stagnation). These were removed because they created **chaotic trajectory loops** — the forced turns sent the agent along walls in feedback loops, preventing it from ever reaching distant targets. Letting the VLM reason with its navigation history produces better outcomes.
 
 ---
 

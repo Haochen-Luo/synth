@@ -114,17 +114,17 @@ def check_frame_quality(image_path: str) -> dict:
         if mean_val < 12 or dark_frac > 0.85:
             result['is_dark'] = True
             result['guidance'] = (
-                " VISUAL WARNING: The current camera frame is almost entirely BLACK — "
-                "you are likely facing a wall at very close range or have clipped outside the room boundary. "
-                "Do NOT move forward (you will hit the wall). You MUST TURN (left or right) to find "
-                "an open area with visible room features before moving."
+                " VISUAL WARNING: The current camera frame is almost entirely BLACK. "
+                "This usually means you are facing a wall or large obstacle at very close range. "
+                "Consider turning left or right to find an open path with visible room features. "
+                "Moving forward in this state will likely result in a collision."
             )
         elif mean_val > 235 or bright_frac > 0.85:
             result['is_overexposed'] = True
             result['guidance'] = (
-                " VISUAL WARNING: The current camera frame is almost entirely WHITE/overexposed — "
-                "you are likely pressed against a wall. Do NOT move forward. "
-                "You MUST TURN to find an open area with visible furniture and room features."
+                " VISUAL WARNING: The current camera frame is almost entirely WHITE/overexposed. "
+                "This usually means you are pressed against a bright wall or obstacle. "
+                "Consider turning to find an open area with visible furniture and room features."
             )
         return result
     except Exception:
@@ -304,10 +304,7 @@ RUNNER_TIME_PER_STEP = 0.5  # seconds of runner animation per nav step
 # Habitat Challenge also tilts camera for realistic robot behavior (Hello Stretch).
 CAMERA_PITCH_DEG = -10   # degrees (negative = look down)
 
-# Dark-frame escape: if agent faces a wall (black frames), force 180° turn
-DARK_WINDOW_SIZE = 4     # sliding window size
-DARK_THRESHOLD = 3       # trigger if >= this many dark frames in window
-DARK_ESCAPE_COOLDOWN = 3 # steps to skip dark-check after a 180° escape
+
 
 # Agent mesh default facing direction → yaw=0 is +X.
 # The mesh actually faces -Y, so we rotate +90° to align with +X.
@@ -609,8 +606,6 @@ try:
     # === Navigation log ===
     nav_history = []
     collision_occurred = False
-    dark_frame_history = []          # bool per step: True = dark frame
-    dark_escape_cooldown = 0         # countdown after 180° escape
     
     for step in range(MAX_STEPS):
         # Root offset keeps feet on the ground (pelvis-to-feet distance)
@@ -685,10 +680,8 @@ try:
         
         # Check frame quality (pixel analysis for black/overexposed frames)
         fq = check_frame_quality(frame_path)
-        is_dark_frame = fq.get('is_dark', False)
-        dark_frame_history.append(is_dark_frame)
-        if is_dark_frame or fq.get('is_overexposed'):
-            fq_label = 'DARK' if is_dark_frame else 'OVEREXPOSED'
+        if fq.get('is_dark') or fq.get('is_overexposed'):
+            fq_label = 'DARK' if fq.get('is_dark') else 'OVEREXPOSED'
             with open(out_log, "a") as f:
                 f.write(f"[NAV] Step {step}: Frame quality: {fq_label} (mean={fq['mean_brightness']:.1f})\n")
         
@@ -713,63 +706,6 @@ try:
         log_action = f"{action} (fallback)" if is_fallback else action
         with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: VLM action = {log_action}\n")
         
-        # --- Dark-frame escape: 3-of-4 sliding window → 180° about-face + MOVE_FORWARD ---
-        if dark_escape_cooldown > 0:
-            dark_escape_cooldown -= 1
-        else:
-            window = dark_frame_history[-DARK_WINDOW_SIZE:]
-            if len(window) >= DARK_WINDOW_SIZE and sum(window) >= DARK_THRESHOLD:
-                old_yaw = agent_yaw
-                agent_yaw = wrap_angle_deg(agent_yaw + 180)
-                action = "MOVE_FORWARD"  # move away from the wall after turning
-                dark_escape_cooldown = DARK_ESCAPE_COOLDOWN
-                with open(out_log, "a") as f:
-                    f.write(f"[NAV] Step {step}: DARK ESCAPE! {sum(window)}/{len(window)} dark frames "
-                            f"→ 180° turn ({old_yaw:.0f}°→{agent_yaw:.0f}°) + MOVE_FORWARD "
-                            f"(cooldown={DARK_ESCAPE_COOLDOWN} steps)\n")
-        
-        # --- Stuck detector v6: retreat-then-reroute ---
-        # Count how many recent steps the agent has been at the same position.
-        # When stuck at a large obstacle (e.g., sofa edge), simple 90°/180° turns
-        # often fail because ALL cardinal directions hit the obstacle's bounding box.
-        # Solution: RETREAT (step backward) to create clearance, then reroute.
-        stagnant_steps = 0
-        for h in reversed(nav_history):
-            if abs(h["x"] - round(agent_x, 3)) < 0.01 and abs(h["y"] - round(agent_y, 3)) < 0.01:
-                stagnant_steps += 1
-            else:
-                break
-        
-        if stagnant_steps >= 6 and action == "MOVE_FORWARD":
-            # Find the direction we CAME FROM (last position where we were NOT at current pos)
-            retreat_yaw = None
-            for h in reversed(nav_history):
-                if abs(h["x"] - round(agent_x, 3)) > 0.01 or abs(h["y"] - round(agent_y, 3)) > 0.01:
-                    # Direction FROM that position TO current = approach angle
-                    approach_yaw = math.degrees(math.atan2(
-                        round(agent_y, 3) - h["y"],
-                        round(agent_x, 3) - h["x"]))
-                    retreat_yaw = wrap_angle_deg(approach_yaw + 180)  # reverse it
-                    break
-            
-            if retreat_yaw is not None:
-                # Escalating strategy based on how long we've been stuck
-                if stagnant_steps < 12:
-                    # First: try 90° offset from approach direction (go AROUND the obstacle)
-                    offset = 90 if (stagnant_steps % 2 == 0) else -90
-                    escape_yaw = wrap_angle_deg(retreat_yaw + 180 + offset)  # 90° off the approach
-                    agent_yaw = escape_yaw
-                    with open(out_log, "a") as f:
-                        f.write(f"[NAV] Step {step}: STUCK ({stagnant_steps} steps same pos)! "
-                                f"Trying {'+' if offset > 0 else ''}{offset}° off approach "
-                                f"→ yaw={agent_yaw:.0f}°\n")
-                else:
-                    # Escalation: RETREAT backward (guaranteed free — we came from there)
-                    agent_yaw = retreat_yaw
-                    with open(out_log, "a") as f:
-                        f.write(f"[NAV] Step {step}: STUCK ({stagnant_steps} steps same pos)! "
-                                f"RETREATING → yaw={agent_yaw:.0f}° (reverse of approach)\n")
-
         
         # Save pre-action position to compute 'moved' later
         pre_x, pre_y = agent_x, agent_y
