@@ -598,6 +598,11 @@ try:
     timeline = omni.timeline.get_timeline_interface()
     timeline.play()
     
+    # Compute animation loop range from the USD stage time codes
+    anim_start_tc = stage.GetStartTimeCode()   # typically 1.0
+    anim_end_tc   = stage.GetEndTimeCode()      # typically 39.0
+    anim_duration_s = (anim_end_tc - anim_start_tc) / max(1.0, anim_fps)
+    
     with open(out_log, "a") as f: f.write("[NAV] Setup complete. Starting navigation loop...\n")
     
     # === Agent state ===
@@ -638,8 +643,9 @@ try:
             r1_yaw_rad = math.radians(r1_rot[2])
             runner1_xf_ops["orient"].Set(Gf.Quatf(math.cos(r1_yaw_rad/2), 0, 0, math.sin(r1_yaw_rad/2)))
         
-        # 4. Advance timeline for skeleton animation
-        timeline.set_current_time(sim_time)
+        # 4. Advance timeline for skeleton animation (loop within animation range)
+        anim_time = anim_start_tc / anim_fps + (sim_time % anim_duration_s) if anim_duration_s > 0 else sim_time
+        timeline.set_current_time(anim_time)
         
         # 5. Render current frame (PathTracing with 16 accumulated subframes to clear snowflakes)
         rep.orchestrator.step(rt_subframes=16)
