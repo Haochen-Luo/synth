@@ -296,7 +296,12 @@ STEP_DISTANCE = 0.25     # meters per MOVE_FORWARD
 TURN_ANGLE = 15.0        # degrees per TURN
 MAX_STEPS = 250        # timeout
 STOP_CONFIRM_ROUNDS = 2  # require 2 consecutive STOP predictions to accept
-AGENT_HEIGHT = 0.07      # Empirical lift: fresh USD-ref skeleton rest-pose root is ~7cm lower than animated runner
+# BBox-calibrated ground contact Z offsets (measured via check_dancer_bbox.py).
+# These are the translate-Z values that place each mesh's feet exactly at floor
+# level (Z=0) when scaled to runner_scale (0.5326).  The old root_offset_m
+# approach was wrong: root_offset_m ≠ mesh-space feet distance.
+RUNNER_MESH_GROUND_Z = 0.6773   # obj_1_run_anim_1.usdc  (agent uses same mesh)
+DANCER_MESH_GROUND_Z = 0.8961   # obj_2_dance_anim_2.usdc
 AGENT_EYE_HEIGHT = 1.58  # z for camera (eye level)
 RUNNER_TIME_PER_STEP = 0.5  # seconds of runner animation per nav step
 
@@ -539,14 +544,13 @@ try:
         d_trans = d_xf.AddTranslateOp()
         d_orient = d_xf.AddOrientOp()
         d_scale = d_xf.AddScaleOp()
-        # Scale dancer's own root_offset proportionally: different mesh → different skeleton
-        # dancer_Z = dancer_root_offset * (runner_scale / dancer_original_scale)
-        dancer_z = d_root_off[2] * (runner_scale[2] / d_orig_scale[2]) if d_orig_scale[2] > 0 else runner_root_offset[2]
+        # Use bbox-calibrated ground contact Z (empirically measured)
+        dancer_z = DANCER_MESH_GROUND_Z
         d_trans.Set(Gf.Vec3d(d_pos[0], d_pos[1], dancer_z))
         d_yaw_rad = math.radians(d_rot[2])
         d_orient.Set(Gf.Quatf(math.cos(d_yaw_rad/2), 0, 0, math.sin(d_yaw_rad/2)))
         d_scale.Set(Gf.Vec3d(runner_scale[0], runner_scale[1], runner_scale[2]))
-        with open(out_log, "a") as f: f.write(f"[NAV] Dancer: scale={runner_scale}, Z={dancer_z:.3f} (own root_off={d_root_off[2]:.3f} × {runner_scale[2]:.3f}/{d_orig_scale[2]:.3f})\n")
+        with open(out_log, "a") as f: f.write(f"[NAV] Dancer: scale={runner_scale}, Z={dancer_z:.4f} (bbox-calibrated)\n")
     
     # === Setup Runner 1 (obstacle) — override scale + animate manually ===
     runner1_prim = None
@@ -608,11 +612,8 @@ try:
     collision_occurred = False
     
     for step in range(MAX_STEPS):
-        # Root offset keeps feet on the ground (pelvis-to-feet distance)
-        agent_root_z = runner_root_offset[2] if runner_root_offset else 0.0
-            
-        # 1. Update agent position in scene
-        agent_trans.Set(Gf.Vec3d(agent_x, agent_y, AGENT_HEIGHT + agent_root_z))
+        # 1. Update agent position in scene (bbox-calibrated ground contact Z)
+        agent_trans.Set(Gf.Vec3d(agent_x, agent_y, RUNNER_MESH_GROUND_Z))
         # Apply mesh yaw offset so the body faces the movement direction
         mesh_yaw = agent_yaw + AGENT_MESH_YAW_OFFSET
         mesh_yaw_rad = math.radians(mesh_yaw)

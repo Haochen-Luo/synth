@@ -63,7 +63,8 @@ TURN_ANGLE         = 15.0    # degrees per TURN_LEFT / TURN_RIGHT
 MAX_STEPS          = 250     # timeout limit
 STOP_CONFIRM_ROUNDS = 2      # require 2 consecutive STOP predictions
 
-AGENT_HEIGHT       = 0.07    # Z-offset for agent mesh (skeleton rest-pose correction)
+RUNNER_MESH_GROUND_Z = 0.6773  # bbox-calibrated Z for runner/agent mesh
+DANCER_MESH_GROUND_Z = 0.8961  # bbox-calibrated Z for dancer mesh
 AGENT_EYE_HEIGHT   = 1.58    # Z of FPV camera (human eye level)
 CAMERA_PITCH_DEG   = -10     # degrees downward tilt (see low furniture)
 
@@ -152,11 +153,16 @@ for sweep_z in [0.5, 1.0]:
     hit = query.sweep_sphere_closest(0.2, origin, direction, STEP_DISTANCE)
 ```
 
-### Human Mesh Scaling
+### Human Mesh Scaling & Ground Contact
 
-All human `.usdc` meshes use the runner's `animation_binding` scale (`0.53`). Root Z-offset (`runner_root_offset[2] ≈ 0.534m`) keeps feet on the ground.
+All human `.usdc` meshes are rescaled to the runner's `animation_binding` scale (`0.53`).
 
-The VLM agent mesh (`agent_runner`) is a fresh USD reference instance. Its skeleton rest-pose root sits ~7cm lower than the animated runner, corrected by `AGENT_HEIGHT = 0.07`.
+**Ground contact** is set via bbox-calibrated Z offsets (measured empirically using `check_dancer_bbox.py`). The old `root_offset_m` approach was incorrect — it doesn't represent the actual mesh-space feet-to-origin distance. The human prims are kinematic (positioned via `TranslateOp.Set()`), not dynamic physics objects, so PhysX floor collision does not apply.
+
+```python
+RUNNER_MESH_GROUND_Z = 0.6773   # obj_1_run_anim_1.usdc (agent uses same mesh)
+DANCER_MESH_GROUND_Z = 0.8961   # obj_2_dance_anim_2.usdc
+```
 
 ---
 
@@ -259,5 +265,5 @@ source /home/qi/miniconda3/etc/profile.d/conda.sh && conda activate pp
 1. **OptixDenoiser warnings** — Harmless; denoiser is optional.
 2. **VLM oscillation** — Model sometimes alternates TURN_LEFT/TURN_RIGHT. This is a VLM reasoning limitation, not a code bug. Reported as a diagnostic metric.
 3. **Low-obstacle blindness** — Even with -10° camera tilt, the VLM may not recognize low furniture as obstacles. This is a known limitation in VLM-only navigation (Habitat research uses separate geometric planners for this).
-4. **Agent mesh Z-offset** — The `AGENT_HEIGHT = 0.07` correction is empirical. May need fine-tuning if the mesh USD changes.
+4. **Mesh ground contact** — Human prims are kinematic (no PhysX floor collision). Ground Z is set via bbox-calibrated constants. If mesh USDs change, re-run `check_dancer_bbox.py` to recalibrate.
 5. **Double-Scaling** — The 4D human `.usdc` meshes may have baked USD scales. Ensure `scale_xyz` in `.spec.json` is `[1.0, 1.0, 1.0]` for models with baked scales.
