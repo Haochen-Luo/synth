@@ -152,12 +152,47 @@ First, briefly explain your reasoning based on what you see.
 Then, as the VERY LAST line of your response, output ONLY the single chosen action in this exact format:
 ACTION: <action_name>"""
 
-def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, action_history: list = None, step: int = 0, frame_quality: dict = None, nav_history_records: list = None) -> tuple:
+def make_multistep_system_prompt(task_instruction):
+    """Generate a system prompt for multi-step tasks with PICK_UP/PUT_DOWN."""
+    return f"""You are a service robot inside a living room. Your task:
+{task_instruction}
+
+You can ONLY output ONE of these actions:
+- MOVE_FORWARD (move 0.25 meters in your current facing direction)
+- TURN_LEFT (rotate 15 degrees to the left)
+- TURN_RIGHT (rotate 15 degrees to the right)
+- PICK_UP (pick up an object near you — only works when you are very close to the object)
+- PUT_DOWN (put down the object you are carrying — only works near the target location)
+- STOP (you have completed the final step of the task)
+
+Rules:
+- Think step by step: what sub-task should I do next?
+- You must be VERY CLOSE to an object to PICK_UP or PUT_DOWN.
+- If you are carrying an object, navigate to where you need to put it down.
+- Only use STOP after ALL steps of the task are done.
+
+First, briefly explain your reasoning based on what you see.
+Then, as the VERY LAST line of your response, output ONLY the single chosen action in this exact format:
+ACTION: <action_name>"""
+
+def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, action_history: list = None, step: int = 0, frame_quality: dict = None, nav_history_records: list = None, task_phase_info: dict = None) -> tuple:
     """Send image to VLM, return (action_string, is_fallback)."""
     with open(image_path, "rb") as f:
         img_b64 = base64.b64encode(f.read()).decode("utf-8")
     
-    prompt = f"You are navigating an indoor environment to reach the {TARGET_DESC}. Based on this first-person view, what action should you take? First explain your reasoning, then output the action."
+    if task_phase_info:
+        ph_desc = task_phase_info['desc']
+        ph_action = task_phase_info['action']
+        inv_str = task_phase_info.get('inventory', 'empty')
+        ph_idx = task_phase_info['phase_idx']
+        ph_total = task_phase_info['phase_total']
+        prompt = (
+            f"You are performing a multi-step task. Current objective: go to {ph_desc} and use {ph_action}. "
+            f"Carrying: [{inv_str}]. Progress: step {ph_idx+1}/{ph_total}. "
+            f"Based on this first-person view, what action should you take? First explain your reasoning, then output the action."
+        )
+    else:
+        prompt = f"You are navigating an indoor environment to reach the {TARGET_DESC}. Based on this first-person view, what action should you take? First explain your reasoning, then output the action."
     if action_history and nav_history_records:
         recent = nav_history_records[-8:]  # last 8 steps
         history_lines = []
@@ -214,14 +249,14 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
             
             # Extract valid action from response
             import re
-            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP)", text_upper)
+            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP|PICK_UP|PUT_DOWN)", text_upper)
             if match:
                 return match.group(1), False
             else:
                 # Fallback: search backwards to find the final chosen action
                 best_action = "MOVE_FORWARD"
                 best_idx = -1
-                for action in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP"]:
+                for action in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP", "PICK_UP", "PUT_DOWN"]:
                     idx = text_upper.rfind(action)
                     if idx > best_idx:
                         best_idx = idx
@@ -276,11 +311,11 @@ def query_vlm_confirm_stop(image_path: str, out_log: str, step: int = 0) -> str:
                 f.write(json.dumps({"step": step, "type": "stop_confirm", "image": image_path, "response": text}) + "\n")
             text_upper = text.upper()
             import re
-            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP)", text_upper)
+            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP|PICK_UP|PUT_DOWN)", text_upper)
             if match:
                 return match.group(1)
             best_action, best_idx = "MOVE_FORWARD", -1
-            for a in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP"]:
+            for a in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP", "PICK_UP", "PUT_DOWN"]:
                 idx = text_upper.rfind(a)
                 if idx > best_idx:
                     best_idx, best_action = idx, a
@@ -334,16 +369,39 @@ TARGET_CONFIGS = {
         # Ground truth from scene_inventory.json
         "bbox": [0.20, 8.16, 0.47, 9.36],
     },
+    "book_return": {
+        "task_type": "multi_step",
+        "coords": [8.0, 6.0],  # initial target = book on floor (phase 0)
+        "success_radius": 1.0,
+        "desc": "book return task",
+        "instruction": "Pick up the book from the floor, put it on the tall 4-tier bookshelf, then go to the black door.",
+        "phases": [
+            {"name": "pick_up_book", "target": [8.0, 6.0], "radius": 1.0,
+             "action": "PICK_UP", "desc": "the book on the floor"},
+            {"name": "put_on_shelf", "target": [0.34, 8.76], "radius": 1.2,
+             "action": "PUT_DOWN", "desc": "the tall 4-tier bookshelf"},
+            {"name": "go_to_door", "target": [6.0, 11.7], "radius": 1.5,
+             "action": "STOP", "desc": "the black door"},
+        ],
+        # Book prim to relocate to floor
+        "book_prim": "/World/Env/BookStackFactory_3931954__spawn_asset_7414082_",
+        "book_floor_pos": [8.0, 6.0, 0.15],
+    },
 }
 
 # === SELECT TARGET (override via env: NAV_TARGET=bookshelf) ===
 TARGET_NAME = os.environ.get("NAV_TARGET", "sofa")
 
 _cfg = TARGET_CONFIGS[TARGET_NAME]
+IS_MULTI_STEP = _cfg.get("task_type") == "multi_step"
 TARGET = _cfg["coords"]
 SUCCESS_RADIUS = _cfg["success_radius"]
 TARGET_DESC = _cfg["desc"]
-SYSTEM_PROMPT = make_system_prompt(TARGET_DESC)
+
+if IS_MULTI_STEP:
+    SYSTEM_PROMPT = make_multistep_system_prompt(_cfg["instruction"])
+else:
+    SYSTEM_PROMPT = make_system_prompt(TARGET_DESC)
 
 # Agent start: on the rug, facing roughly toward sofa
 AGENT_START_X = 12.0
@@ -552,6 +610,22 @@ try:
         d_scale.Set(Gf.Vec3d(runner_scale[0], runner_scale[1], runner_scale[2]))
         with open(out_log, "a") as f: f.write(f"[NAV] Dancer: scale={runner_scale}, Z={dancer_z:.4f} (bbox-calibrated)\n")
     
+    # === Setup book_return task: relocate book to floor ===
+    book_prim_for_task = None
+    if IS_MULTI_STEP and _cfg.get("book_prim"):
+        book_path = _cfg["book_prim"]
+        book_prim_for_task = stage.GetPrimAtPath(book_path)
+        if book_prim_for_task and book_prim_for_task.IsValid():
+            bk_xf = UsdGeom.Xformable(book_prim_for_task)
+            try: bk_xf.ClearXformOpOrder()
+            except: pass
+            bk_trans = bk_xf.AddTranslateOp()
+            bk_pos = _cfg["book_floor_pos"]
+            bk_trans.Set(Gf.Vec3d(bk_pos[0], bk_pos[1], bk_pos[2]))
+            with open(out_log, "a") as f: f.write(f"[NAV] Book relocated to floor: {bk_pos}\n")
+        else:
+            with open(out_log, "a") as f: f.write(f"[NAV] WARNING: Book prim not found: {book_path}\n")
+    
     # === Setup Runner 1 (obstacle) — override scale + animate manually ===
     runner1_prim = None
     runner1_xf_ops = {}  # will hold translate/orient/scale ops
@@ -615,6 +689,21 @@ try:
     # === Navigation log ===
     nav_history = []
     collision_occurred = False
+    
+    # === Multi-step task state ===
+    task_phases = _cfg.get("phases", None)
+    current_phase_idx = 0
+    agent_inventory = []  # items the agent is carrying
+    if task_phases:
+        active_target = task_phases[0]["target"]
+        active_radius = task_phases[0]["radius"]
+        with open(out_log, "a") as f:
+            f.write(f"[NAV] Multi-step task: {len(task_phases)} phases\n")
+            for i, ph in enumerate(task_phases):
+                f.write(f"[NAV]   Phase {i}: {ph['name']} -> {ph['desc']} (r={ph['radius']}m, action={ph['action']})\n")
+    else:
+        active_target = TARGET
+        active_radius = SUCCESS_RADIUS
     
     for step in range(MAX_STEPS):
         # 1. Update agent position in scene (bbox-calibrated ground contact Z)
@@ -681,9 +770,13 @@ try:
             break
         
         # 7. Query VLM
-        dist_to_target = math.sqrt((agent_x - TARGET[0])**2 + (agent_y - TARGET[1])**2)
+        dist_to_target = math.sqrt((agent_x - active_target[0])**2 + (agent_y - active_target[1])**2)
+        phase_info = ""
+        if task_phases:
+            ph = task_phases[current_phase_idx]
+            phase_info = f" [Phase {current_phase_idx+1}/{len(task_phases)}: {ph['name']}]"
         with open(out_log, "a") as f: 
-            f.write(f"[NAV] Step {step}: pos=({agent_x:.2f},{agent_y:.2f}) yaw={agent_yaw:.0f}° dist={dist_to_target:.2f}m\n")
+            f.write(f"[NAV] Step {step}: pos=({agent_x:.2f},{agent_y:.2f}) yaw={agent_yaw:.0f}° dist={dist_to_target:.2f}m{phase_info}\n")
         
         # Check frame quality (pixel analysis for black/overexposed frames)
         fq = check_frame_quality(frame_path)
@@ -693,8 +786,23 @@ try:
                 f.write(f"[NAV] Step {step}: Frame quality: {fq_label} (mean={fq['mean_brightness']:.1f})\n")
         
         past_actions = [h["action"] for h in nav_history] if nav_history else None
-        action, is_fallback = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions, step=step, frame_quality=fq, nav_history_records=nav_history)
+        # Build task phase info for multi-step prompt
+        _tpi = None
+        if task_phases:
+            ph = task_phases[current_phase_idx]
+            inv_str = ', '.join(agent_inventory) if agent_inventory else 'empty'
+            _tpi = {"desc": ph["desc"], "action": ph["action"], "inventory": inv_str,
+                    "phase_idx": current_phase_idx, "phase_total": len(task_phases)}
+        action, is_fallback = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions, step=step, frame_quality=fq, nav_history_records=nav_history, task_phase_info=_tpi)
         collision_occurred = False # reset after consuming
+        
+        # --- Multi-step: inject phase context into prompt (via nav_history) ---
+        if task_phases and nav_history:
+            ph = task_phases[current_phase_idx]
+            inv_str = ', '.join(agent_inventory) if agent_inventory else 'empty'
+            nav_history[-1]["phase"] = current_phase_idx
+            nav_history[-1]["phase_name"] = ph["name"]
+            nav_history[-1]["inventory"] = inv_str
         
         # --- STOP confirmation (Sequential Confirmation, 2 rounds) ---
         if action == "STOP":
@@ -727,14 +835,71 @@ try:
             "moved": False,  # will be updated after action execution
         })
         
-        # 8. Check STOP
+        # 8. Check STOP / PICK_UP / PUT_DOWN
         if action == "STOP":
-            success = dist_to_target < SUCCESS_RADIUS
-            with open(out_log, "a") as f:
-                f.write(f"[NAV] STOP at step {step}. dist={dist_to_target:.2f}m. {'SUCCESS!' if success else 'FAIL (too far)'}\n")
-            break
+            if task_phases:
+                # Multi-step: STOP only valid in final phase
+                ph = task_phases[current_phase_idx]
+                if ph["action"] == "STOP" and dist_to_target < active_radius:
+                    with open(out_log, "a") as f:
+                        f.write(f"[NAV] STOP at step {step}. Phase {current_phase_idx+1}/{len(task_phases)} complete. dist={dist_to_target:.2f}m. ALL PHASES DONE — SUCCESS!\n")
+                    break
+                else:
+                    with open(out_log, "a") as f:
+                        f.write(f"[NAV] Step {step}: STOP rejected — task not complete (phase={current_phase_idx+1}/{len(task_phases)}, dist={dist_to_target:.2f}m)\n")
+                    # Don't break — treat as no-op, agent continues
+            else:
+                success = dist_to_target < active_radius
+                with open(out_log, "a") as f:
+                    f.write(f"[NAV] STOP at step {step}. dist={dist_to_target:.2f}m. {'SUCCESS!' if success else 'FAIL (too far)'}\n")
+                break
         
-        # 9. Apply action
+        elif action == "PICK_UP" and task_phases:
+            ph = task_phases[current_phase_idx]
+            if ph["action"] == "PICK_UP" and dist_to_target < active_radius:
+                # Success: pick up the book
+                agent_inventory.append("book")
+                if book_prim_for_task and book_prim_for_task.IsValid():
+                    UsdGeom.Imageable(book_prim_for_task).MakeInvisible()
+                current_phase_idx += 1
+                active_target = task_phases[current_phase_idx]["target"]
+                active_radius = task_phases[current_phase_idx]["radius"]
+                with open(out_log, "a") as f:
+                    f.write(f"[NAV] Step {step}: PICK_UP success! dist={dist_to_target:.2f}m. Inventory={agent_inventory}. Advancing to phase {current_phase_idx+1}: {task_phases[current_phase_idx]['name']}\n")
+            else:
+                reason = f"wrong phase (need {ph['action']})" if ph["action"] != "PICK_UP" else f"too far ({dist_to_target:.2f}m > {active_radius}m)"
+                with open(out_log, "a") as f:
+                    f.write(f"[NAV] Step {step}: PICK_UP failed — {reason}\n")
+        
+        elif action == "PUT_DOWN" and task_phases:
+            ph = task_phases[current_phase_idx]
+            if ph["action"] == "PUT_DOWN" and dist_to_target < active_radius and "book" in agent_inventory:
+                # Success: put the book on the shelf
+                agent_inventory.remove("book")
+                if book_prim_for_task and book_prim_for_task.IsValid():
+                    # Move book to shelf position and make visible
+                    shelf_target = task_phases[current_phase_idx]["target"]
+                    bk_xf = UsdGeom.Xformable(book_prim_for_task)
+                    for op in bk_xf.GetOrderedXformOps():
+                        if op.GetOpName() == "xformOp:translate":
+                            op.Set(Gf.Vec3d(shelf_target[0], shelf_target[1], 0.8))
+                    UsdGeom.Imageable(book_prim_for_task).MakeVisible()
+                current_phase_idx += 1
+                active_target = task_phases[current_phase_idx]["target"]
+                active_radius = task_phases[current_phase_idx]["radius"]
+                with open(out_log, "a") as f:
+                    f.write(f"[NAV] Step {step}: PUT_DOWN success! dist={dist_to_target:.2f}m. Book placed on shelf. Advancing to phase {current_phase_idx+1}: {task_phases[current_phase_idx]['name']}\n")
+            else:
+                if "book" not in agent_inventory:
+                    reason = "nothing to put down"
+                elif ph["action"] != "PUT_DOWN":
+                    reason = f"wrong phase (need {ph['action']})"
+                else:
+                    reason = f"too far ({dist_to_target:.2f}m > {active_radius}m)"
+                with open(out_log, "a") as f:
+                    f.write(f"[NAV] Step {step}: PUT_DOWN failed — {reason}\n")
+        
+        # 9. Apply movement action
         if action == "MOVE_FORWARD":
             import omni.physx, carb
             # Sync PhysX broadphase with latest xform changes
@@ -744,7 +909,6 @@ try:
             dir_y = math.sin(math.radians(agent_yaw))
             
             # Multi-height sphere sweep: waist (0.5m) + chest (1.0m)
-            # Note: floor collision is at z≈0.1, sphere r=0.2, so z must be >= 0.4
             blocked = False
             hit_info = ""
             for sweep_z in [0.5, 1.0]:

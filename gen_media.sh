@@ -12,7 +12,7 @@ PREVIEW="$BASE/nav_preview"
 mkdir -p "$PREVIEW"
 
 FPS=5
-GIF_MAX=80   # max frames for GIF to keep file size reasonable
+GIF_MAX=0    # 0 = no cap, include all frames (set >0 to limit GIF size)
 
 for VIEW in fpv birdseye; do
     if [ "$VIEW" = "fpv" ]; then
@@ -26,7 +26,7 @@ for VIEW in fpv birdseye; do
     echo "[INFO] $VIEW: $N frames in $SRC"
 
     PAT="$SRC/rgb_%04d.png"
-    GN=$((N < GIF_MAX ? N : GIF_MAX))
+    GN=$((GIF_MAX > 0 && N > GIF_MAX ? GIF_MAX : N))
 
     # ─── HD outputs (base_dir) ───
     # HD MP4 (1920x1080)
