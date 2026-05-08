@@ -893,10 +893,10 @@ try:
                 with open(out_log, "a") as f:
                     f.write(f"[NAV] Step {step}: PICK_UP success! dist={dist_to_target:.2f}m. Inventory={agent_inventory}. Advancing to phase {current_phase_idx+1}: {task_phases[current_phase_idx]['name']}\n")
             else:
-                reason = f"wrong phase (need {ph['action']})" if ph["action"] != "PICK_UP" else f"too far ({dist_to_target:.2f}m > {active_radius}m)"
+                reason = f"wrong phase (need {ph['action']})" if ph["action"] != "PICK_UP" else "you are too far away"
                 with open(out_log, "a") as f:
-                    f.write(f"[NAV] Step {step}: PICK_UP failed — {reason}\n")
-                action_feedback = f"PICK_UP failed: {reason}. Navigate closer to {task_phases[current_phase_idx]['desc']} first."
+                    f.write(f"[NAV] Step {step}: PICK_UP failed — {reason} (dist={dist_to_target:.2f}m)\n")
+                action_feedback = f"PICK_UP failed: you are not close enough to the object. Move closer first."
         
         elif action == "PUT_DOWN" and task_phases:
             ph = task_phases[current_phase_idx]
@@ -922,10 +922,10 @@ try:
                 elif ph["action"] != "PUT_DOWN":
                     reason = f"wrong phase (need {ph['action']})"
                 else:
-                    reason = f"too far ({dist_to_target:.2f}m > {active_radius}m)"
+                    reason = f"too far (dist={dist_to_target:.2f}m > {active_radius}m)"
                 with open(out_log, "a") as f:
                     f.write(f"[NAV] Step {step}: PUT_DOWN failed — {reason}\n")
-                action_feedback = f"PUT_DOWN failed: {reason}. Navigate closer to {task_phases[current_phase_idx]['desc']} first."
+                action_feedback = f"PUT_DOWN failed: you are not close enough to the target. Move closer first."
         
         # 9. Apply movement action
         if action == "MOVE_FORWARD":
