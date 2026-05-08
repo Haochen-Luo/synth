@@ -191,6 +191,10 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
             f"Carrying: [{inv_str}]. Progress: step {ph_idx+1}/{ph_total}. "
             f"Based on this first-person view, what action should you take? First explain your reasoning, then output the action."
         )
+        # Inject failure feedback from previous step
+        fb = task_phase_info.get('action_feedback', '')
+        if fb:
+            prompt += f" ⚠ PREVIOUS ACTION FAILED: {fb} You MUST use MOVE_FORWARD or TURN to get closer before trying again."
     else:
         prompt = f"You are navigating an indoor environment to reach the {TARGET_DESC}. Based on this first-person view, what action should you take? First explain your reasoning, then output the action."
     if action_history and nav_history_records:
@@ -722,6 +726,8 @@ try:
         active_target = TARGET
         active_radius = SUCCESS_RADIUS
     
+    action_feedback = ""  # feedback to VLM about failed actions
+    
     for step in range(MAX_STEPS):
         # 1. Update agent position in scene (bbox-calibrated ground contact Z)
         agent_trans.Set(Gf.Vec3d(agent_x, agent_y, RUNNER_MESH_GROUND_Z))
@@ -809,9 +815,11 @@ try:
             ph = task_phases[current_phase_idx]
             inv_str = ', '.join(agent_inventory) if agent_inventory else 'empty'
             _tpi = {"desc": ph["desc"], "action": ph["action"], "inventory": inv_str,
-                    "phase_idx": current_phase_idx, "phase_total": len(task_phases)}
+                    "phase_idx": current_phase_idx, "phase_total": len(task_phases),
+                    "action_feedback": action_feedback}
         action, is_fallback = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions, step=step, frame_quality=fq, nav_history_records=nav_history, task_phase_info=_tpi)
         collision_occurred = False # reset after consuming
+        action_feedback = ""  # reset after consuming
         
         # --- Multi-step: inject phase context into prompt (via nav_history) ---
         if task_phases and nav_history:
@@ -864,6 +872,7 @@ try:
                 else:
                     with open(out_log, "a") as f:
                         f.write(f"[NAV] Step {step}: STOP rejected — task not complete (phase={current_phase_idx+1}/{len(task_phases)}, dist={dist_to_target:.2f}m)\n")
+                    action_feedback = f"STOP rejected: task not complete yet. You still need to {task_phases[current_phase_idx]['desc']}."
                     # Don't break — treat as no-op, agent continues
             else:
                 success = dist_to_target < active_radius
@@ -887,6 +896,7 @@ try:
                 reason = f"wrong phase (need {ph['action']})" if ph["action"] != "PICK_UP" else f"too far ({dist_to_target:.2f}m > {active_radius}m)"
                 with open(out_log, "a") as f:
                     f.write(f"[NAV] Step {step}: PICK_UP failed — {reason}\n")
+                action_feedback = f"PICK_UP failed: {reason}. Navigate closer to {task_phases[current_phase_idx]['desc']} first."
         
         elif action == "PUT_DOWN" and task_phases:
             ph = task_phases[current_phase_idx]
@@ -915,6 +925,7 @@ try:
                     reason = f"too far ({dist_to_target:.2f}m > {active_radius}m)"
                 with open(out_log, "a") as f:
                     f.write(f"[NAV] Step {step}: PUT_DOWN failed — {reason}\n")
+                action_feedback = f"PUT_DOWN failed: {reason}. Navigate closer to {task_phases[current_phase_idx]['desc']} first."
         
         # 9. Apply movement action
         if action == "MOVE_FORWARD":
