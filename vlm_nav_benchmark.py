@@ -140,6 +140,8 @@ You can ONLY output ONE of these actions:
 - MOVE_FORWARD (move 0.25 meters in your current facing direction)
 - TURN_LEFT (rotate 15 degrees to the left)  
 - TURN_RIGHT (rotate 15 degrees to the right)
+- TILT_UP (tilt camera up by 5 degrees to look higher)
+- TILT_DOWN (tilt camera down by 5 degrees to look at the ground)
 - STOP (you believe you have reached the target)
 
 Rules:
@@ -161,6 +163,8 @@ You can ONLY output ONE of these actions:
 - MOVE_FORWARD (move 0.25 meters in your current facing direction)
 - TURN_LEFT (rotate 15 degrees to the left)
 - TURN_RIGHT (rotate 15 degrees to the right)
+- TILT_UP (tilt camera up by 5 degrees to look higher)
+- TILT_DOWN (tilt camera down by 5 degrees to look at the ground)
 - PICK_UP (pick up an object near you — only works when you are very close to the object)
 - PUT_DOWN (put down the object you are carrying — only works near the target location)
 - STOP (you have completed the final step of the task)
@@ -256,14 +260,14 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
             
             # Extract valid action from response
             import re
-            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP|PICK_UP|PUT_DOWN)", text_upper)
+            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP|PICK_UP|PUT_DOWN|TILT_UP|TILT_DOWN)", text_upper)
             if match:
                 return match.group(1), False
             else:
                 # Fallback: search backwards to find the final chosen action
                 best_action = "MOVE_FORWARD"
                 best_idx = -1
-                for action in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP", "PICK_UP", "PUT_DOWN"]:
+                for action in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP", "PICK_UP", "PUT_DOWN", "TILT_UP", "TILT_DOWN"]:
                     idx = text_upper.rfind(action)
                     if idx > best_idx:
                         best_idx = idx
@@ -318,11 +322,11 @@ def query_vlm_confirm_stop(image_path: str, out_log: str, step: int = 0) -> str:
                 f.write(json.dumps({"step": step, "type": "stop_confirm", "image": image_path, "response": text}) + "\n")
             text_upper = text.upper()
             import re
-            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP|PICK_UP|PUT_DOWN)", text_upper)
+            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP|PICK_UP|PUT_DOWN|TILT_UP|TILT_DOWN)", text_upper)
             if match:
                 return match.group(1)
             best_action, best_idx = "MOVE_FORWARD", -1
-            for a in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP", "PICK_UP", "PUT_DOWN"]:
+            for a in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP", "PICK_UP", "PUT_DOWN", "TILT_UP", "TILT_DOWN"]:
                 idx = text_upper.rfind(a)
                 if idx > best_idx:
                     best_idx, best_action = idx, a
@@ -349,7 +353,10 @@ RUNNER_TIME_PER_STEP = 0.5  # seconds of runner animation per nav step
 
 # Camera pitch: tilt down to see low furniture (sofa, coffee table).
 # Habitat Challenge also tilts camera for realistic robot behavior (Hello Stretch).
-CAMERA_PITCH_DEG = -10   # degrees (negative = look down)
+CAMERA_PITCH_DEG = -10   # degrees (negative = look down) — initial value
+TILT_ANGLE = 5           # degrees per TILT_UP/TILT_DOWN action
+CAMERA_PITCH_MIN = -30   # max downward tilt
+CAMERA_PITCH_MAX = 10    # max upward tilt
 
 
 
@@ -730,6 +737,7 @@ try:
         active_radius = SUCCESS_RADIUS
     
     action_feedback = ""  # feedback to VLM about failed actions
+    agent_pitch = CAMERA_PITCH_DEG  # dynamic camera pitch (degrees)
     
     for step in range(MAX_STEPS):
         # 1. Update agent position in scene (bbox-calibrated ground contact Z)
@@ -748,7 +756,7 @@ try:
             cam_orient = cam_xf.AddOrientOp()
             
             cam_trans.Set(Gf.Vec3d(agent_x, agent_y, AGENT_EYE_HEIGHT))
-            cam_orient.Set(get_camera_quat_from_yaw(agent_yaw, CAMERA_PITCH_DEG))
+            cam_orient.Set(get_camera_quat_from_yaw(agent_yaw, agent_pitch))
         
         # 3. Animate Runner 1 (obstacle) — position from trajectory keyframes
         if runner1_spec and runner1_xf_ops:
@@ -964,6 +972,12 @@ try:
             agent_yaw += TURN_ANGLE
         elif action == "TURN_RIGHT":
             agent_yaw -= TURN_ANGLE
+        elif action == "TILT_UP":
+            agent_pitch = min(agent_pitch + TILT_ANGLE, CAMERA_PITCH_MAX)
+            with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: TILT_UP -> pitch={agent_pitch}°\n")
+        elif action == "TILT_DOWN":
+            agent_pitch = max(agent_pitch - TILT_ANGLE, CAMERA_PITCH_MIN)
+            with open(out_log, "a") as f: f.write(f"[NAV] Step {step}: TILT_DOWN -> pitch={agent_pitch}°\n")
         
         # Keep yaw in [-180, 180]
         agent_yaw = wrap_angle_deg(agent_yaw)
