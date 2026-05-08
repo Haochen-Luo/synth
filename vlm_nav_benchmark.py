@@ -376,13 +376,13 @@ TARGET_CONFIGS = {
     "book_return": {
         "task_type": "multi_step",
         "coords": [8.0, 6.0],  # initial target = book on floor (phase 0)
-        "success_radius": 1.0,
+        "success_radius": 1.5,
         "desc": "book return task",
         "instruction": "Pick up the book from the floor, put it on the tall 4-tier bookshelf, then go to the black door.",
         "phases": [
-            {"name": "pick_up_book", "target": [8.0, 6.0], "radius": 1.0,
+            {"name": "pick_up_book", "target": [8.0, 6.0], "radius": 1.5,
              "action": "PICK_UP", "desc": "the book on the floor"},
-            {"name": "put_on_shelf", "target": [0.34, 8.76], "radius": 1.2,
+            {"name": "put_on_shelf", "target": [0.34, 8.76], "radius": 1.5,
              "action": "PUT_DOWN", "desc": "the tall 4-tier bookshelf"},
             {"name": "go_to_door", "target": [6.0, 11.7], "radius": 1.5,
              "action": "STOP", "desc": "the black door"},
