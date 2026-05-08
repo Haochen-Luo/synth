@@ -626,6 +626,20 @@ try:
             bk_pos = _cfg["book_floor_pos"]
             bk_trans.Set(Gf.Vec3d(bk_pos[0], bk_pos[1], bk_pos[2]))
             with open(out_log, "a") as f: f.write(f"[NAV] Book relocated to floor: {bk_pos}\n")
+            
+            # Hide ALL other book prims so the shelf appears empty
+            # This prevents VLM from being confused by books already on the shelf
+            hidden_count = 0
+            for prim in stage.Traverse():
+                prim_path = str(prim.GetPath())
+                if ("BookStack" in prim_path or "BookColumn" in prim_path) and "Bookcase" not in prim_path:
+                    if prim_path != book_path and prim.GetTypeName() in ("Xform", ""):
+                        try:
+                            UsdGeom.Imageable(prim).MakeInvisible()
+                            hidden_count += 1
+                        except:
+                            pass
+            with open(out_log, "a") as f: f.write(f"[NAV] Hidden {hidden_count} other book prims to clear shelf\n")
         else:
             with open(out_log, "a") as f: f.write(f"[NAV] WARNING: Book prim not found: {book_path}\n")
     
