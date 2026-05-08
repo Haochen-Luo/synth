@@ -167,7 +167,10 @@ You can ONLY output ONE of these actions:
 
 Rules:
 - Think step by step: what sub-task should I do next?
-- You must be VERY CLOSE to an object to PICK_UP or PUT_DOWN.
+- Do NOT attempt PICK_UP or PUT_DOWN just because you can see the target. You must navigate RIGHT NEXT TO IT first.
+- Only use PICK_UP when the object fills a large portion of your view and appears within arm's reach.
+- Only use PUT_DOWN when you are standing directly beside the target furniture.
+- Use MOVE_FORWARD and TURN to navigate. Approach the target until it is very large in your view before interacting.
 - If you are carrying an object, navigate to where you need to put it down.
 - Only use STOP after ALL steps of the task are done.
 
