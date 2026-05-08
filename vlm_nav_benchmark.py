@@ -386,6 +386,9 @@ TARGET_CONFIGS = {
         # Book prim to relocate to floor
         "book_prim": "/World/Env/BookStackFactory_3931954__spawn_asset_7414082_",
         "book_floor_pos": [8.0, 6.0, 0.15],
+        # Shelf tier 3 surface Z, computed from LargeShelf bbox:
+        # Z_min=0.132, Z_max=1.685, 4 tiers → tier3 = 0.132 + 2*(1.685-0.132)/4 = 0.909
+        "book_shelf_z": 0.909,
     },
 }
 
@@ -881,8 +884,8 @@ try:
                     shelf_target = task_phases[current_phase_idx]["target"]
                     bk_xf = UsdGeom.Xformable(book_prim_for_task)
                     for op in bk_xf.GetOrderedXformOps():
-                        if op.GetOpName() == "xformOp:translate":
-                            op.Set(Gf.Vec3d(shelf_target[0], shelf_target[1], 0.8))
+                         if op.GetOpName() == "xformOp:translate":
+                            op.Set(Gf.Vec3d(shelf_target[0], shelf_target[1], _cfg.get("book_shelf_z", 0.909)))
                     UsdGeom.Imageable(book_prim_for_task).MakeVisible()
                 current_phase_idx += 1
                 active_target = task_phases[current_phase_idx]["target"]
