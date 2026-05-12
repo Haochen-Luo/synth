@@ -412,11 +412,11 @@ TARGET_CONFIGS = {
         "task_type": "multi_step",
         "coords": [10.0, 0.6],  # initial target = desk lamp on table
         "success_radius": 1.5,
-        "desc": "turn on the light and go to the sofa",
-        "instruction": "Go to the desk lamp on the table and turn it on, then navigate to the sofa.",
+        "desc": "turn on the lamp and go to the sofa",
+        "instruction": "Find the lamp and turn it on, then navigate to the sofa.",
         "phases": [
             {"name": "turn_on_lamp", "target": [10.0, 0.6], "radius": 2.0,
-             "action": "TURN_ON", "desc": "the desk lamp on the table"},
+             "action": "TURN_ON", "desc": "the lamp"},
             {"name": "go_to_sofa", "target": [4.37, 6.43], "radius": 3.0,
              "action": "STOP", "desc": "the sofa (large light-green couch)"},
         ],
