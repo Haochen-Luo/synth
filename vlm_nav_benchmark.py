@@ -424,6 +424,38 @@ TARGET_CONFIGS = {
         "lamp_prim": "/World/Env/DeskLampFactory_7935096__spawn_asset_6219104_",
         "lamp_light_pos": [10.0, 0.57, 1.2],  # position for the new SphereLight
     },
+    "book_dancer": {
+        "task_type": "multi_step",
+        "coords": [8.0, 6.0],  # initial target = book on floor
+        "success_radius": 1.5,
+        "desc": "pick up the book and go to the dancer",
+        "instruction": "Pick up the book from the floor, then go to the dancing person.",
+        "phases": [
+            {"name": "pick_up_book", "target": [8.0, 6.0], "radius": 1.5,
+             "action": "PICK_UP", "desc": "the book on the floor"},
+            {"name": "go_to_dancer", "target": [2.34, 2.13], "radius": 1.5,
+             "action": "STOP", "desc": "the dancing person"},
+        ],
+        "book_prim": "/World/Env/BookStackFactory_3931954__spawn_asset_7414082_",
+        "book_floor_pos": [8.0, 6.0, 0.15],
+    },
+    "book_dancer_hidden": {
+        "task_type": "multi_step",
+        "coords": [8.0, 6.0],  # initial target = book on floor
+        "success_radius": 1.5,
+        "desc": "pick up the book and go to the dancer",
+        "instruction": "Pick up the book from the floor, then go to the dancing person.",
+        "phases": [
+            {"name": "pick_up_book", "target": [8.0, 6.0], "radius": 1.5,
+             "action": "PICK_UP", "desc": "the book on the floor"},
+            {"name": "go_to_dancer", "target": [15.0, 2.0], "radius": 1.5,
+             "action": "STOP", "desc": "the dancing person"},
+        ],
+        "book_prim": "/World/Env/BookStackFactory_3931954__spawn_asset_7414082_",
+        "book_floor_pos": [8.0, 6.0, 0.15],
+        # Relocate dancer behind agent (not visible from start yaw=160°)
+        "dancer_override_pos": [15.0, 2.0],
+    },
 }
 
 # === SELECT TARGET (override via env: NAV_TARGET=bookshelf) ===
@@ -646,6 +678,11 @@ try:
         d_orient.Set(Gf.Quatf(math.cos(d_yaw_rad/2), 0, 0, math.sin(d_yaw_rad/2)))
         d_scale.Set(Gf.Vec3d(runner_scale[0], runner_scale[1], runner_scale[2]))
         with open(out_log, "a") as f: f.write(f"[NAV] Dancer: scale={runner_scale}, Z={dancer_z:.4f} (bbox-calibrated)\n")
+        # Override dancer position for task-specific placement
+        dancer_override = _cfg.get("dancer_override_pos")
+        if dancer_override:
+            d_trans.Set(Gf.Vec3d(dancer_override[0], dancer_override[1], dancer_z))
+            with open(out_log, "a") as f: f.write(f"[NAV] Dancer repositioned to: ({dancer_override[0]}, {dancer_override[1]}) [behind agent]\n")
     
     # === Setup book_return task: relocate book to floor ===
     book_prim_for_task = None
