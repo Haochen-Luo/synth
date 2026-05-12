@@ -167,6 +167,7 @@ You can ONLY output ONE of these actions:
 - TILT_DOWN (tilt camera down by 5 degrees to look at the ground)
 - PICK_UP (pick up an object near you — only works when you are very close to the object)
 - PUT_DOWN (put down the object you are carrying — only works near the target location)
+- TURN_ON (turn on a light or device near you — only works when you are very close to it)
 - STOP (you have completed the final step of the task)
 
 Rules:
@@ -174,6 +175,7 @@ Rules:
 - Do NOT attempt PICK_UP or PUT_DOWN just because you can see the target. You must navigate RIGHT NEXT TO IT first.
 - Only use PICK_UP when the object fills a large portion of your view and appears within arm's reach.
 - Only use PUT_DOWN when you are standing directly beside the target furniture.
+- Only use TURN_ON when the lamp or device is clearly visible and within arm's reach.
 - Use MOVE_FORWARD and TURN to navigate. Approach the target until it is very large in your view before interacting.
 - If you are carrying an object, navigate to where you need to put it down.
 - Only use STOP after ALL steps of the task are done.
@@ -260,14 +262,14 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
             
             # Extract valid action from response
             import re
-            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP|PICK_UP|PUT_DOWN|TILT_UP|TILT_DOWN)", text_upper)
+            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP|PICK_UP|PUT_DOWN|TURN_ON|TILT_UP|TILT_DOWN)", text_upper)
             if match:
                 return match.group(1), False
             else:
                 # Fallback: search backwards to find the final chosen action
                 best_action = "MOVE_FORWARD"
                 best_idx = -1
-                for action in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP", "PICK_UP", "PUT_DOWN", "TILT_UP", "TILT_DOWN"]:
+                for action in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP", "PICK_UP", "PUT_DOWN", "TURN_ON", "TILT_UP", "TILT_DOWN"]:
                     idx = text_upper.rfind(action)
                     if idx > best_idx:
                         best_idx = idx
@@ -322,11 +324,11 @@ def query_vlm_confirm_stop(image_path: str, out_log: str, step: int = 0) -> str:
                 f.write(json.dumps({"step": step, "type": "stop_confirm", "image": image_path, "response": text}) + "\n")
             text_upper = text.upper()
             import re
-            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP|PICK_UP|PUT_DOWN|TILT_UP|TILT_DOWN)", text_upper)
+            match = re.search(r"ACTION:\s*(MOVE_FORWARD|TURN_LEFT|TURN_RIGHT|STOP|PICK_UP|PUT_DOWN|TURN_ON|TILT_UP|TILT_DOWN)", text_upper)
             if match:
                 return match.group(1)
             best_action, best_idx = "MOVE_FORWARD", -1
-            for a in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP", "PICK_UP", "PUT_DOWN", "TILT_UP", "TILT_DOWN"]:
+            for a in ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "STOP", "PICK_UP", "PUT_DOWN", "TURN_ON", "TILT_UP", "TILT_DOWN"]:
                 idx = text_upper.rfind(a)
                 if idx > best_idx:
                     best_idx, best_action = idx, a
@@ -403,6 +405,22 @@ TARGET_CONFIGS = {
         # Shelf tier 3 surface Z, computed from LargeShelf bbox:
         # Z_min=0.132, Z_max=1.685, 4 tiers → tier3 = 0.132 + 2*(1.685-0.132)/4 = 0.909
         "book_shelf_z": 0.909,
+    },
+    "light_sofa": {
+        "task_type": "multi_step",
+        "coords": [10.0, 0.6],  # initial target = desk lamp on table
+        "success_radius": 1.5,
+        "desc": "turn on the light and go to the sofa",
+        "instruction": "Go to the desk lamp on the table and turn it on, then navigate to the sofa.",
+        "phases": [
+            {"name": "turn_on_lamp", "target": [10.0, 0.6], "radius": 1.5,
+             "action": "TURN_ON", "desc": "the desk lamp on the table"},
+            {"name": "go_to_sofa", "target": [4.37, 6.43], "radius": 3.0,
+             "action": "STOP", "desc": "the sofa (large light-green couch)"},
+        ],
+        # Desk lamp prim — used to create a light effect on TURN_ON
+        "lamp_prim": "/World/Env/DeskLampFactory_7935096__spawn_asset_6219104_",
+        "lamp_light_pos": [10.0, 0.57, 1.2],  # position for the new SphereLight
     },
 }
 
@@ -938,6 +956,29 @@ try:
                     f.write(f"[NAV] Step {step}: PUT_DOWN failed — {reason}\n")
                 action_feedback = f"PUT_DOWN failed: you are not close enough to the target. Move closer first."
         
+        elif action == "TURN_ON" and task_phases:
+            ph = task_phases[current_phase_idx]
+            if ph["action"] == "TURN_ON" and dist_to_target < active_radius:
+                # Success: turn on the lamp — create a visible SphereLight
+                lamp_light_pos = _cfg.get("lamp_light_pos", [10.0, 0.57, 1.2])
+                lamp_light = UsdLux.SphereLight.Define(stage, "/World/Lights/DeskLampLight")
+                lamp_light.CreateIntensityAttr().Set(150000.0)
+                lamp_light.CreateRadiusAttr().Set(0.15)
+                lamp_light.CreateColorAttr().Set(Gf.Vec3f(1.0, 0.92, 0.7))  # warm white
+                lmp_xf = UsdGeom.Xformable(lamp_light)
+                lmp_xf.ClearXformOpOrder()
+                lmp_xf.AddTranslateOp().Set(Gf.Vec3d(*lamp_light_pos))
+                current_phase_idx += 1
+                active_target = task_phases[current_phase_idx]["target"]
+                active_radius = task_phases[current_phase_idx]["radius"]
+                with open(out_log, "a") as f:
+                    f.write(f"[NAV] Step {step}: TURN_ON success! dist={dist_to_target:.2f}m. Lamp lit. Advancing to phase {current_phase_idx+1}: {task_phases[current_phase_idx]['name']}\n")
+            else:
+                reason = f"wrong phase (need {ph['action']})" if ph["action"] != "TURN_ON" else "you are too far away"
+                with open(out_log, "a") as f:
+                    f.write(f"[NAV] Step {step}: TURN_ON failed — {reason} (dist={dist_to_target:.2f}m)\n")
+                action_feedback = f"TURN_ON failed: you are not close enough to the lamp. Move closer first."
+        
         # 9. Apply movement action
         if action == "MOVE_FORWARD":
             import omni.physx, carb
@@ -1041,6 +1082,11 @@ try:
             "TURN_LEFT": "#ff6b6b",
             "TURN_RIGHT": "#4ecdc4",
             "STOP": "#ffd93d",
+            "PICK_UP": "#c084fc",
+            "PUT_DOWN": "#f472b6",
+            "TURN_ON": "#fbbf24",
+            "TILT_UP": "#94a3b8",
+            "TILT_DOWN": "#64748b",
         }
         
         # Draw trajectory segments
