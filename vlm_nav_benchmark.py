@@ -195,9 +195,11 @@ def query_vlm(image_path: str, out_log: str, collision_alert: bool = False, acti
         inv_str = task_phase_info.get('inventory', 'empty')
         ph_idx = task_phase_info['phase_idx']
         ph_total = task_phase_info['phase_total']
+        lamp_st = task_phase_info.get('lamp_state', {})
+        lamp_info = " Lamp: ON." if lamp_st.get('on') else " Lamp: OFF."
         prompt = (
             f"You are performing a multi-step task. Current objective: go to {ph_desc} and use {ph_action}. "
-            f"Carrying: [{inv_str}]. Progress: step {ph_idx+1}/{ph_total}. "
+            f"Carrying: [{inv_str}].{lamp_info} Progress: step {ph_idx+1}/{ph_total}. "
             f"Based on this first-person view, what action should you take? First explain your reasoning, then output the action."
         )
         # Inject failure feedback from previous step
@@ -413,7 +415,7 @@ TARGET_CONFIGS = {
         "desc": "turn on the light and go to the sofa",
         "instruction": "Go to the desk lamp on the table and turn it on, then navigate to the sofa.",
         "phases": [
-            {"name": "turn_on_lamp", "target": [10.0, 0.6], "radius": 1.5,
+            {"name": "turn_on_lamp", "target": [10.0, 0.6], "radius": 2.0,
              "action": "TURN_ON", "desc": "the desk lamp on the table"},
             {"name": "go_to_sofa", "target": [4.37, 6.43], "radius": 3.0,
              "action": "STOP", "desc": "the sofa (large light-green couch)"},
@@ -756,6 +758,7 @@ try:
     
     action_feedback = ""  # feedback to VLM about failed actions
     agent_pitch = CAMERA_PITCH_DEG  # dynamic camera pitch (degrees)
+    lamp_state = {"on": False}  # tracks lamp on/off state for VLM feedback
     
     for step in range(MAX_STEPS):
         # 1. Update agent position in scene (bbox-calibrated ground contact Z)
@@ -845,7 +848,8 @@ try:
             inv_str = ', '.join(agent_inventory) if agent_inventory else 'empty'
             _tpi = {"desc": ph["desc"], "action": ph["action"], "inventory": inv_str,
                     "phase_idx": current_phase_idx, "phase_total": len(task_phases),
-                    "action_feedback": action_feedback}
+                    "action_feedback": action_feedback,
+                    "lamp_state": lamp_state}
         action, is_fallback = query_vlm(frame_path, out_log, collision_alert=collision_occurred, action_history=past_actions, step=step, frame_quality=fq, nav_history_records=nav_history, task_phase_info=_tpi)
         collision_occurred = False # reset after consuming
         action_feedback = ""  # reset after consuming
@@ -968,6 +972,7 @@ try:
                 lmp_xf = UsdGeom.Xformable(lamp_light)
                 lmp_xf.ClearXformOpOrder()
                 lmp_xf.AddTranslateOp().Set(Gf.Vec3d(*lamp_light_pos))
+                lamp_state["on"] = True
                 current_phase_idx += 1
                 active_target = task_phases[current_phase_idx]["target"]
                 active_radius = task_phases[current_phase_idx]["radius"]
