@@ -1,0 +1,1272 @@
+{
+  "scene_dir": "native_case02_living_two_people_full_physics_scene",
+  "prims": [
+    {
+      "path": "/World/Env/_materials/shader_window_glass_018_deepcopy",
+      "name": "shader_window_glass_018_deepcopy",
+      "category": "window",
+      "center": null,
+      "size": null
+    },
+    {
+      "path": "/World/Env/PanelDoorFactory_878225__spawn_asset_9_",
+      "name": "PanelDoorFactory_878225__spawn_asset_9_",
+      "category": "Pan",
+      "center": [
+        13.861,
+        0.373,
+        1.654
+      ],
+      "size": [
+        1.323,
+        1.565,
+        1.042
+      ]
+    },
+    {
+      "path": "/World/Env/PanelDoorFactory_878225__spawn_asset_9_/PanelDoorFactory_878225__spawn_asset_9_",
+      "name": "PanelDoorFactory_878225__spawn_asset_9_",
+      "category": "Pan",
+      "center": [
+        -0.439,
+        0.242,
+        0.478
+      ],
+      "size": [
+        1.118,
+        1.409,
+        1.042
+      ]
+    },
+    {
+      "path": "/World/Env/RugFactory_488816__spawn_asset_3345098_",
+      "name": "RugFactory_488816__spawn_asset_3345098_",
+      "category": "Rug",
+      "center": [
+        8.442,
+        2.268,
+        0.109
+      ],
+      "size": [
+        4.003,
+        2.873,
+        0.015
+      ]
+    },
+    {
+      "path": "/World/Env/RugFactory_488816__spawn_asset_3345098_/RugFactory_488816__spawn_asset_3345098_",
+      "name": "RugFactory_488816__spawn_asset_3345098_",
+      "category": "Rug",
+      "center": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "size": [
+        4.003,
+        2.873,
+        0.015
+      ]
+    },
+    {
+      "path": "/World/Env/RugFactory_7798581__spawn_asset_5127934_",
+      "name": "RugFactory_7798581__spawn_asset_5127934_",
+      "category": "Rug",
+      "center": [
+        14.969,
+        2.247,
+        0.108
+      ],
+      "size": [
+        4.277,
+        2.859,
+        0.013
+      ]
+    },
+    {
+      "path": "/World/Env/RugFactory_7798581__spawn_asset_5127934_/RugFactory_7798581__spawn_asset_5127934_",
+      "name": "RugFactory_7798581__spawn_asset_5127934_",
+      "category": "Rug",
+      "center": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "size": [
+        4.277,
+        2.859,
+        0.013
+      ]
+    },
+    {
+      "path": "/World/Env/GlassPanelDoorFactory_1596140__spawn_asset_0_",
+      "name": "GlassPanelDoorFactory_1596140__spawn_asset_0_",
+      "category": "Pan",
+      "center": [
+        5.93,
+        1.451,
+        1.175
+      ],
+      "size": [
+        1.829,
+        1.59,
+        2.149
+      ]
+    },
+    {
+      "path": "/World/Env/GlassPanelDoorFactory_1596140__spawn_asset_0_/GlassPanelDoorFactory_1596140__spawn_asset_0_",
+      "name": "GlassPanelDoorFactory_1596140__spawn_asset_0_",
+      "category": "Pan",
+      "center": [
+        -0.472,
+        0.21,
+        -0.156
+      ],
+      "size": [
+        1.053,
+        1.532,
+        2.149
+      ]
+    },
+    {
+      "path": "/World/Env/PanelDoorFactory_878225__spawn_asset_6__001",
+      "name": "PanelDoorFactory_878225__spawn_asset_6__001",
+      "category": "Pan",
+      "center": [
+        16.271,
+        6.144,
+        1.175
+      ],
+      "size": [
+        0.541,
+        1.01,
+        2.149
+      ]
+    },
+    {
+      "path": "/World/Env/PanelDoorFactory_878225__spawn_asset_6__001/PanelDoorFactory_878225__spawn_asset_6__001",
+      "name": "PanelDoorFactory_878225__spawn_asset_6__001",
+      "category": "Pan",
+      "center": [
+        -0.0,
+        0.021,
+        -0.074
+      ],
+      "size": [
+        0.083,
+        1.08,
+        2.149
+      ]
+    },
+    {
+      "path": "/World/Env/PanelDoorFactory_878225__spawn_asset_9__001",
+      "name": "PanelDoorFactory_878225__spawn_asset_9__001",
+      "category": "Pan",
+      "center": [
+        14.187,
+        -0.4,
+        1.175
+      ],
+      "size": [
+        0.249,
+        1.08,
+        2.149
+      ]
+    },
+    {
+      "path": "/World/Env/PanelDoorFactory_878225__spawn_asset_9__001/PanelDoorFactory_878225__spawn_asset_9__001",
+      "name": "PanelDoorFactory_878225__spawn_asset_9__001",
+      "category": "Pan",
+      "center": [
+        -0.0,
+        0.021,
+        -0.132
+      ],
+      "size": [
+        0.083,
+        1.08,
+        2.149
+      ]
+    },
+    {
+      "path": "/World/Env/GlassPanelDoorFactory_1596140__spawn_asset_5_",
+      "name": "GlassPanelDoorFactory_1596140__spawn_asset_5_",
+      "category": "Pan",
+      "center": [
+        6.993,
+        4.887,
+        1.175
+      ],
+      "size": [
+        1.158,
+        1.602,
+        2.149
+      ]
+    },
+    {
+      "path": "/World/Env/GlassPanelDoorFactory_1596140__spawn_asset_5_/GlassPanelDoorFactory_1596140__spawn_asset_5_",
+      "name": "GlassPanelDoorFactory_1596140__spawn_asset_5_",
+      "category": "Pan",
+      "center": [
+        -0.472,
+        0.137,
+        -0.048
+      ],
+      "size": [
+        1.053,
+        1.532,
+        2.149
+      ]
+    },
+    {
+      "path": "/World/Env/MirrorFactory_6748333__spawn_asset_3294970_",
+      "name": "MirrorFactory_6748333__spawn_asset_3294970_",
+      "category": "Mirror",
+      "center": [
+        13.273,
+        3.898,
+        1.485
+      ],
+      "size": [
+        0.824,
+        0.018,
+        0.548
+      ]
+    },
+    {
+      "path": "/World/Env/MirrorFactory_6748333__spawn_asset_3294970_/MirrorFactory_6748333__spawn_asset_3294970_",
+      "name": "MirrorFactory_6748333__spawn_asset_3294970_",
+      "category": "Mirror",
+      "center": [
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "size": [
+        0.018,
+        0.824,
+        0.548
+      ]
+    },
+    {
+      "path": "/World/Env/PanelDoorFactory_878225__spawn_asset_6_",
+      "name": "PanelDoorFactory_878225__spawn_asset_6_",
+      "category": "Pan",
+      "center": [
+        16.178,
+        6.97,
+        1.654
+      ],
+      "size": [
+        1.611,
+        1.74,
+        1.042
+      ]
+    },
+    {
+      "path": "/World/Env/PanelDoorFactory_878225__spawn_asset_6_/PanelDoorFactory_878225__spawn_asset_6_",
+      "name": "PanelDoorFactory_878225__spawn_asset_6_",
+      "category": "Pan",
+      "center": [
+        -0.439,
+        0.25,
+        0.478
+      ],
+      "size": [
+        1.118,
+        1.394,
+        1.042
+      ]
+    },
+    {
+      "path": "/World/Env/GlassPanelDoorFactory_1596140__spawn_asset_7_",
+      "name": "GlassPanelDoorFactory_1596140__spawn_asset_7_",
+      "category": "Pan",
+      "center": [
+        12.384,
+        5.609,
+        1.175
+      ],
+      "size": [
+        1.596,
+        1.149,
+        2.149
+      ]
+    },
+    {
+      "path": "/World/Env/GlassPanelDoorFactory_1596140__spawn_asset_7_/GlassPanelDoorFactory_1596140__spawn_asset_7_",
+      "name": "GlassPanelDoorFactory_1596140__spawn_asset_7_",
+      "category": "Pan",
+      "center": [
+        -0.472,
+        0.21,
+        -0.065
+      ],
+      "size": [
+        1.053,
+        1.532,
+        2.149
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_186257_NatureShelfTrinketsFactory",
+      "name": "Obj_186257_NatureShelfTrinketsFactory",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        9.41,
+        5.293,
+        1.318
+      ],
+      "size": [
+        0.112,
+        0.127,
+        0.083
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_186257_NatureShelfTrinketsFactory/NatureShelfTrinketsFactory_9517497_spawn_asset_5970173",
+      "name": "NatureShelfTrinketsFactory_9517497_spawn_asset_5970173",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        9.41,
+        5.293,
+        1.318
+      ],
+      "size": [
+        0.112,
+        0.127,
+        0.083
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_226260_SupportBookStackFactory",
+      "name": "Obj_226260_SupportBookStackFactory",
+      "category": "BookStack",
+      "center": [
+        17.583,
+        2.468,
+        0.174
+      ],
+      "size": [
+        0.328,
+        0.432,
+        0.064
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_226260_SupportBookStackFactory/SupportBookStackFactory_3405052_spawn_asset_5996224",
+      "name": "SupportBookStackFactory_3405052_spawn_asset_5996224",
+      "category": "BookStack",
+      "center": [
+        17.583,
+        2.468,
+        0.174
+      ],
+      "size": [
+        0.328,
+        0.432,
+        0.064
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_244071_CellShelfFactory",
+      "name": "Obj_244071_CellShelfFactory",
+      "category": "CellShelf",
+      "center": [
+        17.644,
+        2.687,
+        0.401
+      ],
+      "size": [
+        0.37,
+        1.13,
+        0.599
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_244071_CellShelfFactory/CellShelfFactory_7403103_spawn_asset_892878",
+      "name": "CellShelfFactory_7403103_spawn_asset_892878",
+      "category": "CellShelf",
+      "center": [
+        17.644,
+        2.687,
+        0.401
+      ],
+      "size": [
+        0.37,
+        1.13,
+        0.599
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_283759_LargeShelfFactory",
+      "name": "Obj_283759_LargeShelfFactory",
+      "category": "LargeShelf",
+      "center": [
+        9.319,
+        5.413,
+        1.054
+      ],
+      "size": [
+        0.295,
+        0.929,
+        1.906
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_283759_LargeShelfFactory/LargeShelfFactory_479230_spawn_asset_8211031",
+      "name": "LargeShelfFactory_479230_spawn_asset_8211031",
+      "category": "LargeShelf",
+      "center": [
+        9.319,
+        5.413,
+        1.054
+      ],
+      "size": [
+        0.295,
+        0.929,
+        1.906
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_32054_BookStackFactory",
+      "name": "Obj_32054_BookStackFactory",
+      "category": "BookStack",
+      "center": [
+        6.518,
+        0.315,
+        0.705
+      ],
+      "size": [
+        0.216,
+        0.152,
+        0.145
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_32054_BookStackFactory/BookStackFactory_1940745_spawn_asset_1160175",
+      "name": "BookStackFactory_1940745_spawn_asset_1160175",
+      "category": "BookStack",
+      "center": [
+        6.518,
+        0.315,
+        0.705
+      ],
+      "size": [
+        0.216,
+        0.152,
+        0.145
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_321614_BookStackFactory",
+      "name": "Obj_321614_BookStackFactory",
+      "category": "BookStack",
+      "center": [
+        7.795,
+        0.327,
+        1.148
+      ],
+      "size": [
+        0.273,
+        0.179,
+        0.127
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_321614_BookStackFactory/BookStackFactory_5299428_spawn_asset_9399228",
+      "name": "BookStackFactory_5299428_spawn_asset_9399228",
+      "category": "BookStack",
+      "center": [
+        7.795,
+        0.327,
+        1.148
+      ],
+      "size": [
+        0.273,
+        0.179,
+        0.127
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_327789_KitchenCabinetFactory",
+      "name": "Obj_327789_KitchenCabinetFactory",
+      "category": "KitchenCabinet",
+      "center": [
+        7.921,
+        0.358,
+        0.594
+      ],
+      "size": [
+        3.294,
+        0.373,
+        0.985
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_327789_KitchenCabinetFactory/KitchenCabinetFactory_3793090_spawn_asset_2618235",
+      "name": "KitchenCabinetFactory_3793090_spawn_asset_2618235",
+      "category": "KitchenCabinet",
+      "center": [
+        7.921,
+        0.358,
+        0.594
+      ],
+      "size": [
+        3.294,
+        0.373,
+        0.985
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_339859_SimpleBookcaseFactory",
+      "name": "Obj_339859_SimpleBookcaseFactory",
+      "category": "SimpleBookcase",
+      "center": [
+        17.7,
+        1.141,
+        0.507
+      ],
+      "size": [
+        0.258,
+        0.511,
+        0.811
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_339859_SimpleBookcaseFactory/SimpleBookcaseFactory_3383077_spawn_asset_6433646",
+      "name": "SimpleBookcaseFactory_3383077_spawn_asset_6433646",
+      "category": "SimpleBookcase",
+      "center": [
+        17.7,
+        1.141,
+        0.507
+      ],
+      "size": [
+        0.258,
+        0.511,
+        0.811
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_365799_NatureShelfTrinketsFactory",
+      "name": "Obj_365799_NatureShelfTrinketsFactory",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        9.206,
+        0.267,
+        0.678
+      ],
+      "size": [
+        0.147,
+        0.135,
+        0.111
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_365799_NatureShelfTrinketsFactory/NatureShelfTrinketsFactory_1014135_spawn_asset_1225547",
+      "name": "NatureShelfTrinketsFactory_1014135_spawn_asset_1225547",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        9.206,
+        0.267,
+        0.678
+      ],
+      "size": [
+        0.147,
+        0.135,
+        0.111
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_368629_BookStackFactory",
+      "name": "Obj_368629_BookStackFactory",
+      "category": "BookStack",
+      "center": [
+        9.315,
+        5.455,
+        1.691
+      ],
+      "size": [
+        0.227,
+        0.259,
+        0.094
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_368629_BookStackFactory/BookStackFactory_617731_spawn_asset_2548972",
+      "name": "BookStackFactory_617731_spawn_asset_2548972",
+      "category": "BookStack",
+      "center": [
+        9.315,
+        5.455,
+        1.691
+      ],
+      "size": [
+        0.227,
+        0.259,
+        0.094
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_370525_DeskLampFactory",
+      "name": "Obj_370525_DeskLampFactory",
+      "category": "DeskLamp",
+      "center": [
+        14.665,
+        3.516,
+        1.116
+      ],
+      "size": [
+        0.252,
+        0.252,
+        0.437
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_370525_DeskLampFactory/DeskLampFactory_2651915_spawn_asset_7282618",
+      "name": "DeskLampFactory_2651915_spawn_asset_7282618",
+      "category": "DeskLamp",
+      "center": [
+        14.665,
+        3.516,
+        1.116
+      ],
+      "size": [
+        0.252,
+        0.252,
+        0.437
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_405596_SupportBookStackFactory",
+      "name": "Obj_405596_SupportBookStackFactory",
+      "category": "BookStack",
+      "center": [
+        17.593,
+        2.745,
+        0.752
+      ],
+      "size": [
+        0.253,
+        0.389,
+        0.104
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_405596_SupportBookStackFactory/SupportBookStackFactory_1571932_spawn_asset_4107157",
+      "name": "SupportBookStackFactory_1571932_spawn_asset_4107157",
+      "category": "BookStack",
+      "center": [
+        17.593,
+        2.745,
+        0.752
+      ],
+      "size": [
+        0.253,
+        0.389,
+        0.104
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_416778_NatureShelfTrinketsFactory",
+      "name": "Obj_416778_NatureShelfTrinketsFactory",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        7.566,
+        0.39,
+        1.103
+      ],
+      "size": [
+        0.104,
+        0.095,
+        0.042
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_416778_NatureShelfTrinketsFactory/NatureShelfTrinketsFactory_3291007_spawn_asset_935892",
+      "name": "NatureShelfTrinketsFactory_3291007_spawn_asset_935892",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        7.566,
+        0.39,
+        1.103
+      ],
+      "size": [
+        0.104,
+        0.095,
+        0.042
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_467635_LargeShelfFactory",
+      "name": "Obj_467635_LargeShelfFactory",
+      "category": "LargeShelf",
+      "center": [
+        11.867,
+        7.67,
+        0.941
+      ],
+      "size": [
+        0.513,
+        0.317,
+        1.679
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_467635_LargeShelfFactory/LargeShelfFactory_9384041_spawn_asset_2136971",
+      "name": "LargeShelfFactory_9384041_spawn_asset_2136971",
+      "category": "LargeShelf",
+      "center": [
+        11.867,
+        7.67,
+        0.941
+      ],
+      "size": [
+        0.513,
+        0.317,
+        1.679
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_547609_NatureShelfTrinketsFactory",
+      "name": "Obj_547609_NatureShelfTrinketsFactory",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        9.315,
+        5.142,
+        1.69
+      ],
+      "size": [
+        0.149,
+        0.145,
+        0.12
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_547609_NatureShelfTrinketsFactory/NatureShelfTrinketsFactory_4152131_spawn_asset_3724390",
+      "name": "NatureShelfTrinketsFactory_4152131_spawn_asset_3724390",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        9.315,
+        5.142,
+        1.69
+      ],
+      "size": [
+        0.149,
+        0.145,
+        0.12
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_566699_NatureShelfTrinketsFactory",
+      "name": "Obj_566699_NatureShelfTrinketsFactory",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        7.011,
+        0.273,
+        1.134
+      ],
+      "size": [
+        0.044,
+        0.086,
+        0.104
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_566699_NatureShelfTrinketsFactory/NatureShelfTrinketsFactory_2267071_spawn_asset_4256070",
+      "name": "NatureShelfTrinketsFactory_2267071_spawn_asset_4256070",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        7.011,
+        0.273,
+        1.134
+      ],
+      "size": [
+        0.044,
+        0.086,
+        0.104
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_570198_BookColumnFactory",
+      "name": "Obj_570198_BookColumnFactory",
+      "category": "BookColumn",
+      "center": [
+        9.335,
+        5.562,
+        1.407
+      ],
+      "size": [
+        0.161,
+        0.293,
+        0.245
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_570198_BookColumnFactory/BookColumnFactory_6816409_spawn_asset_9401275",
+      "name": "BookColumnFactory_6816409_spawn_asset_9401275",
+      "category": "BookColumn",
+      "center": [
+        9.335,
+        5.562,
+        1.407
+      ],
+      "size": [
+        0.161,
+        0.293,
+        0.245
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_5735_NatureShelfTrinketsFactory",
+      "name": "Obj_5735_NatureShelfTrinketsFactory",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        9.303,
+        5.776,
+        1.665
+      ],
+      "size": [
+        0.106,
+        0.112,
+        0.05
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_5735_NatureShelfTrinketsFactory/NatureShelfTrinketsFactory_1340911_spawn_asset_5359207",
+      "name": "NatureShelfTrinketsFactory_1340911_spawn_asset_5359207",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        9.303,
+        5.776,
+        1.665
+      ],
+      "size": [
+        0.106,
+        0.112,
+        0.05
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_584637_SupportBookStackFactory",
+      "name": "Obj_584637_SupportBookStackFactory",
+      "category": "BookStack",
+      "center": [
+        9.338,
+        5.365,
+        0.244
+      ],
+      "size": [
+        0.314,
+        0.399,
+        0.085
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_584637_SupportBookStackFactory/SupportBookStackFactory_1794315_spawn_asset_6586511",
+      "name": "SupportBookStackFactory_1794315_spawn_asset_6586511",
+      "category": "BookStack",
+      "center": [
+        9.338,
+        5.365,
+        0.244
+      ],
+      "size": [
+        0.314,
+        0.399,
+        0.085
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_592841_SupportBookStackFactory",
+      "name": "Obj_592841_SupportBookStackFactory",
+      "category": "BookStack",
+      "center": [
+        9.315,
+        5.532,
+        0.964
+      ],
+      "size": [
+        0.25,
+        0.357,
+        0.081
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_592841_SupportBookStackFactory/SupportBookStackFactory_2502290_spawn_asset_9782008",
+      "name": "SupportBookStackFactory_2502290_spawn_asset_9782008",
+      "category": "BookStack",
+      "center": [
+        9.315,
+        5.532,
+        0.964
+      ],
+      "size": [
+        0.25,
+        0.357,
+        0.081
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_636150_NatureShelfTrinketsFactory",
+      "name": "Obj_636150_NatureShelfTrinketsFactory",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        17.627,
+        3.083,
+        0.742
+      ],
+      "size": [
+        0.139,
+        0.046,
+        0.088
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_636150_NatureShelfTrinketsFactory/NatureShelfTrinketsFactory_7758823_spawn_asset_7725685",
+      "name": "NatureShelfTrinketsFactory_7758823_spawn_asset_7725685",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        17.627,
+        3.083,
+        0.742
+      ],
+      "size": [
+        0.139,
+        0.046,
+        0.088
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_670019_BookStackFactory",
+      "name": "Obj_670019_BookStackFactory",
+      "category": "BookStack",
+      "center": [
+        9.344,
+        5.38,
+        0.674
+      ],
+      "size": [
+        0.288,
+        0.319,
+        0.224
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_670019_BookStackFactory/BookStackFactory_6438874_spawn_asset_5498688",
+      "name": "BookStackFactory_6438874_spawn_asset_5498688",
+      "category": "BookStack",
+      "center": [
+        9.344,
+        5.38,
+        0.674
+      ],
+      "size": [
+        0.288,
+        0.319,
+        0.224
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_672099_NatureShelfTrinketsFactory",
+      "name": "Obj_672099_NatureShelfTrinketsFactory",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        17.712,
+        1.215,
+        0.952
+      ],
+      "size": [
+        0.115,
+        0.112,
+        0.098
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_672099_NatureShelfTrinketsFactory/NatureShelfTrinketsFactory_2311100_spawn_asset_5257821",
+      "name": "NatureShelfTrinketsFactory_2311100_spawn_asset_5257821",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        17.712,
+        1.215,
+        0.952
+      ],
+      "size": [
+        0.115,
+        0.112,
+        0.098
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_729351_DeskLampFactory",
+      "name": "Obj_729351_DeskLampFactory",
+      "category": "DeskLamp",
+      "center": [
+        8.225,
+        0.324,
+        1.315
+      ],
+      "size": [
+        0.305,
+        0.305,
+        0.462
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_729351_DeskLampFactory/DeskLampFactory_8441251_spawn_asset_3964643",
+      "name": "DeskLampFactory_8441251_spawn_asset_3964643",
+      "category": "DeskLamp",
+      "center": [
+        8.225,
+        0.324,
+        1.315
+      ],
+      "size": [
+        0.305,
+        0.305,
+        0.462
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_742946_SimpleDeskFactory",
+      "name": "Obj_742946_SimpleDeskFactory",
+      "category": "SimpleDesk",
+      "center": [
+        14.616,
+        3.508,
+        0.5
+      ],
+      "size": [
+        0.864,
+        0.641,
+        0.797
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_742946_SimpleDeskFactory/SimpleDeskFactory_9559520_spawn_asset_34888",
+      "name": "SimpleDeskFactory_9559520_spawn_asset_34888",
+      "category": "SimpleDesk",
+      "center": [
+        14.616,
+        3.508,
+        0.5
+      ],
+      "size": [
+        0.864,
+        0.641,
+        0.797
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_777818_MonitorFactory",
+      "name": "Obj_777818_MonitorFactory",
+      "category": "Monitor",
+      "center": [
+        14.808,
+        3.723,
+        1.123
+      ],
+      "size": [
+        0.464,
+        0.109,
+        0.45
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_777818_MonitorFactory/MonitorFactory_3778079_spawn_asset_6358111",
+      "name": "MonitorFactory_3778079_spawn_asset_6358111",
+      "category": "Monitor",
+      "center": [
+        14.808,
+        3.723,
+        1.123
+      ],
+      "size": [
+        0.464,
+        0.109,
+        0.45
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_794816_LargePlantContainerFactory",
+      "name": "Obj_794816_LargePlantContainerFactory",
+      "category": "LargePlantContainer",
+      "center": [
+        6.668,
+        2.943,
+        0.668
+      ],
+      "size": [
+        0.814,
+        0.787,
+        1.153
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_794816_LargePlantContainerFactory/LargePlantContainerFactory_2084597_spawn_asset_1809710",
+      "name": "LargePlantContainerFactory_2084597_spawn_asset_1809710",
+      "category": "LargePlantContainer",
+      "center": [
+        6.668,
+        2.943,
+        0.668
+      ],
+      "size": [
+        0.814,
+        0.787,
+        1.153
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_800600_TVStandFactory",
+      "name": "Obj_800600_TVStandFactory",
+      "category": "TVStand",
+      "center": [
+        17.609,
+        4.937,
+        0.363
+      ],
+      "size": [
+        0.44,
+        1.495,
+        0.524
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_800600_TVStandFactory/TVStandFactory_8700760_spawn_asset_5210156",
+      "name": "TVStandFactory_8700760_spawn_asset_5210156",
+      "category": "TVStand",
+      "center": [
+        17.609,
+        4.937,
+        0.363
+      ],
+      "size": [
+        0.44,
+        1.495,
+        0.524
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_844470_TVFactory",
+      "name": "Obj_844470_TVFactory",
+      "category": "TV",
+      "center": [
+        17.728,
+        4.865,
+        0.994
+      ],
+      "size": [
+        0.15,
+        0.951,
+        0.74
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_844470_TVFactory/TVFactory_1181523_spawn_asset_7837992",
+      "name": "TVFactory_1181523_spawn_asset_7837992",
+      "category": "TV",
+      "center": [
+        17.728,
+        4.865,
+        0.994
+      ],
+      "size": [
+        0.15,
+        0.951,
+        0.74
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_932145_BookColumnFactory",
+      "name": "Obj_932145_BookColumnFactory",
+      "category": "BookColumn",
+      "center": [
+        17.578,
+        2.846,
+        0.276
+      ],
+      "size": [
+        0.17,
+        0.165,
+        0.268
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_932145_BookColumnFactory/BookColumnFactory_284242_spawn_asset_5737791",
+      "name": "BookColumnFactory_284242_spawn_asset_5737791",
+      "category": "BookColumn",
+      "center": [
+        17.578,
+        2.846,
+        0.276
+      ],
+      "size": [
+        0.17,
+        0.165,
+        0.268
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_954451_NatureShelfTrinketsFactory",
+      "name": "Obj_954451_NatureShelfTrinketsFactory",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        17.684,
+        1.266,
+        0.583
+      ],
+      "size": [
+        0.15,
+        0.094,
+        0.079
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_954451_NatureShelfTrinketsFactory/NatureShelfTrinketsFactory_9518845_spawn_asset_566502",
+      "name": "NatureShelfTrinketsFactory_9518845_spawn_asset_566502",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        17.684,
+        1.266,
+        0.583
+      ],
+      "size": [
+        0.15,
+        0.094,
+        0.079
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_999080_NatureShelfTrinketsFactory",
+      "name": "Obj_999080_NatureShelfTrinketsFactory",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        17.679,
+        1.001,
+        0.613
+      ],
+      "size": [
+        0.111,
+        0.136,
+        0.135
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_999080_NatureShelfTrinketsFactory/NatureShelfTrinketsFactory_5994230_spawn_asset_1108203",
+      "name": "NatureShelfTrinketsFactory_5994230_spawn_asset_1108203",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        17.679,
+        1.001,
+        0.613
+      ],
+      "size": [
+        0.111,
+        0.136,
+        0.135
+      ]
+    }
+  ]
+}

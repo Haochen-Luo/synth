@@ -1,0 +1,717 @@
+{
+  "scene_dir": "native_case07_dining_zoom_full_physics_scene",
+  "prims": [
+    {
+      "path": "/World/Env/_materials/shader_window_glass_002_deepcopy",
+      "name": "shader_window_glass_002_deepcopy",
+      "category": "window",
+      "center": null,
+      "size": null
+    },
+    {
+      "path": "/World/Env/PanelDoorFactory_7340024__spawn_asset_2_",
+      "name": "PanelDoorFactory_7340024__spawn_asset_2_",
+      "category": "Pan",
+      "center": [
+        1.661,
+        4.488,
+        1.21
+      ],
+      "size": [
+        1.274,
+        1.584,
+        2.145
+      ]
+    },
+    {
+      "path": "/World/Env/PanelDoorFactory_7340024__spawn_asset_2_/PanelDoorFactory_7340024__spawn_asset_2_",
+      "name": "PanelDoorFactory_7340024__spawn_asset_2_",
+      "category": "Pan",
+      "center": [
+        -0.429,
+        0.485,
+        -0.001
+      ],
+      "size": [
+        1.139,
+        1.483,
+        2.145
+      ]
+    },
+    {
+      "path": "/World/Env/MirrorFactory_1673575__spawn_asset_5495788_",
+      "name": "MirrorFactory_1673575__spawn_asset_5495788_",
+      "category": "Mirror",
+      "center": [
+        5.363,
+        6.655,
+        2.144
+      ],
+      "size": [
+        0.601,
+        0.014,
+        0.484
+      ]
+    },
+    {
+      "path": "/World/Env/MirrorFactory_1673575__spawn_asset_5495788_/MirrorFactory_1673575__spawn_asset_5495788_",
+      "name": "MirrorFactory_1673575__spawn_asset_5495788_",
+      "category": "Mirror",
+      "center": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "size": [
+        0.014,
+        0.601,
+        0.484
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_20076_NatureShelfTrinketsFactory",
+      "name": "Obj_20076_NatureShelfTrinketsFactory",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        0.361,
+        5.275,
+        0.352
+      ],
+      "size": [
+        0.037,
+        0.119,
+        0.037
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_20076_NatureShelfTrinketsFactory/NatureShelfTrinketsFactory_1323389_spawn_asset_9645724",
+      "name": "NatureShelfTrinketsFactory_1323389_spawn_asset_9645724",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        0.361,
+        5.275,
+        0.352
+      ],
+      "size": [
+        0.037,
+        0.119,
+        0.037
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_233460_TableDiningFactory",
+      "name": "Obj_233460_TableDiningFactory",
+      "category": "TableDining",
+      "center": [
+        4.522,
+        8.189,
+        0.496
+      ],
+      "size": [
+        1.139,
+        1.772,
+        0.715
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_233460_TableDiningFactory/TableDiningFactory_3241729_spawn_asset_7384845_001_SPLIT_GLAS",
+      "name": "TableDiningFactory_3241729_spawn_asset_7384845_001_SPLIT_GLAS",
+      "category": "TableDining",
+      "center": [
+        4.522,
+        8.189,
+        0.482
+      ],
+      "size": [
+        1.09,
+        1.687,
+        0.688
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_233460_TableDiningFactory/TableDiningFactory_3241729_spawn_asset_7384845",
+      "name": "TableDiningFactory_3241729_spawn_asset_7384845",
+      "category": "TableDining",
+      "center": [
+        4.522,
+        8.189,
+        0.837
+      ],
+      "size": [
+        1.139,
+        1.772,
+        0.032
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_286769_PlateFactory",
+      "name": "Obj_286769_PlateFactory",
+      "category": "Plate",
+      "center": [
+        0.4,
+        5.055,
+        0.924
+      ],
+      "size": [
+        0.292,
+        0.291,
+        0.036
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_286769_PlateFactory/PlateFactory_3417253_spawn_asset_7154421",
+      "name": "PlateFactory_3417253_spawn_asset_7154421",
+      "category": "Plate",
+      "center": [
+        0.4,
+        5.055,
+        0.924
+      ],
+      "size": [
+        0.292,
+        0.291,
+        0.036
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_319895_SingleCabinetFactory",
+      "name": "Obj_319895_SingleCabinetFactory",
+      "category": "SingleCabinet",
+      "center": [
+        6.105,
+        9.071,
+        0.739
+      ],
+      "size": [
+        0.33,
+        0.71,
+        1.202
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_319895_SingleCabinetFactory/SingleCabinetFactory_9136937_spawn_asset_4225029_004_SPLIT_GL",
+      "name": "SingleCabinetFactory_9136937_spawn_asset_4225029_004_SPLIT_GL",
+      "category": "SingleCabinet",
+      "center": [
+        5.984,
+        9.071,
+        0.5
+      ],
+      "size": [
+        0.01,
+        0.708,
+        0.558
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_319895_SingleCabinetFactory/SingleCabinetFactory_9136937_spawn_asset_4225029",
+      "name": "SingleCabinetFactory_9136937_spawn_asset_4225029",
+      "category": "SingleCabinet",
+      "center": [
+        5.967,
+        9.071,
+        0.78
+      ],
+      "size": [
+        0.054,
+        0.71,
+        1.117
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_319895_SingleCabinetFactory/SingleCabinetFactory_9136937_spawn_asset_4225029_001",
+      "name": "SingleCabinetFactory_9136937_spawn_asset_4225029_001",
+      "category": "SingleCabinet",
+      "center": [
+        6.131,
+        9.071,
+        0.779
+      ],
+      "size": [
+        0.259,
+        0.666,
+        1.118
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_319895_SingleCabinetFactory/SingleCabinetFactory_9136937_spawn_asset_4225029_003_SPLIT_GL",
+      "name": "SingleCabinetFactory_9136937_spawn_asset_4225029_003_SPLIT_GL",
+      "category": "SingleCabinet",
+      "center": [
+        6.009,
+        9.071,
+        0.833
+      ],
+      "size": [
+        0.059,
+        0.708,
+        1.01
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_319895_SingleCabinetFactory/SingleCabinetFactory_9136937_spawn_asset_4225029_002",
+      "name": "SingleCabinetFactory_9136937_spawn_asset_4225029_002",
+      "category": "SingleCabinet",
+      "center": [
+        6.135,
+        9.071,
+        0.739
+      ],
+      "size": [
+        0.271,
+        0.708,
+        1.202
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_329417_BookStackFactory",
+      "name": "Obj_329417_BookStackFactory",
+      "category": "BookStack",
+      "center": [
+        6.113,
+        9.11,
+        0.708
+      ],
+      "size": [
+        0.187,
+        0.324,
+        0.204
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_329417_BookStackFactory/BookStackFactory_2488796_spawn_asset_5120125",
+      "name": "BookStackFactory_2488796_spawn_asset_5120125",
+      "category": "BookStack",
+      "center": [
+        6.113,
+        9.11,
+        0.708
+      ],
+      "size": [
+        0.187,
+        0.324,
+        0.204
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_339114_SupportBookStackFactory",
+      "name": "Obj_339114_SupportBookStackFactory",
+      "category": "BookStack",
+      "center": [
+        6.117,
+        9.199,
+        0.288
+      ],
+      "size": [
+        0.253,
+        0.373,
+        0.096
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_339114_SupportBookStackFactory/SupportBookStackFactory_2580528_spawn_asset_7571836",
+      "name": "SupportBookStackFactory_2580528_spawn_asset_7571836",
+      "category": "BookStack",
+      "center": [
+        6.117,
+        9.199,
+        0.288
+      ],
+      "size": [
+        0.253,
+        0.373,
+        0.096
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_401714_WineglassFactory",
+      "name": "Obj_401714_WineglassFactory",
+      "category": "Wineglass",
+      "center": [
+        0.365,
+        5.163,
+        0.69
+      ],
+      "size": [
+        0.141,
+        0.141,
+        0.139
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_401714_WineglassFactory/WineglassFactory_4903779_spawn_asset_4311352",
+      "name": "WineglassFactory_4903779_spawn_asset_4311352",
+      "category": "Wineglass",
+      "center": [
+        0.365,
+        5.163,
+        0.69
+      ],
+      "size": [
+        0.141,
+        0.141,
+        0.139
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_481588_ChairFactory",
+      "name": "Obj_481588_ChairFactory",
+      "category": "Chair",
+      "center": [
+        4.815,
+        6.973,
+        0.619
+      ],
+      "size": [
+        0.481,
+        0.548,
+        0.962
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_481588_ChairFactory/ChairFactory_3513377_spawn_asset_6920716",
+      "name": "ChairFactory_3513377_spawn_asset_6920716",
+      "category": "Chair",
+      "center": [
+        4.815,
+        6.973,
+        0.619
+      ],
+      "size": [
+        0.481,
+        0.548,
+        0.962
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_517127_ChairFactory",
+      "name": "Obj_517127_ChairFactory",
+      "category": "Chair",
+      "center": [
+        3.614,
+        7.812,
+        0.625
+      ],
+      "size": [
+        0.551,
+        0.481,
+        0.974
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_517127_ChairFactory/ChairFactory_3513377_spawn_asset_6521692",
+      "name": "ChairFactory_3513377_spawn_asset_6521692",
+      "category": "Chair",
+      "center": [
+        3.614,
+        7.812,
+        0.625
+      ],
+      "size": [
+        0.551,
+        0.481,
+        0.974
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_53413_LargePlantContainerFactory",
+      "name": "Obj_53413_LargePlantContainerFactory",
+      "category": "LargePlantContainer",
+      "center": [
+        3.35,
+        6.959,
+        0.409
+      ],
+      "size": [
+        0.511,
+        0.52,
+        0.555
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_53413_LargePlantContainerFactory/LargePlantContainerFactory_2727739_spawn_asset_6800802",
+      "name": "LargePlantContainerFactory_2727739_spawn_asset_6800802",
+      "category": "LargePlantContainer",
+      "center": [
+        3.35,
+        6.959,
+        0.409
+      ],
+      "size": [
+        0.511,
+        0.52,
+        0.555
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_610347_PlantContainerFactory",
+      "name": "Obj_610347_PlantContainerFactory",
+      "category": "PlantContainer",
+      "center": [
+        6.165,
+        9.071,
+        1.498
+      ],
+      "size": [
+        0.273,
+        0.274,
+        0.363
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_610347_PlantContainerFactory/PlantContainerFactory_2427147_spawn_asset_5951518",
+      "name": "PlantContainerFactory_2427147_spawn_asset_5951518",
+      "category": "PlantContainer",
+      "center": [
+        6.165,
+        9.071,
+        1.498
+      ],
+      "size": [
+        0.273,
+        0.274,
+        0.363
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_787459_SimpleBookcaseFactory",
+      "name": "Obj_787459_SimpleBookcaseFactory",
+      "category": "SimpleBookcase",
+      "center": [
+        0.39,
+        5.102,
+        0.523
+      ],
+      "size": [
+        0.365,
+        0.584,
+        0.769
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_787459_SimpleBookcaseFactory/SimpleBookcaseFactory_3115838_spawn_asset_1058906",
+      "name": "SimpleBookcaseFactory_3115838_spawn_asset_1058906",
+      "category": "SimpleBookcase",
+      "center": [
+        0.39,
+        5.102,
+        0.523
+      ],
+      "size": [
+        0.365,
+        0.584,
+        0.769
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_78825_ChairFactory",
+      "name": "Obj_78825_ChairFactory",
+      "category": "Chair",
+      "center": [
+        5.428,
+        8.635,
+        0.621
+      ],
+      "size": [
+        0.549,
+        0.481,
+        0.966
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_78825_ChairFactory/ChairFactory_3513377_spawn_asset_1613030",
+      "name": "ChairFactory_3513377_spawn_asset_1613030",
+      "category": "Chair",
+      "center": [
+        5.428,
+        8.635,
+        0.621
+      ],
+      "size": [
+        0.549,
+        0.481,
+        0.966
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_836042_NatureShelfTrinketsFactory",
+      "name": "Obj_836042_NatureShelfTrinketsFactory",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        0.291,
+        5.149,
+        0.373
+      ],
+      "size": [
+        0.089,
+        0.13,
+        0.078
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_836042_NatureShelfTrinketsFactory/NatureShelfTrinketsFactory_4628591_spawn_asset_8132289",
+      "name": "NatureShelfTrinketsFactory_4628591_spawn_asset_8132289",
+      "category": "NatureShelfTrinkets",
+      "center": [
+        0.291,
+        5.149,
+        0.373
+      ],
+      "size": [
+        0.089,
+        0.13,
+        0.078
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_860587_BookStackFactory",
+      "name": "Obj_860587_BookStackFactory",
+      "category": "BookStack",
+      "center": [
+        6.084,
+        9.227,
+        1.032
+      ],
+      "size": [
+        0.146,
+        0.241,
+        0.121
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_860587_BookStackFactory/BookStackFactory_8830564_spawn_asset_5503328",
+      "name": "BookStackFactory_8830564_spawn_asset_5503328",
+      "category": "BookStack",
+      "center": [
+        6.084,
+        9.227,
+        1.032
+      ],
+      "size": [
+        0.146,
+        0.241,
+        0.121
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_879076_CupFactory",
+      "name": "Obj_879076_CupFactory",
+      "category": "Cup",
+      "center": [
+        4.763,
+        8.077,
+        0.858
+      ],
+      "size": [
+        0.116,
+        0.141,
+        0.075
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_879076_CupFactory/CupFactory_8486571_spawn_asset_9111148",
+      "name": "CupFactory_8486571_spawn_asset_9111148",
+      "category": "Cup",
+      "center": [
+        4.763,
+        8.077,
+        0.858
+      ],
+      "size": [
+        0.116,
+        0.141,
+        0.075
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_885933_ChairFactory",
+      "name": "Obj_885933_ChairFactory",
+      "category": "Chair",
+      "center": [
+        4.277,
+        6.964,
+        0.625
+      ],
+      "size": [
+        0.481,
+        0.55,
+        0.974
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_885933_ChairFactory/ChairFactory_3513377_spawn_asset_9823620",
+      "name": "ChairFactory_3513377_spawn_asset_9823620",
+      "category": "Chair",
+      "center": [
+        4.277,
+        6.964,
+        0.625
+      ],
+      "size": [
+        0.481,
+        0.55,
+        0.974
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_920613_PotFactory",
+      "name": "Obj_920613_PotFactory",
+      "category": "Pot",
+      "center": [
+        4.182,
+        8.21,
+        0.916
+      ],
+      "size": [
+        0.318,
+        0.265,
+        0.192
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_920613_PotFactory/PotFactory_3596886_spawn_asset_1758814",
+      "name": "PotFactory_3596886_spawn_asset_1758814",
+      "category": "Pot",
+      "center": [
+        4.182,
+        8.21,
+        0.916
+      ],
+      "size": [
+        0.318,
+        0.265,
+        0.192
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_976574_ChairFactory",
+      "name": "Obj_976574_ChairFactory",
+      "category": "Chair",
+      "center": [
+        3.62,
+        8.345,
+        0.621
+      ],
+      "size": [
+        0.549,
+        0.481,
+        0.966
+      ]
+    },
+    {
+      "path": "/World/InteractiveProps/Obj_976574_ChairFactory/ChairFactory_3513377_spawn_asset_4406320",
+      "name": "ChairFactory_3513377_spawn_asset_4406320",
+      "category": "Chair",
+      "center": [
+        3.62,
+        8.345,
+        0.621
+      ],
+      "size": [
+        0.549,
+        0.481,
+        0.966
+      ]
+    }
+  ]
+}
