@@ -230,21 +230,28 @@ try:
 
     # ── Lighting — always add fill lights for PathTracing (required) ──
     # PathTracing mode needs explicit lights; built-in scene lights may not emit enough.
-    # Same approach as original vlm_nav_benchmark.py which always adds 5 SphereLights.
-    light_intensity = 80000.0  # same as original benchmark
+    light_intensity = 30000.0
     all_c = [o["center"][:2] for o in spec.get("scene_objects", [{}]) if isinstance(o.get("center"), list)]
-    # Distribute lights across the room based on agent start region
-    lx, ly = agent_start_xy[0], agent_start_xy[1]
-    light_positions = [
-        (lx-4, ly, 2.3), (lx+4, ly, 2.3), (lx, ly+4, 2.3),
-        (lx, ly-4, 2.3), (lx, ly, 2.3),
-    ]
+    if all_c:
+        x_min, x_max = min(c[0] for c in all_c), max(c[0] for c in all_c)
+        y_min, y_max = min(c[1] for c in all_c), max(c[1] for c in all_c)
+        cx, cy = (x_min + x_max)/2, (y_min + y_max)/2
+        dx, dy = max(2, (x_max - x_min)/4), max(2, (y_max - y_min)/4)
+        light_positions = [
+            (cx, cy, 2.3), (cx-dx, cy-dy, 2.3), (cx+dx, cy-dy, 2.3),
+            (cx-dx, cy+dy, 2.3), (cx+dx, cy+dy, 2.3)
+        ]
+    else:
+        # Fallback
+        lx, ly = agent_start_xy[0], agent_start_xy[1]
+        light_positions = [(lx, ly, 2.3), (lx-2, ly, 2.3), (lx+2, ly, 2.3), (lx, ly-2, 2.3), (lx, ly+2, 2.3)]
+        
     for i, lp in enumerate(light_positions):
         lt = UsdLux.SphereLight.Define(stage, f"/World/Lights/BenchLight_{i}")
         lt.CreateIntensityAttr().Set(light_intensity); lt.CreateRadiusAttr().Set(0.3)
         xf = UsdGeom.Xformable(lt); xf.ClearXformOpOrder()
         xf.AddTranslateOp().Set(Gf.Vec3d(*lp))
-    log(f"[BENCH] Added 5 fill lights at intensity={light_intensity} near agent start")
+    log(f"[BENCH] Added 5 fill lights at intensity={light_intensity} strictly inside room bounds")
 
     # ── Warm up + PathTracing ──
     for _ in range(100): sim_app.update()
