@@ -228,12 +228,22 @@ try:
             log(f"[BENCH] Dancer: scale={runner_scale}, Z={DANCER_MESH_GROUND_Z:.4f}")
             break
 
-    # ── Lighting ──
-    for i, lp in enumerate([(5,6,2.3),(10,6,2.3),(15,6,2.3),(5,2,2.3),(10,10,2.3)]):
-        lt = UsdLux.SphereLight.Define(stage, f"/World/Lights/BenchLight_{i}")
-        lt.CreateIntensityAttr().Set(80000.0); lt.CreateRadiusAttr().Set(0.3)
-        xf = UsdGeom.Xformable(lt); xf.ClearXformOpOrder()
-        xf.AddTranslateOp().Set(Gf.Vec3d(*lp))
+    # ── Lighting — only add fill lights if scene has very few built-in lights ──
+    existing_lights = 0
+    for p in stage.Traverse():
+        if p.IsA(UsdLux.SphereLight) or p.IsA(UsdLux.RectLight) or p.IsA(UsdLux.DistantLight):
+            existing_lights += 1
+    log(f"[BENCH] Scene has {existing_lights} existing lights")
+    if existing_lights < 3:
+        # Dark scene — add fill lights (same as case11 original)
+        for i, lp in enumerate([(5,6,2.3),(10,6,2.3),(15,6,2.3),(5,2,2.3),(10,10,2.3)]):
+            lt = UsdLux.SphereLight.Define(stage, f"/World/Lights/BenchLight_{i}")
+            lt.CreateIntensityAttr().Set(80000.0); lt.CreateRadiusAttr().Set(0.3)
+            xf = UsdGeom.Xformable(lt); xf.ClearXformOpOrder()
+            xf.AddTranslateOp().Set(Gf.Vec3d(*lp))
+        log("[BENCH] Added 5 fill lights (dark scene)")
+    else:
+        log("[BENCH] Using scene's built-in lighting")
 
     # ── Warm up + PathTracing ──
     for _ in range(100): sim_app.update()
