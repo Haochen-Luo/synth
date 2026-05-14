@@ -83,11 +83,25 @@ def discover_scene_files(scene_dir):
     }
 
 def find_prim_by_factory(stage, factory_class):
-    """Find first prim path whose name contains the factory class string."""
+    """Find first prim path whose name contains the factory class string.
+    Searches all prims under /World/ (not just /World/Env/)."""
+    key = factory_class.replace("Factory","")
+    # First try exact factory class match (e.g. "SofaFactory" in path)
     for prim in stage.Traverse():
         path = str(prim.GetPath())
-        if factory_class.replace("Factory","") in path and "/World/Env/" in path:
-            return path
+        if "/World/" in path and factory_class in path:
+            # Skip deep children — want the top-level prim
+            parts = path.split("/")
+            if len(parts) <= 5:  # /World/Env/SofaFactory_xxx or /World/SofaFactory_xxx
+                return path
+    # Fallback: search for stripped key (e.g. "Sofa" in path)
+    for prim in stage.Traverse():
+        path = str(prim.GetPath())
+        name = path.split("/")[-1]
+        if key in name and "/World/" in path:
+            parts = path.split("/")
+            if len(parts) <= 5:
+                return path
     return None
 
 def find_all_prims_by_factory(stage, factory_class):
@@ -96,8 +110,11 @@ def find_all_prims_by_factory(stage, factory_class):
     key = factory_class.replace("Factory","")
     for prim in stage.Traverse():
         path = str(prim.GetPath())
-        if key in path and "/World/Env/" in path:
-            results.append(path)
+        name = path.split("/")[-1]
+        if (key in name or factory_class in name) and "/World/" in path:
+            parts = path.split("/")
+            if len(parts) <= 5:
+                results.append(path)
     return results
 
 def get_prim_world_center(stage, prim_path):
