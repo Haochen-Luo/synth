@@ -228,22 +228,23 @@ try:
             log(f"[BENCH] Dancer: scale={runner_scale}, Z={DANCER_MESH_GROUND_Z:.4f}")
             break
 
-    # ── Lighting — only add fill lights if scene has very few built-in lights ──
-    existing_lights = 0
-    for p in stage.Traverse():
-        if p.IsA(UsdLux.SphereLight) or p.IsA(UsdLux.RectLight) or p.IsA(UsdLux.DistantLight):
-            existing_lights += 1
-    log(f"[BENCH] Scene has {existing_lights} existing lights")
-    if existing_lights < 3:
-        # Dark scene — add fill lights (same as case11 original)
-        for i, lp in enumerate([(5,6,2.3),(10,6,2.3),(15,6,2.3),(5,2,2.3),(10,10,2.3)]):
-            lt = UsdLux.SphereLight.Define(stage, f"/World/Lights/BenchLight_{i}")
-            lt.CreateIntensityAttr().Set(80000.0); lt.CreateRadiusAttr().Set(0.3)
-            xf = UsdGeom.Xformable(lt); xf.ClearXformOpOrder()
-            xf.AddTranslateOp().Set(Gf.Vec3d(*lp))
-        log("[BENCH] Added 5 fill lights (dark scene)")
-    else:
-        log("[BENCH] Using scene's built-in lighting")
+    # ── Lighting — always add fill lights for PathTracing (required) ──
+    # PathTracing mode needs explicit lights; built-in scene lights may not emit enough.
+    # Same approach as original vlm_nav_benchmark.py which always adds 5 SphereLights.
+    light_intensity = 80000.0  # same as original benchmark
+    all_c = [o["center"][:2] for o in spec.get("scene_objects", [{}]) if isinstance(o.get("center"), list)]
+    # Distribute lights across the room based on agent start region
+    lx, ly = agent_start_xy[0], agent_start_xy[1]
+    light_positions = [
+        (lx-4, ly, 2.3), (lx+4, ly, 2.3), (lx, ly+4, 2.3),
+        (lx, ly-4, 2.3), (lx, ly, 2.3),
+    ]
+    for i, lp in enumerate(light_positions):
+        lt = UsdLux.SphereLight.Define(stage, f"/World/Lights/BenchLight_{i}")
+        lt.CreateIntensityAttr().Set(light_intensity); lt.CreateRadiusAttr().Set(0.3)
+        xf = UsdGeom.Xformable(lt); xf.ClearXformOpOrder()
+        xf.AddTranslateOp().Set(Gf.Vec3d(*lp))
+    log(f"[BENCH] Added 5 fill lights at intensity={light_intensity} near agent start")
 
     # ── Warm up + PathTracing ──
     for _ in range(100): sim_app.update()

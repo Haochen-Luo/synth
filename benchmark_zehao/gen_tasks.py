@@ -27,26 +27,36 @@ def has_obj(scene, cat):
     return cat in scenes[scene]["objects"]
 
 def pick_start(scene, target_cat, facing=True):
-    """Pick a start position far from target. If facing=True, yaw toward target."""
+    """Pick a start position ~4-5m from target, well inside room bounds.
+    If facing=True, yaw toward target; else yaw away."""
     tc = obj_center(scene, target_cat)
     if not tc: tc = [6, 6]
-    # Pick a point ~5m away from target
-    # Try a few candidate starts and pick one that's far enough
     all_centers = [o["center"][:2] for o in scenes[scene]["objects"].values()]
     if not all_centers: all_centers = [[6,6]]
-    x_min = min(c[0] for c in all_centers) - 1
-    x_max = max(c[0] for c in all_centers) + 1
-    y_min = min(c[1] for c in all_centers) - 1
-    y_max = max(c[1] for c in all_centers) + 1
+    # Room bounds with 2m safety margin from walls
+    x_min = min(c[0] for c in all_centers)
+    x_max = max(c[0] for c in all_centers)
+    y_min = min(c[1] for c in all_centers)
+    y_max = max(c[1] for c in all_centers)
+    margin = 2.0
+    safe_xmin = x_min + margin
+    safe_xmax = x_max - margin
+    safe_ymin = y_min + margin
+    safe_ymax = y_max - margin
+    if safe_xmin >= safe_xmax: safe_xmin, safe_xmax = x_min+0.5, x_max-0.5
+    if safe_ymin >= safe_ymax: safe_ymin, safe_ymax = y_min+0.5, y_max-0.5
     cx, cy = (x_min+x_max)/2, (y_min+y_max)/2
     
-    # Start near edge, opposite side from target
+    # Start: go opposite direction from target, but stay well inside room
     dx = tc[0] - cx
     dy = tc[1] - cy
     d = math.sqrt(dx*dx+dy*dy) or 1
-    # Go opposite direction from target, clamped to room bounds
-    sx = max(x_min+0.5, min(x_max-0.5, cx - 4*dx/d))
-    sy = max(y_min+0.5, min(y_max-0.5, cy - 4*dy/d))
+    # Only go 3m from center (not all the way to edge)
+    sx = cx - 3*dx/d
+    sy = cy - 3*dy/d
+    # Clamp to safe zone
+    sx = max(safe_xmin, min(safe_xmax, sx))
+    sy = max(safe_ymin, min(safe_ymax, sy))
     
     if facing:
         yaw = math.degrees(math.atan2(tc[1]-sy, tc[0]-sx))
