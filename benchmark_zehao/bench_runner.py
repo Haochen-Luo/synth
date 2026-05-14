@@ -230,7 +230,7 @@ try:
 
     # ── Lighting — always add fill lights for PathTracing (required) ──
     # PathTracing mode needs explicit lights; built-in scene lights may not emit enough.
-    light_intensity = 30000.0
+    light_intensity = 50000.0
     all_c = [o["center"][:2] for o in spec.get("scene_objects", [{}]) if isinstance(o.get("center"), list)]
     if all_c:
         x_min, x_max = min(c[0] for c in all_c), max(c[0] for c in all_c)
@@ -238,20 +238,25 @@ try:
         cx, cy = (x_min + x_max)/2, (y_min + y_max)/2
         dx, dy = max(2, (x_max - x_min)/4), max(2, (y_max - y_min)/4)
         light_positions = [
-            (cx, cy, 2.3), (cx-dx, cy-dy, 2.3), (cx+dx, cy-dy, 2.3),
-            (cx-dx, cy+dy, 2.3), (cx+dx, cy+dy, 2.3)
+            (cx, cy, 1.9), (cx-dx, cy-dy, 1.9), (cx+dx, cy-dy, 1.9),
+            (cx-dx, cy+dy, 1.9), (cx+dx, cy+dy, 1.9)
         ]
     else:
         # Fallback
         lx, ly = agent_start_xy[0], agent_start_xy[1]
-        light_positions = [(lx, ly, 2.3), (lx-2, ly, 2.3), (lx+2, ly, 2.3), (lx, ly-2, 2.3), (lx, ly+2, 2.3)]
+        light_positions = [(lx, ly, 1.9), (lx-2, ly, 1.9), (lx+2, ly, 1.9), (lx, ly-2, 1.9), (lx, ly+2, 1.9)]
         
+    # Add a DomeLight for ambient illumination (works if scene has no ceiling or windows)
+    dome_light = UsdLux.DomeLight.Define(stage, "/World/Lights/AmbientDome")
+    dome_light.CreateIntensityAttr().Set(1000.0)  # Soft ambient
+    
     for i, lp in enumerate(light_positions):
         lt = UsdLux.SphereLight.Define(stage, f"/World/Lights/BenchLight_{i}")
-        lt.CreateIntensityAttr().Set(light_intensity); lt.CreateRadiusAttr().Set(0.3)
+        lt.CreateIntensityAttr().Set(light_intensity)
+        lt.CreateRadiusAttr().Set(1.0)  # Larger radius for softer, wider light spread
         xf = UsdGeom.Xformable(lt); xf.ClearXformOpOrder()
         xf.AddTranslateOp().Set(Gf.Vec3d(*lp))
-    log(f"[BENCH] Added 5 fill lights at intensity={light_intensity} strictly inside room bounds")
+    log(f"[BENCH] Added DomeLight and 5 fill lights at intensity={light_intensity}")
 
     # ── Warm up + PathTracing ──
     for _ in range(100): sim_app.update()
@@ -288,14 +293,23 @@ try:
     wr_fpv = rep.WriterRegistry.get("BasicWriter")
     wr_fpv.initialize(output_dir=fpv_dir, rgb=True); wr_fpv.attach([rp_fpv])
 
-    # ── Bird's-eye camera — elevated corner view of entire room ──
+    # ── Bird's-eye camera — elevated top-down view of entire room ──
     bird_cam = UsdGeom.Camera.Define(stage, "/World/BirdCamera")
-    bird_cam.CreateFocalLengthAttr().Set(18.0)
+    bird_cam.CreateFocalLengthAttr().Set(12.0)  # Wider angle for top-down
     bird_cam.CreateHorizontalApertureAttr().Set(34.0)
     bxf = UsdGeom.Xformable(bird_cam); bxf.ClearXformOpOrder()
     bt = bxf.AddTranslateOp(); bo = bxf.AddOrientOp()
-    bird_pos = Gf.Vec3d(agent_start_xy[0]+3, agent_start_xy[1]-2, 2.4)
-    bird_tgt = Gf.Vec3d(agent_start_xy[0]-7, agent_start_xy[1]+3, 0.3)
+    
+    if all_c:
+        x_min, x_max = min(c[0] for c in all_c), max(c[0] for c in all_c)
+        y_min, y_max = min(c[1] for c in all_c), max(c[1] for c in all_c)
+        cx, cy = (x_min + x_max)/2, (y_min + y_max)/2
+        bird_pos = Gf.Vec3d(cx, cy, 6.0) # High up in the center
+        bird_tgt = Gf.Vec3d(cx+0.01, cy, 0.0) # Look mostly straight down
+    else:
+        bird_pos = Gf.Vec3d(agent_start_xy[0], agent_start_xy[1], 6.0)
+        bird_tgt = Gf.Vec3d(agent_start_xy[0]+0.01, agent_start_xy[1], 0.0)
+        
     bt.Set(bird_pos); bo.Set(cam_lookat(bird_pos, bird_tgt))
     rp_bird = rep.create.render_product("/World/BirdCamera", (1920,1080))
     wr_bird = rep.WriterRegistry.get("BasicWriter")
@@ -368,12 +382,14 @@ try:
         myaw = math.radians(ayaw + MESH_YAW_OFF)
         a_orient.Set(Gf.Quatf(math.cos(myaw/2), 0, 0, math.sin(myaw/2)))
 
-        # Update camera
+        # Update camera (offset forward to avoid clipping inside agent mesh)
         if nav_cam and nav_cam.IsValid():
             cxf = UsdGeom.Xformable(nav_cam)
             try: cxf.ClearXformOpOrder()
             except: pass
-            cxf.AddTranslateOp().Set(Gf.Vec3d(ax, ay, EYE_H))
+            cam_x = ax + 0.3 * math.cos(math.radians(ayaw))
+            cam_y = ay + 0.3 * math.sin(math.radians(ayaw))
+            cxf.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, GROUND_Z + EYE_H))
             cxf.AddOrientOp().Set(cam_quat(ayaw, apitch))
 
         # Animate runner 1 (obstacle)
