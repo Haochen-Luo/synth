@@ -1,0 +1,413 @@
+{
+  "benchmark": "4DSynth-Nav",
+  "version": "1.0",
+  "max_steps": 150,
+  "step_distance_m": 0.25,
+  "turn_angle_deg": 15.0,
+  "tilt_angle_deg": 5.0,
+  "camera_pitch_deg": -10,
+  "agent_eye_height_m": 1.58,
+  "scenes_base": "/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao",
+  "tasks": [
+    {
+      "id": "01-L1", "level": "L1", "scene_dir": "native_case01_living_follow_full_physics_scene",
+      "instruction": "Go to the sofa.",
+      "agent_start": [12.0, 4.0], "agent_yaw": 200.0,
+      "phases": [
+        {"name": "nav_sofa", "target_object": "SofaFactory", "radius": 3.0, "action": "STOP",
+         "desc": "the sofa", "place_at": null}
+      ]
+    },
+    {
+      "id": "01-L2", "level": "L2", "scene_dir": "native_case01_living_follow_full_physics_scene",
+      "instruction": "Go to the door.",
+      "agent_start": [6.0, 6.0], "agent_yaw": 270.0,
+      "phases": [
+        {"name": "nav_door", "target_object": "door", "radius": 2.0, "action": "STOP",
+         "desc": "the door", "place_at": null}
+      ]
+    },
+    {
+      "id": "01-L3", "level": "L3", "scene_dir": "native_case01_living_follow_full_physics_scene",
+      "instruction": "Pick up the book from the floor and put it on the sofa.",
+      "agent_start": [10.0, 8.0], "agent_yaw": 180.0,
+      "phases": [
+        {"name": "pick_book", "target_object": "BookStackFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the book on the floor", "place_at": [8.0, 6.0, 0.15]},
+        {"name": "put_sofa", "target_object": "SofaFactory", "radius": 3.0, "action": "STOP",
+         "desc": "the sofa", "place_at": null}
+      ]
+    },
+    {
+      "id": "01-L4", "level": "L4", "scene_dir": "native_case01_living_follow_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the bookshelf behind you.",
+      "agent_start": [8.0, 6.0], "agent_yaw": 0.0,
+      "phases": [
+        {"name": "pick_book", "target_object": "BookStackFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the book on the floor", "place_at": [9.0, 5.0, 0.15]},
+        {"name": "put_shelf", "target_object": "SimpleBookcaseFactory", "radius": 1.5, "action": "STOP",
+         "desc": "the bookshelf behind you", "place_at": null}
+      ]
+    },
+    {
+      "id": "02-L1", "level": "L1", "scene_dir": "native_case02_living_two_people_full_physics_scene",
+      "instruction": "Go to the sofa.",
+      "agent_start": [12.0, 4.0], "agent_yaw": 160.0,
+      "phases": [
+        {"name": "nav_sofa", "target_object": "SofaFactory", "radius": 3.0, "action": "STOP",
+         "desc": "the sofa", "place_at": null}
+      ]
+    },
+    {
+      "id": "02-L2", "level": "L2", "scene_dir": "native_case02_living_two_people_full_physics_scene",
+      "instruction": "Go to the TV stand.",
+      "agent_start": [6.0, 6.0], "agent_yaw": 180.0,
+      "phases": [
+        {"name": "nav_tv", "target_object": "TVStandFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the TV stand", "place_at": null}
+      ]
+    },
+    {
+      "id": "02-L3", "level": "L3", "scene_dir": "native_case02_living_two_people_full_physics_scene",
+      "instruction": "Pick up the book from the floor and put it on the shelf.",
+      "agent_start": [10.0, 5.0], "agent_yaw": 200.0,
+      "phases": [
+        {"name": "pick_book", "target_object": "BookStackFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the book on the floor", "place_at": [8.0, 5.0, 0.15]},
+        {"name": "put_shelf", "target_object": "SimpleBookcaseFactory", "radius": 1.5, "action": "STOP",
+         "desc": "the shelf", "place_at": null}
+      ]
+    },
+    {
+      "id": "02-L4", "level": "L4", "scene_dir": "native_case02_living_two_people_full_physics_scene",
+      "instruction": "Pick up the book and bring it to the person near the wall.",
+      "agent_start": [10.0, 5.0], "agent_yaw": 0.0,
+      "phases": [
+        {"name": "pick_book", "target_object": "BookStackFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the book on the floor", "place_at": [8.0, 4.0, 0.15]},
+        {"name": "go_person", "target_object": "__human_0__", "radius": 2.0, "action": "STOP",
+         "desc": "the person near the wall", "place_at": null}
+      ]
+    },
+    {
+      "id": "03-L1", "level": "L1", "scene_dir": "native_case03_living_push_full_physics_scene",
+      "instruction": "Go to the coffee table.",
+      "agent_start": [12.0, 4.0], "agent_yaw": 200.0,
+      "phases": [
+        {"name": "nav_table", "target_object": "CoffeeTableFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the coffee table", "place_at": null}
+      ]
+    },
+    {
+      "id": "03-L2", "level": "L2", "scene_dir": "native_case03_living_push_full_physics_scene",
+      "instruction": "Go to the kitchen cabinet.",
+      "agent_start": [6.0, 6.0], "agent_yaw": 180.0,
+      "phases": [
+        {"name": "nav_cabinet", "target_object": "KitchenCabinetFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the kitchen cabinet", "place_at": null}
+      ]
+    },
+    {
+      "id": "03-L3", "level": "L3", "scene_dir": "native_case03_living_push_full_physics_scene",
+      "instruction": "Pick up the book and bring it to the desk.",
+      "agent_start": [10.0, 8.0], "agent_yaw": 200.0,
+      "phases": [
+        {"name": "pick_book", "target_object": "BookStackFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the book on the floor", "place_at": [9.0, 6.0, 0.15]},
+        {"name": "go_desk", "target_object": "SimpleDeskFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the desk", "place_at": null}
+      ]
+    },
+    {
+      "id": "03-L4", "level": "L4", "scene_dir": "native_case03_living_push_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the door behind you.",
+      "agent_start": [9.0, 6.0], "agent_yaw": 90.0,
+      "phases": [
+        {"name": "pick_book", "target_object": "BookStackFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the book on the floor", "place_at": [10.0, 7.0, 0.15]},
+        {"name": "go_door", "target_object": "door", "radius": 2.0, "action": "STOP",
+         "desc": "the door behind you", "place_at": null}
+      ]
+    },
+    {
+      "id": "04-L1", "level": "L1", "scene_dir": "native_case04_living_two_runners_full_physics_scene",
+      "instruction": "Go to the sofa.",
+      "agent_start": [12.0, 4.0], "agent_yaw": 160.0,
+      "phases": [
+        {"name": "nav_sofa", "target_object": "SofaFactory", "radius": 3.0, "action": "STOP",
+         "desc": "the sofa", "place_at": null}
+      ]
+    },
+    {
+      "id": "04-L2", "level": "L2", "scene_dir": "native_case04_living_two_runners_full_physics_scene",
+      "instruction": "Go to the desk lamp.",
+      "agent_start": [6.0, 8.0], "agent_yaw": 90.0,
+      "phases": [
+        {"name": "nav_lamp", "target_object": "DeskLampFactory", "radius": 1.5, "action": "STOP",
+         "desc": "the desk lamp", "place_at": null}
+      ]
+    },
+    {
+      "id": "04-L3", "level": "L3", "scene_dir": "native_case04_living_two_runners_full_physics_scene",
+      "instruction": "Go to the lamp, turn it on, then go to the sofa.",
+      "agent_start": [12.0, 4.0], "agent_yaw": 160.0,
+      "phases": [
+        {"name": "turn_on_lamp", "target_object": "DeskLampFactory", "radius": 2.0, "action": "TURN_ON",
+         "desc": "the lamp", "place_at": null},
+        {"name": "go_sofa", "target_object": "SofaFactory", "radius": 3.0, "action": "STOP",
+         "desc": "the sofa", "place_at": null}
+      ]
+    },
+    {
+      "id": "04-L4", "level": "L4", "scene_dir": "native_case04_living_two_runners_full_physics_scene",
+      "instruction": "Pick up the book from the shelf and bring it to the coffee table.",
+      "agent_start": [6.0, 4.0], "agent_yaw": 0.0,
+      "phases": [
+        {"name": "pick_book", "target_object": "BookStackFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the book on the floor", "place_at": [7.0, 3.0, 0.15]},
+        {"name": "go_table", "target_object": "CoffeeTableFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the coffee table", "place_at": null}
+      ]
+    },
+    {
+      "id": "05-L1", "level": "L1", "scene_dir": "native_case05_dining_turn_left_full_physics_scene",
+      "instruction": "Go to the dining table.",
+      "agent_start": [2.0, 4.0], "agent_yaw": 45.0,
+      "phases": [
+        {"name": "nav_table", "target_object": "TableDiningFactory", "radius": 2.5, "action": "STOP",
+         "desc": "the dining table", "place_at": null}
+      ]
+    },
+    {
+      "id": "05-L2", "level": "L2", "scene_dir": "native_case05_dining_turn_left_full_physics_scene",
+      "instruction": "Go to the plant.",
+      "agent_start": [4.0, 8.0], "agent_yaw": 270.0,
+      "phases": [
+        {"name": "nav_plant", "target_object": "LargePlantContainerFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the plant", "place_at": null}
+      ]
+    },
+    {
+      "id": "05-L3", "level": "L3", "scene_dir": "native_case05_dining_turn_left_full_physics_scene",
+      "instruction": "Pick up the cup from the table, then go to the shelf.",
+      "agent_start": [2.0, 6.0], "agent_yaw": 45.0,
+      "phases": [
+        {"name": "pick_cup", "target_object": "CupFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the cup on the table", "place_at": null},
+        {"name": "go_shelf", "target_object": "SimpleBookcaseFactory", "radius": 1.5, "action": "STOP",
+         "desc": "the shelf", "place_at": null}
+      ]
+    },
+    {
+      "id": "05-L4", "level": "L4", "scene_dir": "native_case05_dining_turn_left_full_physics_scene",
+      "instruction": "Pick up the cup, then find and go to the door behind you.",
+      "agent_start": [3.0, 7.0], "agent_yaw": 90.0,
+      "phases": [
+        {"name": "pick_cup", "target_object": "CupFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the cup", "place_at": null},
+        {"name": "go_door", "target_object": "door", "radius": 2.0, "action": "STOP",
+         "desc": "the door behind you", "place_at": null}
+      ]
+    },
+    {
+      "id": "06-L1", "level": "L1", "scene_dir": "native_case06_dining_two_people_full_physics_scene",
+      "instruction": "Go to the dining table.",
+      "agent_start": [2.0, 4.0], "agent_yaw": 45.0,
+      "phases": [
+        {"name": "nav_table", "target_object": "TableDiningFactory", "radius": 2.5, "action": "STOP",
+         "desc": "the dining table", "place_at": null}
+      ]
+    },
+    {
+      "id": "06-L2", "level": "L2", "scene_dir": "native_case06_dining_two_people_full_physics_scene",
+      "instruction": "Go to the bookshelf.",
+      "agent_start": [3.0, 8.0], "agent_yaw": 180.0,
+      "phases": [
+        {"name": "nav_shelf", "target_object": "SimpleBookcaseFactory", "radius": 1.5, "action": "STOP",
+         "desc": "the bookshelf", "place_at": null}
+      ]
+    },
+    {
+      "id": "06-L3", "level": "L3", "scene_dir": "native_case06_dining_two_people_full_physics_scene",
+      "instruction": "Pick up the cup from the table, then go to the person near the wall.",
+      "agent_start": [2.0, 6.0], "agent_yaw": 45.0,
+      "phases": [
+        {"name": "pick_cup", "target_object": "CupFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the cup on the table", "place_at": null},
+        {"name": "go_person", "target_object": "__human_0__", "radius": 2.0, "action": "STOP",
+         "desc": "the person near the wall", "place_at": null}
+      ]
+    },
+    {
+      "id": "06-L4", "level": "L4", "scene_dir": "native_case06_dining_two_people_full_physics_scene",
+      "instruction": "Pick up the pot from the counter, bring it to the dining table.",
+      "agent_start": [-1.0, 6.0], "agent_yaw": 0.0,
+      "phases": [
+        {"name": "pick_pot", "target_object": "PotFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the pot on the counter", "place_at": null},
+        {"name": "go_table", "target_object": "TableDiningFactory", "radius": 2.5, "action": "STOP",
+         "desc": "the dining table", "place_at": null}
+      ]
+    },
+    {
+      "id": "07-L1", "level": "L1", "scene_dir": "native_case07_dining_zoom_full_physics_scene",
+      "instruction": "Go to the dining table.",
+      "agent_start": [2.0, 2.0], "agent_yaw": 45.0,
+      "phases": [
+        {"name": "nav_table", "target_object": "TableDiningFactory", "radius": 2.5, "action": "STOP",
+         "desc": "the dining table", "place_at": null}
+      ]
+    },
+    {
+      "id": "07-L2", "level": "L2", "scene_dir": "native_case07_dining_zoom_full_physics_scene",
+      "instruction": "Go to the door.",
+      "agent_start": [3.0, 6.0], "agent_yaw": 90.0,
+      "phases": [
+        {"name": "nav_door", "target_object": "door", "radius": 2.0, "action": "STOP",
+         "desc": "the door", "place_at": null}
+      ]
+    },
+    {
+      "id": "07-L3", "level": "L3", "scene_dir": "native_case07_dining_zoom_full_physics_scene",
+      "instruction": "Pick up the plate from the table and put it on the cabinet.",
+      "agent_start": [2.0, 4.0], "agent_yaw": 45.0,
+      "phases": [
+        {"name": "pick_plate", "target_object": "PlateFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the plate on the table", "place_at": null},
+        {"name": "go_cabinet", "target_object": "SingleCabinetFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the cabinet", "place_at": null}
+      ]
+    },
+    {
+      "id": "07-L4", "level": "L4", "scene_dir": "native_case07_dining_zoom_full_physics_scene",
+      "instruction": "Pick up the wineglass and bring it to the person behind you.",
+      "agent_start": [2.0, 6.0], "agent_yaw": 90.0,
+      "phases": [
+        {"name": "pick_glass", "target_object": "WineglassFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the wineglass", "place_at": null},
+        {"name": "go_person", "target_object": "__human_0__", "radius": 2.0, "action": "STOP",
+         "desc": "the person behind you", "place_at": null}
+      ]
+    },
+    {
+      "id": "09-L1", "level": "L1", "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
+      "instruction": "Go to the TV.",
+      "agent_start": [12.0, 4.0], "agent_yaw": 200.0,
+      "phases": [
+        {"name": "nav_tv", "target_object": "TVFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the TV", "place_at": null}
+      ]
+    },
+    {
+      "id": "09-L2", "level": "L2", "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
+      "instruction": "Go to the mirror.",
+      "agent_start": [6.0, 4.0], "agent_yaw": 0.0,
+      "phases": [
+        {"name": "nav_mirror", "target_object": "MirrorFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the mirror", "place_at": null}
+      ]
+    },
+    {
+      "id": "09-L3", "level": "L3", "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
+      "instruction": "Pick up the bowl from the table and bring it to the desk.",
+      "agent_start": [8.0, 4.0], "agent_yaw": 200.0,
+      "phases": [
+        {"name": "pick_bowl", "target_object": "BowlFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the bowl on the table", "place_at": null},
+        {"name": "go_desk", "target_object": "SimpleDeskFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the desk", "place_at": null}
+      ]
+    },
+    {
+      "id": "09-L4", "level": "L4", "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
+      "instruction": "Pick up the bowl and bring it to the person walking behind you.",
+      "agent_start": [8.0, 4.0], "agent_yaw": 0.0,
+      "phases": [
+        {"name": "pick_bowl", "target_object": "BowlFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the bowl on the table", "place_at": null},
+        {"name": "go_person", "target_object": "__human_0__", "radius": 2.0, "action": "STOP",
+         "desc": "the person walking behind you", "place_at": null}
+      ]
+    },
+    {
+      "id": "10-L1", "level": "L1", "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
+      "instruction": "Go to the dining table.",
+      "agent_start": [2.0, 4.0], "agent_yaw": 45.0,
+      "phases": [
+        {"name": "nav_table", "target_object": "TableDiningFactory", "radius": 2.5, "action": "STOP",
+         "desc": "the dining table", "place_at": null}
+      ]
+    },
+    {
+      "id": "10-L2", "level": "L2", "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
+      "instruction": "Go to the kitchen cabinet.",
+      "agent_start": [4.0, 8.0], "agent_yaw": 90.0,
+      "phases": [
+        {"name": "nav_cabinet", "target_object": "KitchenCabinetFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the kitchen cabinet", "place_at": null}
+      ]
+    },
+    {
+      "id": "10-L3", "level": "L3", "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
+      "instruction": "Pick up the cup from the table, bring it to the kitchen cabinet.",
+      "agent_start": [3.0, 6.0], "agent_yaw": 45.0,
+      "phases": [
+        {"name": "pick_cup", "target_object": "CupFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the cup on the table", "place_at": null},
+        {"name": "go_cabinet", "target_object": "KitchenCabinetFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the kitchen cabinet", "place_at": null}
+      ]
+    },
+    {
+      "id": "10-L4", "level": "L4", "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
+      "instruction": "Pick up the pot, bring it to the person sitting at the other end of the table.",
+      "agent_start": [4.0, 6.0], "agent_yaw": 0.0,
+      "phases": [
+        {"name": "pick_pot", "target_object": "PotFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the pot", "place_at": null},
+        {"name": "go_person", "target_object": "__human_1__", "radius": 2.0, "action": "STOP",
+         "desc": "the person at the other end of the table", "place_at": null}
+      ]
+    },
+    {
+      "id": "12-L1", "level": "L1", "scene_dir": "native_case12_living_two_runners_push_full_physics_scene",
+      "instruction": "Go to the sofa.",
+      "agent_start": [10.0, 4.0], "agent_yaw": 180.0,
+      "phases": [
+        {"name": "nav_sofa", "target_object": "SofaFactory", "radius": 3.0, "action": "STOP",
+         "desc": "the sofa", "place_at": null}
+      ]
+    },
+    {
+      "id": "12-L2", "level": "L2", "scene_dir": "native_case12_living_two_runners_push_full_physics_scene",
+      "instruction": "Go to the large shelf.",
+      "agent_start": [4.0, 4.0], "agent_yaw": 180.0,
+      "phases": [
+        {"name": "nav_shelf", "target_object": "LargeShelfFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the large shelf", "place_at": null}
+      ]
+    },
+    {
+      "id": "12-L3", "level": "L3", "scene_dir": "native_case12_living_two_runners_push_full_physics_scene",
+      "instruction": "Go to the desk, then go to the sofa.",
+      "agent_start": [10.0, 4.0], "agent_yaw": 180.0,
+      "phases": [
+        {"name": "go_desk", "target_object": "SimpleDeskFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the desk", "place_at": null},
+        {"name": "go_sofa", "target_object": "SofaFactory", "radius": 3.0, "action": "STOP",
+         "desc": "the sofa", "place_at": null}
+      ]
+    },
+    {
+      "id": "12-L4", "level": "L4", "scene_dir": "native_case12_living_two_runners_push_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the coffee table.",
+      "agent_start": [8.0, 2.0], "agent_yaw": 0.0,
+      "phases": [
+        {"name": "pick_book", "target_object": "BookStackFactory", "radius": 1.5, "action": "PICK_UP",
+         "desc": "the book on the floor", "place_at": [7.0, 3.0, 0.15]},
+        {"name": "go_table", "target_object": "CoffeeTableFactory", "radius": 2.0, "action": "STOP",
+         "desc": "the coffee table", "place_at": null}
+      ]
+    }
+  ]
+}
