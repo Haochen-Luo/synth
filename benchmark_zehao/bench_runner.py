@@ -116,9 +116,14 @@ try:
     stage = omni.usd.get_context().get_stage()
     log("[BENCH] Stage loaded")
 
-    # ── Hide ceiling for bird's-eye view ──
+    # ── Hide ceiling SURFACE for bird's-eye view ──
+    # IMPORTANT: Only hide the actual ceiling surface mesh, NOT CeilingLightFactory
+    # prims which are light fixtures that illuminate the room interior.
     for p in stage.Traverse():
-        if "ceiling" in str(p.GetPath()).lower():
+        pname = p.GetName().lower()
+        ppath = str(p.GetPath()).lower()
+        # Only hide actual ceiling/roof surface geometry, skip light fixtures
+        if ("ceiling" in pname or "roof" in pname) and "light" not in pname and "lamp" not in pname:
             try: UsdGeom.Imageable(p).MakeInvisible()
             except: pass
 
@@ -238,27 +243,27 @@ try:
         cx, cy = (x_min + x_max)/2, (y_min + y_max)/2
         dx, dy = max(2, (x_max - x_min)/4), max(2, (y_max - y_min)/4)
         light_positions = [
-            (cx, cy, 1.9), (cx-dx, cy-dy, 1.9), (cx+dx, cy-dy, 1.9),
-            (cx-dx, cy+dy, 1.9), (cx+dx, cy+dy, 1.9)
+            (cx, cy, 2.3), (cx-dx, cy-dy, 2.3), (cx+dx, cy-dy, 2.3),
+            (cx-dx, cy+dy, 2.3), (cx+dx, cy+dy, 2.3)
         ]
     else:
         # Fallback
         lx, ly = agent_start_xy[0], agent_start_xy[1]
-        light_positions = [(lx, ly, 1.9), (lx-2, ly, 1.9), (lx+2, ly, 1.9), (lx, ly-2, 1.9), (lx, ly+2, 1.9)]
+        light_positions = [(lx, ly, 2.3), (lx-2, ly, 2.3), (lx+2, ly, 2.3), (lx, ly-2, 2.3), (lx, ly+2, 2.3)]
         
-    # Add a DomeLight for ambient illumination (works if scene has no ceiling or windows)
-    dome_light = UsdLux.DomeLight.Define(stage, "/World/Lights/AmbientDome")
-    dome_light.CreateIntensityAttr().Set(1000.0)  # Soft ambient
-    
+    # ── Lighting — matching original benchmark ──
     for i, lp in enumerate(light_positions):
         lt = UsdLux.SphereLight.Define(stage, f"/World/Lights/BenchLight_{i}")
-        lt.CreateIntensityAttr().Set(light_intensity)
-        lt.CreateRadiusAttr().Set(1.0)  # Larger radius for softer, wider light spread
+        lt.CreateIntensityAttr().Set(80000.0)
+        lt.CreateRadiusAttr().Set(0.3)
         xf = UsdGeom.Xformable(lt); xf.ClearXformOpOrder()
         xf.AddTranslateOp().Set(Gf.Vec3d(*lp))
-    log(f"[BENCH] Added DomeLight and 5 fill lights at intensity={light_intensity}")
+    
+    log("[BENCH] Added 5 fill lights at intensity=80000.0")
 
-    # ── Warm up + PathTracing ──
+    # (Ceiling already hidden above — no duplicate needed)
+
+    # ── Warm up + Rendering ──
     for _ in range(100): sim_app.update()
     import omni.kit.commands
     omni.kit.commands.execute("ChangeSetting", path="/rtx/rendermode", value="PathTracing")
@@ -321,6 +326,14 @@ try:
     except: pass
     a_trans = agent_xf.AddTranslateOp()
     a_orient = agent_xf.AddOrientOp()
+
+    # Hide agent mesh geometry to prevent blocking FPV camera
+    for p in agent_prim.GetChildren():
+        if p.GetName() == "SkelRoot":
+            for child in p.GetChildren():
+                if "Mesh" in child.GetName():
+                    UsdGeom.Imageable(child).MakeInvisible()
+            break
     a_scale = agent_xf.AddScaleOp()
     a_scale.Set(Gf.Vec3d(*runner_scale))
 
@@ -389,7 +402,9 @@ try:
             except: pass
             cam_x = ax + 0.3 * math.cos(math.radians(ayaw))
             cam_y = ay + 0.3 * math.sin(math.radians(ayaw))
-            cxf.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, GROUND_Z + EYE_H))
+            # DO NOT ADD GROUND_Z: EYE_H is absolute height from floor. 
+            # Adding GROUND_Z pushed the camera into the ceiling (2.25m).
+            cxf.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, EYE_H))
             cxf.AddOrientOp().Set(cam_quat(ayaw, apitch))
 
         # Animate runner 1 (obstacle)
