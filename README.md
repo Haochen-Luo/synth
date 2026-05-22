@@ -1,269 +1,132 @@
-# VLM Navigation Benchmark
+# 4DSynth-Nav Benchmark — Hands-off
 
-Closed-loop indoor navigation benchmark powered by a Vision-Language Model (VLM) running inside NVIDIA Isaac Sim. A human-mesh agent navigates a physically-accurate living room to reach a target object, while avoiding a dynamically-moving obstacle (runner).
+VLM indoor-navigation benchmark on physically-accurate 4D scenes. This file is
+the session-handoff: read it to pick up where the last session left off.
 
-The benchmark follows **Habitat ObjectNav** conventions: the VLM receives egocentric RGB frames, outputs discrete actions, and relies on its own visual reasoning for all navigation decisions. No oracle planner, no pre-built map, no distance-to-target leakage.
-
----
-
-## Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Isaac Sim (Docker)                     │
-│  ┌───────────────┐   ┌──────────────┐   ┌────────────┐ │
-│  │  USD Scene     │   │  PhysX Engine│   │ Replicator  │ │
-│  │  (Case 11)     │──▶│  Sweep Query │   │ PathTracing │ │
-│  └───────────────┘   └──────────────┘   └────────────┘ │
-│         │                    │                  │        │
-│    Room Geometry      Collision Check     Frame Render   │
-│    + Furniture        (Sphere r=0.2m)    (1920×1080)     │
-└─────────┬───────────────────┬───────────────┬───────────┘
-          │                   │               │
-          ▼                   ▼               ▼
-     ┌─────────────────────────────────────────────┐
-     │            Navigation Loop (Python)          │
-     │  1. Update agent pose in scene               │
-     │  2. Update FPV camera (yaw + pitch tilt)     │
-     │  3. Render frame (PathTracing, 16 subframes)  │
-     │  4. Send frame + history to VLM API          │
-     │  5. Apply action (MOVE/TURN/STOP)            │
-     │  6. PhysX sweep_sphere_closest collision      │
-     └──────────────────────┬──────────────────────┘
-                            │
-                            ▼
-     ┌─────────────────────────────────────────────┐
-     │          VLM (vLLM on localhost:8300)         │
-     │  Model: Qwen/Qwen3-VL-30B-A3B-Instruct-FP8  │
-     │  Input: Base64 PNG frame + nav history       │
-     │  Output: MOVE_FORWARD | TURN_LEFT |          │
-     │          TURN_RIGHT | STOP                   │
-     └─────────────────────────────────────────────┘
-```
+Code lives in `benchmark_zehao/`. Git branch: **`benchmark-multiaction`**
+(commits `2ac89be`, `9b417e4`). The repo is otherwise on a detached HEAD —
+stay on this branch.
 
 ---
 
-## Core Files
+## Environment
 
-| File | Purpose |
-|------|---------|
-| `vlm_nav_benchmark.py` | **Headless benchmark script.** Runs the full loop, writes logs/media to a timestamped `runs/<target>_<timestamp>/` directory. |
-| `vlm_nav_interactive.py` | **Jupyter Notebook script** (`.py` with `# %%` cell markers). Same logic split into cells for interactive debugging. |
-| `gen_media.sh` | FFmpeg-based media post-processing. Called automatically at end of benchmark run. |
-| `regen_trajectory_plot.py` | Standalone 2D trajectory plotter. Can regenerate trajectory maps from any run's `vlm_nav_history.json`. |
-| `start_jupyter.sh` | Launches the Isaac Sim Docker container with Jupyter on port 8888. |
-
----
-
-## Navigation Parameters
-
-```python
-STEP_DISTANCE      = 0.25    # meters per MOVE_FORWARD
-TURN_ANGLE         = 15.0    # degrees per TURN_LEFT / TURN_RIGHT
-MAX_STEPS          = 250     # timeout limit
-STOP_CONFIRM_ROUNDS = 2      # require 2 consecutive STOP predictions
-
-RUNNER_MESH_GROUND_Z = 0.6773  # bbox-calibrated Z for runner/agent mesh
-DANCER_MESH_GROUND_Z = 0.8961  # bbox-calibrated Z for dancer mesh
-AGENT_EYE_HEIGHT   = 1.58    # Z of FPV camera (human eye level)
-CAMERA_PITCH_DEG   = -10     # degrees downward tilt (see low furniture)
-
-AGENT_START        = (12.0, 4.0)
-AGENT_START_YAW    = 160.0   # degrees
-```
-
-## Multi-Target Support
-
-Target is selected via environment variable:
-
-```bash
-# Sofa (default)
-docker exec vlm-jupyter /isaac-sim/python.sh vlm_nav_benchmark.py
-
-# Bookshelf
-NAV_TARGET=bookshelf docker exec vlm-jupyter /isaac-sim/python.sh vlm_nav_benchmark.py
-```
-
-| Target | Coords | Success Radius | Description |
-|--------|--------|---------------|-------------|
-| `sofa` | (4.37, 6.43) | 3.0m | Large light-green couch (easy — direct path) |
-| `bookshelf` | (0.34, 8.76) | 1.5m | Tall white 4-tier shelf (hard — sofa blocks direct path) |
+- **Always run inside the `vlm-jupyter` Docker container on GPU-843** — never
+  run `pxr`/`omni`/`isaacsim` code on the host.
+  - `ssh GPU-843` then `docker exec vlm-jupyter /isaac-sim/python.sh <script>`
+  - Container is bound to physical **GPU 4** (isaac-sim 4.5.0).
+- vLLM server (Qwen3-VL-30B) serves the VLM on `localhost:8300`.
+- If Isaac Sim segfaults on startup (happens after the container has been up a
+  long time / many runs): `ssh GPU-843 'docker restart vlm-jupyter'`, wait ~10s.
+- Python syntax check: `PYTHONPYCACHEPREFIX=/tmp/pycache python3 -m py_compile <f>`
+  (the repo `__pycache__` is root-owned; the prefix dodges it).
 
 ---
 
-## Design Decisions (Habitat-Aligned)
-
-### 1. Pure VLM Reasoning — No Oracle Planner
-
-Following Habitat ObjectNav conventions, the VLM has full agency over navigation decisions. We intentionally do **not** provide:
-- Distance to target (would leak oracle info)
-- Pre-built occupancy map
-- Action masking based on ground truth
-
-The VLM receives only: **egocentric RGB frame + recent action history**.
-
-### 2. Camera Pitch Tilt (-10°)
-
-The camera is tilted 10° downward from horizontal. This is aligned with Habitat Challenge conventions (Hello Stretch robot configuration) where cameras are tilted to see the ground/obstacles ahead.
-
-**Rationale**: At a perfectly horizontal 1.58m eye height, low furniture like sofas (~0.8m) barely appears in the FOV. The VLM sees the target *over* the sofa and walks straight into it. The -10° pitch makes obstacles significantly more visible.
-
-### 3. Collision Feedback in Prompt (Not Oracle Planner)
-
-When `MOVE_FORWARD` is blocked by physics collision, the nav history reports **"BLOCKED by obstacle"** instead of generic "no movement":
+## Run a single task
 
 ```
-Step 103: MOVE_FORWARD (BLOCKED by obstacle, yaw=145°)
-Step 104: MOVE_FORWARD (BLOCKED by obstacle, yaw=160°)
-⚠ WARNING: You have NOT moved for the last 3+ steps. You are likely stuck.
+ssh GPU-843 'docker exec -e TASK_ID=case01-L2 \
+  -e VLLM_URL=http://localhost:8300/v1/chat/completions \
+  -e BATCH_NAME=myrun \
+  vlm-jupyter /isaac-sim/python.sh \
+  /home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/bench_runner.py'
 ```
 
-This is equivalent to proprioceptive feedback (robot knows its wheels stopped turning) — not an oracle. The VLM still decides *how* to respond.
+Output: `benchmark_zehao/results/<BATCH_NAME>/<LEVEL>/<TASK>_<ts>/` —
+`run.log`, `results.json`, `vlm_nav_frames_fpv/`, `vlm_nav_frames_bird/`,
+`vlm_nav_frames_fpv_smooth/`, plus MP4/GIF from `gen_media.sh`.
 
-### 4. No VLM-Level Anti-Oscillation Override
+Task file: `benchmark_zehao/benchmark_tasks.json` (40 tasks, `caseNN-LN`).
+This is the original, verified task set — its `agent_start` positions place
+the agent in sensible, on-floor, lit room locations. **Use this file.**
 
-VLM oscillation (repeating TURN_LEFT/TURN_RIGHT) is treated as a **diagnostic metric of model reasoning failure**, not something to paper over with code. This aligns with Habitat research where oscillation rates are reported as evaluation metrics.
-
-### 5. Prompt-Based Situational Awareness (No Forced Interventions)
-
-All navigation decisions are made by the VLM. The system provides **advisory prompt hints** to help the VLM reason about difficult situations, but never overrides the VLM's chosen action:
-
-#### Frame Quality Hints
-When rendered frames are abnormally dark (facing a wall) or overexposed (pressed against a bright surface), the VLM receives an advisory warning suggesting it consider turning. The VLM decides whether and how to act on this.
-
-#### Collision Feedback
-When `MOVE_FORWARD` is blocked by PhysX collision, the navigation history reports `BLOCKED by obstacle`. After 3+ consecutive blocked steps, an additional `⚠ WARNING: You have NOT moved for the last 3+ steps` hint is appended.
-
-#### Design Rationale
-Previous versions used forced escape heuristics (180° about-face on dark frames, ±90° turns on position stagnation). These were removed because they created **chaotic trajectory loops** — the forced turns sent the agent along walls in feedback loops, preventing it from ever reaching distant targets. Letting the VLM reason with its navigation history produces better outcomes.
+### Env-var knobs (bench_runner.py)
+- `MAX_VLM_CALLS` (default 50) — episode ends at min(150 steps, this).
+- `RENDER_W` / `RENDER_H` (default 960×540) — render resolution.
+- `ENABLE_BIRD_SMOOTH` (default 0) — bird filler frames + bird `_smooth` folder.
+- `TASKS_JSON` — override the task file path.
 
 ---
 
-## Physics & Collision
+## What this session built
 
-### Collision Detection: PhysX Sphere Sweep
+All on branch `benchmark-multiaction`:
 
-Volumetric sphere sweep at two heights (waist=0.5m, chest=1.0m) to catch both low and high obstacles:
-
-```python
-query = omni.physx.get_physx_scene_query_interface()
-for sweep_z in [0.5, 1.0]:
-    origin = carb.Float3(agent_x, agent_y, sweep_z)
-    direction = carb.Float3(dir_x, dir_y, 0.0)
-    hit = query.sweep_sphere_closest(0.2, origin, direction, STEP_DISTANCE)
-```
-
-### Human Mesh Scaling & Ground Contact
-
-All human `.usdc` meshes are rescaled to the runner's `animation_binding` scale (`0.53`).
-
-**Ground contact** is set via bbox-calibrated Z offsets (measured empirically using `check_dancer_bbox.py`). The old `root_offset_m` approach was incorrect — it doesn't represent the actual mesh-space feet-to-origin distance. The human prims are kinematic (positioned via `TranslateOp.Set()`), not dynamic physics objects, so PhysX floor collision does not apply.
-
-```python
-RUNNER_MESH_GROUND_Z = 0.6773   # obj_1_run_anim_1.usdc (agent uses same mesh)
-DANCER_MESH_GROUND_Z = 0.8961   # obj_2_dance_anim_2.usdc
-```
+1. **Obstacle-runner leap fix.** The runner mesh has a baked timeline
+   animation; a playing timeline free-ran during renders, teleporting the
+   runner. Fix: stop the timeline + one-time render-pipeline priming.
+2. **Multi-action planning.** The VLM returns a queue of up to 5 actions
+   (`PLAN: MOVE_FORWARD, ...`), executed one per step; the queue aborts on
+   collision / phase change / failure. ~1.8 actions/call observed.
+3. **Plan-history feedback** — recent plans + outcomes fed back into the prompt.
+4. **Semantic-class target dedup** (`semantic_classes.py`) — same-semantic-class
+   non-target props are deactivated so "go to the bookshelf" is unambiguous.
+5. **Render performance** — 960×540 (was 1920×1080, ~4.6× faster), cheap
+   filler subframes, timing probes. An episode is now ~3-4 min per 15 VLM
+   calls (was unrunnable / >100 min).
+6. **Visibility-gated filler frames** — filler frames only render when the
+   obstacle runner is in the FPV FOV cone (pure-geometry check, ~2ms/episode).
+   Off-screen: filler skipped, `sim_t` still advances (no leap on reappear).
+7. **Filler-frame timing model** — runner advances smoothly during VLM
+   thinking; `gen_media.sh` builds video from `*_smooth` (fpv) / per-step
+   (bird) frames at `SMOOTH_FPS=3` (matches `FILLER_FPS`).
 
 ---
 
-## Camera System
+## Batch run + aggregate metrics
 
-### FPV Camera (VLM Input)
+`bench_batch.py` runs many tasks and aggregates a summary report.
 
-- **Position**: `(agent_x, agent_y, 1.58)` — human eye height
-- **Orientation**: Yaw rotation + pitch tilt (-10° downward)
-- **Resolution**: 1920 × 1080 (PathTracing, 16 SPP subframes)
+```
+# from inside GPU-843 (it docker-exec's the runner; does NOT ssh itself)
+python bench_batch.py --level L2 --batch-name batch_L2
+python bench_batch.py --all --batch-name full_run
+python bench_batch.py --report-only --batch-name batch_L2   # re-aggregate
+```
 
-### Bird's-Eye Camera (Visualization Only)
+Metrics per task: SR (success), SP (subtask progress), GD (goal distance),
+steps, `vlm_calls`, `actions_per_call`, timing breakdown. Aggregated into
+`results/<batch>/benchmark_report.json`.
 
-- **Position**: `(13.0, 7.0, 2.7)` — elevated corner of room
-- **Purpose**: Third-person view for trajectory analysis. Never fed to VLM.
+> NOTE: `bench_batch.py` has a `--ssh` arg that is currently a no-op (it
+> docker-exec's directly, assuming it already runs on GPU-843). Per-task
+> `timeout` is 1800s. It does not pass `MAX_VLM_CALLS` (uses default 50).
+> Minor — fix if batch runs need it.
 
 ---
 
-## Output Structure
+## Open TODOs
 
-Each run produces a self-contained directory:
-
-```
-runs/bookshelf_20260503_051350/
-├── vlm_nav.log              # Step-by-step log (positions, actions, collisions)
-├── vlm_nav_history.json     # Structured trajectory data
-├── vlm_responses.jsonl      # Raw VLM API responses
-├── trajectory_2d.png        # Top-down trajectory visualization
-├── vlm_nav_frames_fpv/      # Per-step FPV frames (rgb_0000.png, ...)
-├── vlm_nav_frames_bird/     # Per-step bird's-eye frames
-├── demo_fpv_hd.mp4          # HD FPV video
-├── demo_fpv_lite.mp4        # Compressed FPV video
-├── demo_birdseye_hd.mp4     # HD bird's-eye video
-└── demo_birdseye_lite.mp4   # Compressed bird's-eye video
-```
-
----
-
-## Run Results
-
-| Run | Target | Result | Steps | Final Dist | Notes |
-|-----|--------|--------|-------|-----------|-------|
-| `sofa_20260503_040344` | Sofa | ✅ SUCCESS | 33 | 2.82m | Clean path, STOP confirmed |
-| `bookshelf_20260503_051350` | Bookshelf | ❌ TIMEOUT | 250 | 5.25m | Navigated correctly but got stuck at sofa edge (obstacle in path) |
-| `bookshelf_20260503_041038` | Bookshelf | ❌ TIMEOUT | 250 | 12.4m | "Left wall" bias in prompt caused wrong turn from start (fixed) |
-| `bookshelf_20260503_074526` | Bookshelf | ❌ TIMEOUT | 250 | 14.92m | VLM navigation failure (walked wrong direction) |
-
-### Known Failure Mode: Sofa Obstruction
-
-The bookshelf is behind the sofa. The VLM navigates correctly toward the bookshelf but gets physically blocked by the sofa. From the agent's eye level, the sofa appears below the bookshelf and the VLM doesn't recognize it as an obstacle. The camera tilt (-10°) and collision feedback ("BLOCKED by obstacle") were added to address this. Full validation pending next run with these changes.
+- **Render noise.** At 960×540 PathTracing noise is visible — lowering
+  resolution removed the free "downscale denoising" a 1080p image got. Noise
+  is governed by `rt_subframes` (16 decision / 4 filler), NOT resolution.
+  Real fixes, in order of value: (a) fix the OptiX denoiser — the container's
+  `nvoptix.bin` is missing so the denoiser silently fails; fixing it would
+  give clean images at low spp for free; (b) raise `rt_subframes` (slower);
+  (c) RayTracedLighting instead of PathTracing.
+- **Agent gets stuck (oscillation).** On some tasks the VLM repeatedly turns
+  ±15° and collides without escaping — a VLM-capability issue. Decision was
+  **not to intervene** in agent behaviour.
+- **`full_task_gen.py`** — a geometric task generator (FOV-frustum visibility,
+  on-floor start validation). Its start-generation was unreliable and is
+  **shelved**; the original `benchmark_tasks.json` starts are used instead.
+  The FOV/raycast visibility check could be repurposed as an informational
+  audit of existing tasks.
+- **L3/L4** — multi-subtask interaction tasks (PICK_UP/PUT_DOWN/TURN_ON).
+  Per-design, the second axis is **subtask count** (1 vs 2-3), not instruction
+  length; interaction is just a subtask carrier, not a separate axis.
 
 ---
 
-## Docker Environment
+## Key files
 
-### Container: `vlm-jupyter`
-
-```bash
-# Launch (on GPU-843):
-bash /home/qi/hc/Puppeteer/zehao_task/start_jupyter.sh
-```
-
-- **Image**: `nvcr.io/nvidia/isaac-sim:4.5.0`
-- **GPU**: Device 4 (`--gpus '"device=4"'`)
-- **Network**: Host mode (port 8888 Jupyter, port 8300 vLLM)
-
-### Running the Benchmark
-
-```bash
-# From login node — sofa target:
-ssh GPU-843 "docker exec vlm-jupyter /isaac-sim/python.sh \
-  /home/qi/hc/Puppeteer/zehao_task/vlm_nav_benchmark.py"
-
-# Bookshelf target:
-ssh GPU-843 "docker exec -e NAV_TARGET=bookshelf vlm-jupyter /isaac-sim/python.sh \
-  /home/qi/hc/Puppeteer/zehao_task/vlm_nav_benchmark.py"
-```
-
-### VLM Server (vLLM)
-
-Must be running on `localhost:8300`:
-```
-Model: Qwen/Qwen3-VL-30B-A3B-Instruct-FP8
-Endpoint: http://localhost:8300/v1/chat/completions
-```
-
----
-
-## Conda Environment: `pp`
-
-FFmpeg for media post-processing:
-```bash
-source /home/qi/miniconda3/etc/profile.d/conda.sh && conda activate pp
-```
-
----
-
-## Known Issues
-
-1. **OptixDenoiser warnings** — Harmless; denoiser is optional.
-2. **VLM oscillation** — Model sometimes alternates TURN_LEFT/TURN_RIGHT. This is a VLM reasoning limitation, not a code bug. Reported as a diagnostic metric.
-3. **Low-obstacle blindness** — Even with -10° camera tilt, the VLM may not recognize low furniture as obstacles. This is a known limitation in VLM-only navigation (Habitat research uses separate geometric planners for this).
-4. **Mesh ground contact** — Human prims are kinematic (no PhysX floor collision). Ground Z is set via bbox-calibrated constants. If mesh USDs change, re-run `check_dancer_bbox.py` to recalibrate.
-5. **Double-Scaling** — The 4D human `.usdc` meshes may have baked USD scales. Ensure `scale_xyz` in `.spec.json` is `[1.0, 1.0, 1.0]` for models with baked scales.
+| File | Role |
+|---|---|
+| `bench_runner.py` | runs ONE task in Isaac Sim |
+| `bench_batch.py` | batch orchestrator + metric aggregation |
+| `bench_helpers.py` | motion sampling, metrics, prompts |
+| `semantic_classes.py` | factory → semantic-class map (target dedup) |
+| `full_task_gen.py` | geometric task generator (shelved) |
+| `gen_media.sh` | builds MP4/GIF from rendered frames |
+| `benchmark_tasks.json` | the 40-task benchmark (use this) |
