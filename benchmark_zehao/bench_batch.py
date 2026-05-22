@@ -16,36 +16,66 @@ VLLM_URL = "http://localhost:8300/v1/chat/completions"
 
 MAX_VLM_CALLS = 50      # per-episode VLM-call cap, passed to the runner
 TASK_TIMEOUT = 5400     # per-task wall-clock cap (s) — full episodes + Isaac boot
+NVOPTIX_HOST = "/usr/share/nvidia/nvoptix.bin"  # host copy for the OptiX denoiser
 
-def run_task(task_id, batch_name="", dry_run=False):
-    """Run a single task inside the Isaac Sim Docker container."""
+# Signatures that mean Isaac Sim crashed (vs the task merely failing).
+CRASH_SIGNATURES = ("Segmentation fault", "core dumped",
+                    "is not running", "OCI runtime exec failed",
+                    "Fatal Python error")
 
+def recover_container():
+    """Restart the Isaac Sim container and restore nvoptix.bin. Called when a
+    task fails with an Isaac-crash signature so an overnight batch survives the
+    known Isaac-degradation segfault."""
+    print("  [RECOVERY] restarting container + restoring nvoptix.bin ...")
+    subprocess.run(f"docker restart {DOCKER_CONTAINER}", shell=True,
+                   capture_output=True, text=True, timeout=180)
+    time.sleep(12)
+    subprocess.run(f"docker cp {NVOPTIX_HOST} "
+                   f"{DOCKER_CONTAINER}:/usr/share/nvidia/nvoptix.bin",
+                   shell=True, capture_output=True, text=True, timeout=120)
+    print("  [RECOVERY] container back up")
+
+def _run_once(task_id, batch_name, dry_run):
+    """One docker-exec attempt. Returns (returncode, stdout, stderr, elapsed)."""
     batch_env = f"-e BATCH_NAME={batch_name} " if batch_name else ""
     cmd = (f'docker exec -e TASK_ID={task_id} -e VLLM_URL={VLLM_URL} '
            f'-e MAX_VLM_CALLS={MAX_VLM_CALLS} {batch_env}'
            f'{DOCKER_CONTAINER} /isaac-sim/python.sh {RUNNER_PATH}')
-    print(f"\n{'='*60}")
-    print(f"  Running: {task_id}")
     print(f"  Command: {cmd}")
-    print(f"{'='*60}")
-
     if dry_run:
         print("  [DRY RUN] Skipped")
-        return None
-
+        return 0, "", "", 0.0
     t0 = time.time()
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True,
-                                text=True, timeout=TASK_TIMEOUT)
+        r = subprocess.run(cmd, shell=True, capture_output=True,
+                           text=True, timeout=TASK_TIMEOUT)
+        return r.returncode, r.stdout or "", r.stderr or "", time.time() - t0
     except subprocess.TimeoutExpired:
-        print(f"  TIMEOUT after {TASK_TIMEOUT}s — skipping task")
+        return -1, "", "TIMEOUT", time.time() - t0
+
+def run_task(task_id, batch_name="", dry_run=False):
+    """Run a single task; on an Isaac-crash signature, recover the container
+    and retry once. Returns the parsed results.json dict or None."""
+    print(f"\n{'='*60}")
+    print(f"  Running: {task_id}")
+    print(f"{'='*60}")
+
+    rc, out, err, elapsed = _run_once(task_id, batch_name, dry_run)
+    if dry_run:
         return None
-    elapsed = time.time() - t0
-    
-    print(f"  Exit code: {result.returncode} ({elapsed:.0f}s)")
-    if result.returncode != 0:
-        print(f"  STDERR: {(result.stderr or '')[-500:]}")
-    
+
+    crashed = rc != 0 and any(s in (out + err) for s in CRASH_SIGNATURES)
+    if crashed:
+        print(f"  Isaac crash detected (rc={rc}) after {elapsed:.0f}s")
+        recover_container()
+        print(f"  [RETRY] re-running {task_id} ...")
+        rc, out, err, elapsed = _run_once(task_id, batch_name, dry_run)
+
+    print(f"  Exit code: {rc} ({elapsed:.0f}s)")
+    if rc != 0:
+        print(f"  STDERR: {err[-500:]}")
+
     # Find the latest result for this task
     pattern = os.path.join(RESULTS_DIR, "*", "*", f"{task_id}_*", "results.json") if batch_name else os.path.join(RESULTS_DIR, "*", f"{task_id}_*", "results.json")
     results_files = sorted(glob.glob(pattern))
