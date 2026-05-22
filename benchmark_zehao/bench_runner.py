@@ -12,17 +12,32 @@ from bench_helpers import (sample_human_motion, wrap_angle_deg, check_frame_qual
                            discover_scene_files, find_prim_by_factory,
                            find_all_prims_by_factory, get_prim_world_center,
                            compute_metrics)
+from semantic_classes import semantic_class_of
 
 # ── Config ──
 VLLM_URL = os.environ.get("VLLM_URL", "http://localhost:8300/v1/chat/completions")
 MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen3-VL-30B-A3B-Instruct-FP8")
-TASKS_JSON = os.path.join(SCRIPT_DIR, "benchmark_tasks.json")
+TASKS_JSON = os.environ.get("TASKS_JSON", os.path.join(SCRIPT_DIR, "benchmark_tasks.json"))
 RESULTS_BASE = os.path.join(SCRIPT_DIR, "results")
 
 STEP_DIST = 0.25; TURN_ANG = 15.0; TILT_ANG = 5.0
 PITCH_MIN = -30; PITCH_MAX = 10; PITCH_INIT = -10
 EYE_H = 1.58; MESH_YAW_OFF = 90.0; RUNNER_TIME_PER_STEP = 0.5
 STOP_CONFIRM = 2
+# Episode ends at whichever limit is hit FIRST: 150 physical steps OR 50 VLM
+# calls. With multi-action planning the two are decoupled; capping VLM calls
+# keeps evaluation fast and bounds the planning/reasoning budget.
+MAX_VLM_CALLS = int(os.environ.get("MAX_VLM_CALLS", "50"))
+# Bird-view smooth video toggle. False (default, prototype speed): no bird
+# _smooth folder, no bird filler frames — the bird video is built from the
+# per-step decision frames in vlm_nav_frames_bird/. True: full bird _smooth
+# folder with decision + filler frames (paper-quality, slower).
+ENABLE_BIRD_SMOOTH = os.environ.get("ENABLE_BIRD_SMOOTH", "0") == "1"
+# Render resolution for FPV + bird render products. PathTracing cost scales
+# ~linearly with pixel count, so 960x540 renders ~4x faster than 1920x1080.
+# Lowered for prototype iteration speed; set RENDER_W/RENDER_H env to override.
+RENDER_W = int(os.environ.get("RENDER_W", "960"))
+RENDER_H = int(os.environ.get("RENDER_H", "540"))
 
 # ── Load task config ──
 task_id = os.environ.get("TASK_ID", "")
@@ -68,6 +83,9 @@ log(f"[BENCH] Phases: {len(phases)}, MaxSteps={max_steps}")
 # ── VLM query ──
 ALL_ACTIONS = ["MOVE_FORWARD","TURN_LEFT","TURN_RIGHT","STOP","PICK_UP","PUT_DOWN","TURN_ON","TILT_UP","TILT_DOWN"]
 ACTION_RE = re.compile(r"ACTION:\s*(" + "|".join(ALL_ACTIONS) + r")", re.IGNORECASE)
+# Multi-action plan: "PLAN: MOVE_FORWARD, MOVE_FORWARD, TURN_LEFT, ..."
+PLAN_RE = re.compile(r"PLAN:\s*(.+)", re.IGNORECASE)
+PLAN_LEN = 5  # max actions the VLM may queue per call
 
 def query_vlm(img_path, prompt, system_prompt, step=0):
     with open(img_path, "rb") as f:
@@ -96,6 +114,45 @@ def query_vlm(img_path, prompt, system_prompt, step=0):
         return best, True
     except Exception as e:
         log(f"[VLM] Error: {e}"); return "MOVE_FORWARD", True
+
+
+def query_vlm_plan(img_path, prompt, system_prompt, step=0):
+    """Query the VLM for a SEQUENCE of up to PLAN_LEN actions. Returns
+    (actions_list, fallback_bool). The agent executes the list one action at a
+    time until collision / target / list exhausted, then re-queries."""
+    with open(img_path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
+    payload = {"model": MODEL_NAME, "max_tokens": 4096, "temperature": 0.0,
+               "messages": [{"role":"system","content":system_prompt},
+                            {"role":"user","content":[
+                                {"type":"image_url","image_url":{"url":f"data:image/png;base64,{b64}"}},
+                                {"type":"text","text":prompt}]}]}
+    req = urllib.request.Request(VLLM_URL, json.dumps(payload).encode(),
+                                {"Content-Type":"application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            text = json.loads(resp.read())["choices"][0]["message"]["content"].strip()
+        resp_log = os.path.join(RUN_DIR, "vlm_responses.jsonl")
+        with open(resp_log, "a") as f:
+            f.write(json.dumps({"step":step,"response":text}) + "\n")
+        up = text.upper()
+        m = PLAN_RE.search(up)
+        if m:
+            tokens = re.split(r"[,\s]+", m.group(1).strip())
+            plan = [t for t in tokens if t in ALL_ACTIONS]
+            if plan:
+                return plan[:PLAN_LEN], False
+        # Fallback: single action via the ACTION: format
+        am = ACTION_RE.search(up)
+        if am:
+            return [am.group(1)], False
+        # Last resort: collect any action keywords in order of appearance
+        found = sorted(((up.find(a), a) for a in ALL_ACTIONS if up.find(a) >= 0))
+        if found:
+            return [a for _, a in found][:PLAN_LEN], True
+        return ["MOVE_FORWARD"], True
+    except Exception as e:
+        log(f"[VLM] Error: {e}"); return ["MOVE_FORWARD"], True
 
 # ── Main ──
 try:
@@ -221,23 +278,26 @@ try:
                         pickup_prim = prim; pickup_prim_path = pp
                     log(f"[BENCH] Placed {tobj} at {pa}")
 
-    # ── Guarantee Target Uniqueness ──
-    # Hide and deactivate all other objects of the same target classes to avoid Ambiguous Instructions
+    # ── Guarantee Target Uniqueness (by SEMANTIC CLASS) ──
+    # An instruction like "go to the bookshelf" is ambiguous if the scene has
+    # several shelf-like factories (SimpleBookcase, CellShelf, LargeShelf, ...).
+    # We deactivate every prop in the SAME SEMANTIC CLASS as a target that is
+    # not itself a target prim — so exactly one instance of that class remains.
+    # Semantic class (not raw factory name) is the disambiguation unit; see
+    # semantic_classes.py. This scales: new scenes just need their factories
+    # mapped there, no per-asset manual inspection.
+    target_semantic = {semantic_class_of(tc) for tc in target_classes}
     props_prim = stage.GetPrimAtPath("/World/InteractiveProps")
     if props_prim and props_prim.IsValid():
         for child in props_prim.GetChildren():
             c_name = child.GetName()
             c_path = child.GetPath().pathString
-            
-            is_target_class = False
-            for tc in target_classes:
-                if tc in c_name:
-                    is_target_class = True
-                    break
-            
-            if is_target_class and c_path not in target_prim_paths:
+
+            child_semantic = semantic_class_of(c_name)
+            if child_semantic in target_semantic and c_path not in target_prim_paths:
                 child.SetActive(False)
-                log(f"[BENCH] Deactivated duplicate non-target prop: {c_path}")
+                log(f"[BENCH] Deactivated same-semantic-class ({child_semantic}) "
+                    f"non-target prop: {c_path}")
 
     # ── Instance agent ──
     human_usd = sf["human_usds"][0] if sf["human_usds"] else None
@@ -332,14 +392,17 @@ try:
     fpv_scratch = os.path.join(RUN_DIR, "_scratch_fpv")
     bird_scratch = os.path.join(RUN_DIR, "_scratch_bird")
     import shutil
-    for d in [fpv_dir, bird_dir, fpv_smooth_dir, bird_smooth_dir, fpv_scratch, bird_scratch]:
+    _dirs = [fpv_dir, bird_dir, fpv_smooth_dir, fpv_scratch, bird_scratch]
+    if ENABLE_BIRD_SMOOTH:           # bird _smooth folder only when enabled
+        _dirs.append(bird_smooth_dir)
+    for d in _dirs:
         if os.path.exists(d): shutil.rmtree(d)
         os.makedirs(d, exist_ok=True)
 
     fpv_cam = UsdGeom.Camera.Define(stage, "/World/NavCamera")
     fpv_cam.CreateFocalLengthAttr().Set(17.0)
     fpv_cam.CreateHorizontalApertureAttr().Set(34.0)
-    rp_fpv = rep.create.render_product("/World/NavCamera", (1920,1080))
+    rp_fpv = rep.create.render_product("/World/NavCamera", (RENDER_W, RENDER_H))
     wr_fpv = rep.WriterRegistry.get("BasicWriter")
     wr_fpv.initialize(output_dir=fpv_scratch, rgb=True); wr_fpv.attach([rp_fpv])
 
@@ -362,7 +425,7 @@ try:
         bird_tgt = Gf.Vec3d(agent_start_xy[0]+0.01, agent_start_xy[1], 0.0)
         
     bt.Set(bird_pos); bo.Set(cam_lookat(bird_pos, bird_tgt))
-    rp_bird = rep.create.render_product("/World/BirdCamera", (1920,1080))
+    rp_bird = rep.create.render_product("/World/BirdCamera", (RENDER_W, RENDER_H))
     wr_bird = rep.WriterRegistry.get("BasicWriter")
     wr_bird.initialize(output_dir=bird_scratch, rgb=True); wr_bird.attach([rp_bird])
 
@@ -434,8 +497,18 @@ try:
     # ── Smooth-frame capture helpers ──
     # FILLER_FPS controls how many in-between frames are rendered per second of
     # sim-time while the VLM is thinking. Higher = smoother runner motion.
-    FILLER_FPS = 6.0
+    # Lowered 6 -> 3 to roughly halve filler render load (prototype speed).
+    FILLER_FPS = 3.0
+    FILLER_SUBFRAMES = 4   # filler frames are video-only -> cheap PathTracing
+    DECISION_SUBFRAMES = 16  # decision frames (VLM sees these) stay full quality
+    # Render at least this many filler frames per step so the runner visibly
+    # progresses even on a fast VLM response.
+    MIN_FILLER_FRAMES = 2
     smooth_counter = [0]  # global running index for *_smooth folders
+    # ── Timing probes ── accumulate wall-clock seconds by category so the log
+    # can show where each episode actually spends its time (render vs VLM).
+    timing = {"render_decision": 0.0, "render_filler": 0.0,
+              "vlm": 0.0, "n_decision": 0, "n_filler": 0, "n_vlm": 0}
 
     def pose_runners_at(t):
         """Move only the runners/dancer to their pose at sim-time t. Agent untouched."""
@@ -482,16 +555,28 @@ try:
         render on every frame."""
         for _ in range(4):
             _drain_scratch()
-            rep.orchestrator.step(rt_subframes=16)
+            rep.orchestrator.step(rt_subframes=DECISION_SUBFRAMES)
             _wait_scratch(fpv_scratch, 0)
         _drain_scratch()
 
-    def render_frame():
-        """Render one frame at the current pose; move the FPV+bird PNGs out of
-        the writer scratch dirs into the *_smooth folders with a continuous
-        index. Returns (fpv_smooth_path, bird_smooth_path) or (None, None)."""
+    def render_frame(filler=False):
+        """Render one frame at the current pose.
+
+        FPV PNG always goes into the fpv *_smooth folder (decision + filler,
+        contiguous). The bird PNG is returned as a scratch path for the caller
+        to file per-step into vlm_nav_frames_bird/.
+
+        Bird _smooth (ENABLE_BIRD_SMOOTH):
+          - False (default): no bird _smooth folder; filler bird frames are
+            discarded; the bird video is built from per-step decision frames.
+          - True: filler bird frames are also kept in the bird _smooth folder
+            for a paper-quality continuous bird video.
+
+        filler=True: video-only in-between frame, low PathTracing subframes.
+        filler=False: full-quality decision frame the VLM sees."""
+        subframes = FILLER_SUBFRAMES if filler else DECISION_SUBFRAMES
         _drain_scratch()
-        rep.orchestrator.step(rt_subframes=16)
+        rep.orchestrator.step(rt_subframes=subframes)
         fpv_raw = _wait_scratch(fpv_scratch, 0)
         bird_raw = _wait_scratch(bird_scratch, 0)
         if not fpv_raw:
@@ -499,17 +584,36 @@ try:
         idx = smooth_counter[0]; smooth_counter[0] += 1
         fpv_out = os.path.join(fpv_smooth_dir, f"rgb_{idx:04d}.png")
         shutil.move(fpv_raw, fpv_out)
-        bird_out = None
-        if bird_raw:
-            bird_out = os.path.join(bird_smooth_dir, f"rgb_{idx:04d}.png")
-            shutil.move(bird_raw, bird_out)
-        return fpv_out, bird_out
+        if filler:
+            if ENABLE_BIRD_SMOOTH and bird_raw:
+                shutil.move(bird_raw, os.path.join(bird_smooth_dir, f"rgb_{idx:04d}.png"))
+            elif bird_raw:
+                try: os.remove(bird_raw)
+                except: pass
+            return fpv_out, None
+        # Decision frame: also keep it in bird _smooth if enabled.
+        if ENABLE_BIRD_SMOOTH and bird_raw:
+            shutil.copy(bird_raw, os.path.join(bird_smooth_dir, f"rgb_{idx:04d}.png"))
+        # Return the bird scratch path for the caller to file per-step.
+        return fpv_out, bird_raw
 
     # ── Nav loop ──
     ax, ay, ayaw = agent_start_xy[0], agent_start_xy[1], agent_start_yaw
     apitch = PITCH_INIT; sim_t = 0.0
     cur_phase = 0; inventory = []; action_fb = ""
     nav_hist = []; lamp_on = False
+    # Multi-action planning: the VLM returns a queue of up to PLAN_LEN actions.
+    # The agent executes them one per step; the queue is cleared (forcing a
+    # re-query) on collision or when a phase target is reached. This cuts VLM
+    # calls roughly PLAN_LEN-fold without changing the physical step budget.
+    plan_queue = []
+    vlm_calls = 0
+    # Plan history: for each VLM call, record what it PLANNED, what was actually
+    # EXECUTED, and the OUTCOME (why the plan ended). Shown back to the VLM so it
+    # can learn from blocked plans instead of repeating the same wall collision.
+    plan_history = []
+    cur_planned = []      # the full plan from the current VLM call
+    cur_executed = []     # actions actually executed from cur_planned so far
 
     log(f"[BENCH] Starting nav loop: start=({ax},{ay}) yaw={ayaw}")
 
@@ -558,18 +662,21 @@ try:
             if nav_cam_prim:
                 nav_cam_prim.CreateClippingRangeAttr().Set(Gf.Vec2f(0.3, 10000.0))
 
-        # Animate runners to the start-of-step sim_t, then render the
-        # DECISION frame (the single image the VLM will see this step).
-        # It also lands in the *_smooth folders as a normal frame.
+        # Animate runners to the start-of-step sim_t, then render this step's
+        # frame. It lands in the *_smooth folders as a normal frame.
         pose_runners_at(sim_t)
-        fpv_smooth_path, bird_smooth_path = render_frame()
+        _t_render = time.time()
+        fpv_smooth_path, bird_raw = render_frame()
+        timing["render_decision"] += time.time() - _t_render
+        timing["n_decision"] += 1
         if not fpv_smooth_path:
             log(f"[BENCH] Step {step}: frame timeout"); break
-        # Copy the decision frame into the decision folders, numbered by step.
+        # File this step's frame into the per-step decision folders (rgb_NNNN
+        # contiguous by step). FPV decision frame is also already in fpv_smooth.
         frame_path = os.path.join(fpv_dir, f"rgb_{step:04d}.png")
         shutil.copy(fpv_smooth_path, frame_path)
-        if bird_smooth_path:
-            shutil.copy(bird_smooth_path, os.path.join(bird_dir, f"rgb_{step:04d}.png"))
+        if bird_raw:
+            shutil.move(bird_raw, os.path.join(bird_dir, f"rgb_{step:04d}.png"))
         # Generate thumbnails for quick preview
         try:
             from PIL import Image
@@ -582,72 +689,132 @@ try:
                         im.thumbnail((480,270)); im.save(tp,"JPEG",quality=80)
         except: pass
 
-        # Build prompt
+        # ── Flagged-task review snapshot ──
+        # full_task_gen may flag a task (raycast occlusion / connectivity) as
+        # informational. We do NOT render anything extra for it: on step 0 we
+        # just copy this already-rendered bird+fpv frame into the flag folder
+        # so the user can eyeball whatever the raycast was unsure about.
+        if step == 0:
+            try:
+                flag_dir = os.path.join(SCRIPT_DIR, "review_flagged")
+                meta = os.path.join(flag_dir, f"flagged_{tid.split('-')[0]}.json")
+                if os.path.exists(meta):
+                    fl = json.load(open(meta))
+                    rec = next((r for r in fl.get("flagged", []) if r["id"] == tid), None)
+                    if rec:
+                        snap = os.path.join(flag_dir, tid)
+                        os.makedirs(snap, exist_ok=True)
+                        shutil.copy(frame_path, os.path.join(snap, "fpv_step0.png"))
+                        bf = sorted(glob.glob(os.path.join(bird_dir, "rgb_*.png")))
+                        if bf:
+                            shutil.copy(bf[-1], os.path.join(snap, "bird_step0.png"))
+                        json.dump(rec, open(os.path.join(snap, "flag_meta.json"), "w"), indent=2)
+                        log(f"[BENCH] Flagged task — review snapshot saved to {snap}")
+            except Exception as e:
+                log(f"[BENCH] flag snapshot skipped: {e}")
+
         ph = phases[cur_phase]
-        if is_multi:
-            inv_s = ','.join(inventory) if inventory else 'empty'
-            lamp_s = " Lamp: ON." if lamp_on else ""
-            prompt = (f"Current objective: go to {ph['desc']} and use {ph['action']}. "
-                      f"Carrying: [{inv_s}].{lamp_s} Progress: step {cur_phase+1}/{len(phases)}. "
-                      f"What action should you take?")
-            if action_fb:
-                prompt += f" ⚠ PREVIOUS ACTION FAILED: {action_fb}"
-        else:
-            prompt = f"Navigate to {ph['desc']}. What action should you take?"
+        log(f"[BENCH] Step {step}: ({ax:.2f},{ay:.2f}) yaw={ayaw:.0f} dist={dist:.2f} "
+            f"phase={cur_phase+1}/{len(phases)} queued={len(plan_queue)}")
 
-        # History
-        if nav_hist:
-            recent = nav_hist[-8:]
-            hlines = []
-            for h in recent:
-                ms = "BLOCKED" if h.get("blocked") else ("moved" if h.get("moved") else "no movement")
-                hlines.append(f"Step {h['step']}: {h['action']} ({ms}, yaw={h['yaw']:.0f}°)")
-            prompt += " Recent history:\n" + "\n".join(hlines)
-            rm = [h.get("moved", True) for h in nav_hist[-3:]]
-            if len(rm) >= 3 and not any(rm):
-                prompt += "\n⚠ WARNING: You have NOT moved for 3+ steps. Try a different direction."
+        # ── Refill the action plan only when the queue is empty ──
+        # This is the multi-action planning: one VLM call yields up to PLAN_LEN
+        # actions, executed across the next PLAN_LEN steps.
+        if not plan_queue and vlm_calls >= MAX_VLM_CALLS:
+            log(f"[BENCH] VLM call budget reached ({MAX_VLM_CALLS}) — ending episode "
+                f"at step {step}, dist={dist:.2f}")
+            break
+        queried_this_step = False
+        if not plan_queue:
+            queried_this_step = True
+            # Build prompt
+            if is_multi:
+                inv_s = ','.join(inventory) if inventory else 'empty'
+                lamp_s = " Lamp: ON." if lamp_on else ""
+                prompt = (f"Current objective: go to {ph['desc']} and use {ph['action']}. "
+                          f"Carrying: [{inv_s}].{lamp_s} Progress: step {cur_phase+1}/{len(phases)}. "
+                          f"Plan your next actions.")
+                if action_fb:
+                    prompt += f" ⚠ PREVIOUS ACTION FAILED: {action_fb}"
+            else:
+                prompt = f"Navigate to {ph['desc']}. Plan your next actions."
 
-        fq = check_frame_quality(frame_path)
-        if fq.get('guidance'): prompt += fq['guidance']
+            # ── Plan history — show the VLM its last few plans, what was
+            # actually executed, and why each plan ended. This lets it avoid
+            # repeating a plan that just walked into a wall.
+            if plan_history:
+                hlines = []
+                for ph_rec in plan_history[-4:]:
+                    pl = ",".join(ph_rec["planned"])
+                    ex = ",".join(ph_rec["executed"]) if ph_rec["executed"] else "(none)"
+                    hlines.append(f"  planned [{pl}] -> executed [{ex}] -> {ph_rec['outcome']}")
+                prompt += ("\nYour recent plans (most recent last):\n" + "\n".join(hlines)
+                           + "\nIf a plan was BLOCKED, the route ahead is obstructed — "
+                             "choose a clearly different direction now.")
+                # Stuck detection: 3+ consecutive plans that moved nowhere
+                stuck = sum(1 for r in plan_history[-3:]
+                            if all(a in ("MOVE_FORWARD",) for a in r["planned"][:1])
+                            and "BLOCKED" in r["outcome"])
+                if stuck >= 3:
+                    prompt += ("\n⚠ WARNING: 3+ plans in a row were blocked immediately. "
+                               "You MUST turn substantially (queue several TURN_LEFT or "
+                               "TURN_RIGHT) before moving forward again.")
 
-        log(f"[BENCH] Step {step}: ({ax:.2f},{ay:.2f}) yaw={ayaw:.0f} dist={dist:.2f} phase={cur_phase+1}/{len(phases)}")
+            fq = check_frame_quality(frame_path)
+            if fq.get('guidance'): prompt += fq['guidance']
 
-        # ── Query VLM asynchronously; render filler frames while it thinks ──
-        # The agent holds its pose (it has not decided yet) but the runners keep
-        # moving, so the *_smooth video shows continuous motion with no leap.
-        import threading
-        vlm_result = {}
-        def _vlm_worker():
-            vlm_result["out"] = query_vlm(frame_path, prompt, sys_prompt, step)
-        vlm_thread = threading.Thread(target=_vlm_worker)
-        vlm_thread.start()
-        filler_t = sim_t
-        filler_n = 0
-        # Render filler frames while the VLM thinks. Also enforce a minimum
-        # per-step sim-time advance (RUNNER_TIME_PER_STEP) so the runner still
-        # progresses even when the VLM responds faster than that.
-        min_filler_t = sim_t + RUNNER_TIME_PER_STEP
-        while vlm_thread.is_alive() or filler_t < min_filler_t:
-            filler_t += 1.0 / FILLER_FPS
-            pose_runners_at(filler_t)
-            render_frame()  # filler frame -> *_smooth folders only
-            filler_n += 1
-        vlm_thread.join()
-        action, fallback = vlm_result.get("out", ("MOVE_FORWARD", True))
-        # Advance sim_t past the thinking time so the next decision frame is
-        # continuous with the filler frames just rendered.
-        sim_t = filler_t
-        if filler_n:
-            log(f"[BENCH] Step {step}: rendered {filler_n} filler frames during VLM thinking")
-        action_fb = ""
+            # ── Query VLM asynchronously; render filler frames while it thinks ──
+            # The agent holds its pose (it has not decided yet) but the runners
+            # keep moving, so the *_smooth video stays leap-free.
+            import threading
+            vlm_result = {}
+            def _vlm_worker():
+                vlm_result["out"] = query_vlm_plan(frame_path, prompt, sys_prompt, step)
+            _t_vlm = time.time()
+            vlm_thread = threading.Thread(target=_vlm_worker)
+            vlm_thread.start()
+            filler_t = sim_t
+            filler_n = 0
+            # Render filler frames while the VLM thinks; also ensure at least
+            # MIN_FILLER_FRAMES so the runner visibly progresses even on a fast
+            # VLM response.
+            while vlm_thread.is_alive() or filler_n < MIN_FILLER_FRAMES:
+                filler_t += 1.0 / FILLER_FPS
+                pose_runners_at(filler_t)
+                _t_fr = time.time()
+                render_frame(filler=True)  # cheap, fpv-only -> *_smooth
+                timing["render_filler"] += time.time() - _t_fr
+                timing["n_filler"] += 1
+                filler_n += 1
+            vlm_thread.join()
+            timing["vlm"] += time.time() - _t_vlm
+            timing["n_vlm"] += 1
+            plan, fallback = vlm_result.get("out", (["MOVE_FORWARD"], True))
+            plan_queue = list(plan)
+            cur_planned = list(plan)   # remember the full plan for history
+            cur_executed = []
+            vlm_calls += 1
+            sim_t = filler_t
+            log(f"[BENCH] Step {step}: VLM call #{vlm_calls} -> plan={plan_queue} "
+                f"({filler_n} filler frames)")
+            action_fb = ""
 
-        # STOP confirm
+        # Pop the next action from the queue
+        action = plan_queue.pop(0)
+        cur_executed.append(action)
+        fallback = False
+
+        # STOP confirm — verify with a single-action query before accepting
         if action == "STOP":
             for cr in range(1, STOP_CONFIRM):
                 ca, _ = query_vlm(frame_path, "You chose STOP. Is the target within arm's reach? Confirm.", sys_prompt, step)
-                if ca != "STOP": action = ca; break
+                if ca != "STOP":
+                    action = ca; plan_queue = []  # plan was wrong, re-query next step
+                    break
 
         pre_x, pre_y = ax, ay
+        pre_phase = cur_phase
+        pre_fb = action_fb
         nav_hist.append({"step":step,"x":round(ax,3),"y":round(ay,3),"yaw":round(ayaw,1),
                          "dist_to_target":round(dist,3),"action":action,"moved":False,"blocked":False})
 
@@ -728,15 +895,53 @@ try:
         ayaw = wrap_angle_deg(ayaw)
         did_move = abs(ax-pre_x) > 0.001 or abs(ay-pre_y) > 0.001
         nav_hist[-1]["moved"] = did_move
-        # sim_t already advanced continuously to filler_t through the thinking
-        # time. The next decision frame renders at exactly sim_t, so playback is
-        # seamless. No extra fixed bump — that was the source of the leap.
+        # Advance sim_t for the runner. On a VLM-call step the filler loop
+        # already advanced sim_t to filler_t. On a queued-action step (no VLM
+        # call) NOTHING advanced it — so bump it here by RUNNER_TIME_PER_STEP,
+        # otherwise the runner freezes during queued actions and then leaps at
+        # the next VLM call.
+        if not queried_this_step:
+            sim_t += RUNNER_TIME_PER_STEP
+
+        # ── Decide whether the current plan ends here, and why.
+        # A plan ends if the world changed unexpectedly (collision / phase
+        # target reached / interaction failed) OR the queue drained naturally.
+        collided = nav_hist[-1]["blocked"]
+        phase_changed = cur_phase != pre_phase
+        action_failed = bool(action_fb) and not pre_fb
+        plan_interrupted = collided or phase_changed or action_failed
+        plan_ended = plan_interrupted or not plan_queue
+
+        if plan_ended and cur_planned:
+            if collided:
+                outcome = f"BLOCKED at action {len(cur_executed)} ({action})"
+            elif phase_changed:
+                outcome = f"sub-task completed ({action})"
+            elif action_failed:
+                outcome = f"action failed ({action_fb})"
+            else:
+                outcome = "plan completed, no obstruction"
+            plan_history.append({"planned": list(cur_planned),
+                                  "executed": list(cur_executed),
+                                  "outcome": outcome})
+            if plan_interrupted and plan_queue:
+                log(f"[BENCH] Step {step}: aborting queued plan ({outcome}), "
+                    f"dropped {len(plan_queue)} action(s) -> re-query next step")
+                plan_queue = []
+            cur_planned = []; cur_executed = []
     else:
         log(f"[BENCH] TIMEOUT after {max_steps} steps, dist={dist:.2f}")
 
     # ── Save results ──
     metrics = compute_metrics(nav_hist, task, cur_phase, len(phases))
+    # Planning efficiency: how many VLM calls the episode used. With
+    # multi-action planning one call yields up to PLAN_LEN actions, so
+    # vlm_calls << steps_used. This is a cost/latency axis, separate from the
+    # physical-step metrics (which stay comparable to single-action runs).
+    metrics["vlm_calls"] = vlm_calls
+    metrics["actions_per_call"] = round(metrics["steps_used"] / max(1, vlm_calls), 2)
     results = {"task": task, "metrics": metrics, "nav_history": nav_hist,
+               "plan_history": plan_history,
                "resolved_targets": resolved_targets,
                "agent_start": agent_start_xy, "agent_yaw": agent_start_yaw}
     with open(os.path.join(RUN_DIR, "vlm_nav_history.json"), "w") as f:
@@ -745,7 +950,20 @@ try:
         json.dump(results, f, indent=2)
 
     log(f"[BENCH] Results: SR={metrics['task_success_rate']} SP={metrics['subtask_progress']:.0%} "
-        f"GD={metrics['goal_distance_m']:.2f}m Steps={metrics['steps_used']}")
+        f"GD={metrics['goal_distance_m']:.2f}m Steps={metrics['steps_used']} "
+        f"VLMcalls={vlm_calls} ({metrics['actions_per_call']} actions/call)")
+
+    # ── Timing breakdown — where did the episode spend wall-clock time? ──
+    # NOTE: the VLM thread and filler renders run CONCURRENTLY, so "vlm" (the
+    # join window) overlaps "render_filler". Pure VLM wait ≈ vlm - render_filler.
+    rd, rf = timing["render_decision"], timing["render_filler"]
+    vt = timing["vlm"]
+    nd, nf, nv = timing["n_decision"], timing["n_filler"], max(1, timing["n_vlm"])
+    log(f"[BENCH] TIMING: decision-render {rd:.0f}s ({nd} frames, "
+        f"{rd/max(1,nd):.1f}s/frame) | filler-render {rf:.0f}s ({nf} frames, "
+        f"{rf/max(1,nf):.1f}s/frame) | vlm-window {vt:.0f}s ({nv} calls, "
+        f"{vt/nv:.1f}s/call) | pure-vlm≈{max(0,vt-rf):.0f}s")
+    metrics["timing"] = {k: round(v, 1) for k, v in timing.items()}
 
     # ── Clean up render scratch dirs ──
     for d in [fpv_scratch, bird_scratch]:

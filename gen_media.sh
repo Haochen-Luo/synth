@@ -11,14 +11,37 @@ BASE="${1:-/home/qi/hc/Puppeteer/zehao_task}"
 PREVIEW="$BASE/nav_preview"
 mkdir -p "$PREVIEW"
 
-FPS=5
+FPS=2          # decision-frame playback rate (one frame per agent step)
+# Smooth playback rate. Match it to FILLER_FPS in bench_runner.py: filler
+# frames are rendered at FILLER_FPS frames per second of sim-time, so playing
+# them back at the same rate gives near-real-time motion. FILLER_FPS is 3.
+SMOOTH_FPS=3
 GIF_MAX=0    # 0 = no cap, include all frames (set >0 to limit GIF size)
 
 for VIEW in fpv birdseye; do
+    # FPV: use the *_smooth folder (decision + filler, contiguous, leap-free,
+    #      fast playback).
+    # Bird: if a bird _smooth folder exists (ENABLE_BIRD_SMOOTH was on) use it;
+    #       otherwise fall back to the per-step decision folder (contiguous
+    #       rgb_NNNN by step), played at the slow per-step rate.
     if [ "$VIEW" = "fpv" ]; then
+        SMOOTH="$BASE/vlm_nav_frames_fpv_smooth"
         SRC="$BASE/vlm_nav_frames_fpv"
+        FPS=2
+        if [ -d "$SMOOTH" ] && [ "$(ls "$SMOOTH"/rgb_*.png 2>/dev/null | wc -l)" -gt 0 ]; then
+            SRC="$SMOOTH"; FPS=$SMOOTH_FPS
+            echo "[INFO] $VIEW: using smooth frames"
+        fi
     else
+        SMOOTH="$BASE/vlm_nav_frames_bird_smooth"
         SRC="$BASE/vlm_nav_frames_bird"
+        FPS=2
+        if [ -d "$SMOOTH" ] && [ "$(ls "$SMOOTH"/rgb_*.png 2>/dev/null | wc -l)" -gt 0 ]; then
+            SRC="$SMOOTH"; FPS=$SMOOTH_FPS
+            echo "[INFO] $VIEW: using bird smooth frames"
+        else
+            echo "[INFO] $VIEW: using per-step decision frames (bird filler disabled)"
+        fi
     fi
 
     N=$(ls "$SRC"/rgb_*.png 2>/dev/null | wc -l)

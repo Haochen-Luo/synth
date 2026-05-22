@@ -36,7 +36,34 @@ try:
         "NatureShelfTrinkets", "door", "window",
     ]
 
-    results = {"scene_dir": os.path.basename(scene_dir), "prims": []}
+    results = {"scene_dir": os.path.basename(scene_dir), "prims": [], "room_bounds": None}
+
+    # ── Room structure: the REAL floor bbox defines the walkable room extent.
+    # Furniture does not fill the room, so a furniture-center range is NOT a
+    # valid room boundary — task generators must use this floor bbox instead.
+    def _world_bbox(prim):
+        try:
+            r = UsdGeom.Imageable(prim).ComputeWorldBound(0, "default").GetRange()
+            if r.IsEmpty():
+                return None
+            mn, mx = r.GetMin(), r.GetMax()
+            return ([round(float(mn[i]), 3) for i in range(3)],
+                    [round(float(mx[i]), 3) for i in range(3)])
+        except Exception:
+            return None
+
+    for prim in stage.Traverse():
+        nm = prim.GetName().lower()
+        if "floor" in nm and "ground" not in nm:
+            bb = _world_bbox(prim)
+            if bb:
+                mn, mx = bb
+                results["room_bounds"] = {
+                    "floor_prim": str(prim.GetPath()),
+                    "x": [mn[0], mx[0]], "y": [mn[1], mx[1]], "z": [mn[2], mx[2]],
+                }
+                print(f"  ROOM FLOOR: {prim.GetPath()}  x[{mn[0]},{mx[0]}]  y[{mn[1]},{mx[1]}]")
+                break
 
     for prim in stage.Traverse():
         path = str(prim.GetPath())
