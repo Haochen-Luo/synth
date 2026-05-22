@@ -318,10 +318,21 @@ try:
         return Gf.Quatf(qd.GetReal(), *qd.GetImaginary())
 
     # ── FPV camera ──
+    # Decision folders: exactly ONE frame per agent step — the image the VLM
+    #   sees (rgb_NNNN.png numbered by step).
+    # Smooth folders: EVERY rendered frame, including filler frames captured
+    #   while the VLM is thinking, so runner motion is continuous (no leaps).
+    # The BasicWriter writes into scratch dirs; render_and_capture() moves each
+    # frame out, so the writer's auto-incrementing names never leak into the
+    # decision/smooth folders.
     fpv_dir = os.path.join(RUN_DIR, "vlm_nav_frames_fpv")
     bird_dir = os.path.join(RUN_DIR, "vlm_nav_frames_bird")
+    fpv_smooth_dir = os.path.join(RUN_DIR, "vlm_nav_frames_fpv_smooth")
+    bird_smooth_dir = os.path.join(RUN_DIR, "vlm_nav_frames_bird_smooth")
+    fpv_scratch = os.path.join(RUN_DIR, "_scratch_fpv")
+    bird_scratch = os.path.join(RUN_DIR, "_scratch_bird")
     import shutil
-    for d in [fpv_dir, bird_dir]:
+    for d in [fpv_dir, bird_dir, fpv_smooth_dir, bird_smooth_dir, fpv_scratch, bird_scratch]:
         if os.path.exists(d): shutil.rmtree(d)
         os.makedirs(d, exist_ok=True)
 
@@ -330,7 +341,7 @@ try:
     fpv_cam.CreateHorizontalApertureAttr().Set(34.0)
     rp_fpv = rep.create.render_product("/World/NavCamera", (1920,1080))
     wr_fpv = rep.WriterRegistry.get("BasicWriter")
-    wr_fpv.initialize(output_dir=fpv_dir, rgb=True); wr_fpv.attach([rp_fpv])
+    wr_fpv.initialize(output_dir=fpv_scratch, rgb=True); wr_fpv.attach([rp_fpv])
 
     # ── Bird's-eye camera — elevated top-down view of entire room ──
     bird_cam = UsdGeom.Camera.Define(stage, "/World/BirdCamera")
@@ -353,7 +364,7 @@ try:
     bt.Set(bird_pos); bo.Set(cam_lookat(bird_pos, bird_tgt))
     rp_bird = rep.create.render_product("/World/BirdCamera", (1920,1080))
     wr_bird = rep.WriterRegistry.get("BasicWriter")
-    wr_bird.initialize(output_dir=bird_dir, rgb=True); wr_bird.attach([rp_bird])
+    wr_bird.initialize(output_dir=bird_scratch, rgb=True); wr_bird.attach([rp_bird])
 
     # ── Setup agent + runner xform ops ──
     agent_xf = UsdGeom.Xformable(agent_prim)
@@ -402,7 +413,15 @@ try:
                 break
 
     nav_cam = stage.GetPrimAtPath("/World/NavCamera")
-    timeline = omni.timeline.get_timeline_interface(); timeline.play()
+    timeline = omni.timeline.get_timeline_interface()
+    # IMPORTANT: keep the timeline PAUSED. The runner mesh has a baked
+    # xformOp:translate animation (600 keyframes) driven by the timeline.
+    # A PLAYING timeline free-runs ~rt_subframes anim-frames during each
+    # orchestrator.step() render, so the captured frame reflects a much later
+    # timecode than the one we set — that was the obstacle "leap". With the
+    # timeline stopped, set_current_time() holds exactly and each render
+    # captures precisely the requested timecode.
+    timeline.stop()
     anim_start = stage.GetStartTimeCode(); anim_end = stage.GetEndTimeCode()
     anim_dur = (anim_end - anim_start) / max(1.0, anim_fps)
 
@@ -412,6 +431,80 @@ try:
     else:
         sys_prompt = make_nav_system_prompt(phases[0]["desc"])
 
+    # ── Smooth-frame capture helpers ──
+    # FILLER_FPS controls how many in-between frames are rendered per second of
+    # sim-time while the VLM is thinking. Higher = smoother runner motion.
+    FILLER_FPS = 6.0
+    smooth_counter = [0]  # global running index for *_smooth folders
+
+    def pose_runners_at(t):
+        """Move only the runners/dancer to their pose at sim-time t. Agent untouched."""
+        if runner1_spec and r1_ops:
+            rp, rr = sample_human_motion(runner1_spec, t, anim_fps)
+            r1_ops["t"].Set(Gf.Vec3d(rp[0], rp[1], GROUND_Z))
+            ryr = math.radians(rr[2])
+            r1_ops["o"].Set(Gf.Quatf(math.cos(ryr/2), 0, 0, math.sin(ryr/2)))
+        if runner2_spec and r2_ops:
+            rp2, rr2 = sample_human_motion(runner2_spec, t, anim_fps)
+            r2_ops["t"].Set(Gf.Vec3d(rp2[0], rp2[1], GROUND_Z))
+            ry2 = math.radians(rr2[2])
+            r2_ops["o"].Set(Gf.Quatf(math.cos(ry2/2), 0, 0, math.sin(ry2/2)))
+        at_ = anim_start/anim_fps + (t % anim_dur) if anim_dur > 0 else t
+        # Timeline is stopped; set the timecode and commit it with one update so
+        # USD evaluates the runner's baked animation samples before rendering.
+        timeline.set_current_time(at_)
+        sim_app.update()
+
+    def _wait_scratch(scratch, prev_n):
+        t0 = time.time()
+        while time.time() - t0 < 5.0:
+            ff = sorted(glob.glob(os.path.join(scratch, "rgb_*.png")))
+            if len(ff) > prev_n:
+                return ff[-1]
+            time.sleep(0.05)
+        return None
+
+    def _drain_scratch():
+        """Delete any pending PNGs in the writer scratch dirs."""
+        for d in [fpv_scratch, bird_scratch]:
+            for p in glob.glob(os.path.join(d, "rgb_*.png")):
+                try: os.remove(p)
+                except: pass
+
+    def prime_render():
+        """Flush the render pipeline ONCE at loop start so the first real
+        render_frame() already reflects the current pose.
+
+        Only the very first captured frame was ever wrong: it carried stale
+        state from the warmup phase (100 free-running updates with a playing
+        timeline). Frames 1..N were always continuous on a single render. So we
+        drain the pipeline thoroughly here, ONCE, instead of paying a double
+        render on every frame."""
+        for _ in range(4):
+            _drain_scratch()
+            rep.orchestrator.step(rt_subframes=16)
+            _wait_scratch(fpv_scratch, 0)
+        _drain_scratch()
+
+    def render_frame():
+        """Render one frame at the current pose; move the FPV+bird PNGs out of
+        the writer scratch dirs into the *_smooth folders with a continuous
+        index. Returns (fpv_smooth_path, bird_smooth_path) or (None, None)."""
+        _drain_scratch()
+        rep.orchestrator.step(rt_subframes=16)
+        fpv_raw = _wait_scratch(fpv_scratch, 0)
+        bird_raw = _wait_scratch(bird_scratch, 0)
+        if not fpv_raw:
+            return None, None
+        idx = smooth_counter[0]; smooth_counter[0] += 1
+        fpv_out = os.path.join(fpv_smooth_dir, f"rgb_{idx:04d}.png")
+        shutil.move(fpv_raw, fpv_out)
+        bird_out = None
+        if bird_raw:
+            bird_out = os.path.join(bird_smooth_dir, f"rgb_{idx:04d}.png")
+            shutil.move(bird_raw, bird_out)
+        return fpv_out, bird_out
+
     # ── Nav loop ──
     ax, ay, ayaw = agent_start_xy[0], agent_start_xy[1], agent_start_yaw
     apitch = PITCH_INIT; sim_t = 0.0
@@ -419,6 +512,25 @@ try:
     nav_hist = []; lamp_on = False
 
     log(f"[BENCH] Starting nav loop: start=({ax},{ay}) yaw={ayaw}")
+
+    # Prime the render pipeline: pose agent + camera + runners at the step-0
+    # state and flush throwaway renders. The first orchestrator.step()
+    # otherwise captures the stale warmup-phase pose, which made step 0's
+    # frame leap. Priming once here lets every render_frame() be a single
+    # render with no per-frame double cost.
+    a_trans.Set(Gf.Vec3d(ax, ay, GROUND_Z))
+    myaw0 = math.radians(ayaw + MESH_YAW_OFF)
+    a_orient.Set(Gf.Quatf(math.cos(myaw0/2), 0, 0, math.sin(myaw0/2)))
+    if nav_cam and nav_cam.IsValid():
+        cxf0 = UsdGeom.Xformable(nav_cam)
+        try: cxf0.ClearXformOpOrder()
+        except: pass
+        cam_x0 = ax + 0.1 * math.cos(math.radians(ayaw))
+        cam_y0 = ay + 0.1 * math.sin(math.radians(ayaw))
+        cxf0.AddTranslateOp().Set(Gf.Vec3d(cam_x0, cam_y0, EYE_H))
+        cxf0.AddOrientOp().Set(cam_quat(ayaw, apitch))
+    pose_runners_at(sim_t)
+    prime_render()
 
     for step in range(max_steps):
         tgt = resolved_targets[cur_phase]
@@ -446,49 +558,29 @@ try:
             if nav_cam_prim:
                 nav_cam_prim.CreateClippingRangeAttr().Set(Gf.Vec2f(0.3, 10000.0))
 
-        # Animate runner 1 (obstacle)
-        if runner1_spec and r1_ops:
-            rp, rr = sample_human_motion(runner1_spec, sim_t, anim_fps)
-            r1_ops["t"].Set(Gf.Vec3d(rp[0], rp[1], GROUND_Z))
-            ryr = math.radians(rr[2])
-            r1_ops["o"].Set(Gf.Quatf(math.cos(ryr/2), 0, 0, math.sin(ryr/2)))
-
-        # Animate runner 2 (if exists)
-        if runner2_spec and r2_ops:
-            rp2, rr2 = sample_human_motion(runner2_spec, sim_t, anim_fps)
-            r2_ops["t"].Set(Gf.Vec3d(rp2[0], rp2[1], GROUND_Z))
-            ry2 = math.radians(rr2[2])
-            r2_ops["o"].Set(Gf.Quatf(math.cos(ry2/2), 0, 0, math.sin(ry2/2)))
-
-        # Timeline
-        at = anim_start/anim_fps + (sim_t % anim_dur) if anim_dur > 0 else sim_t
-        timeline.set_current_time(at)
-
-        # Render
-        rep.orchestrator.step(rt_subframes=16)
-
-        # Wait for frame (both FPV and bird render simultaneously)
-        t0 = time.time()
-        frame_path = None
-        while time.time() - t0 < 5.0:
-            frames = sorted(glob.glob(os.path.join(fpv_dir, "rgb_*.png")))
-            if len(frames) >= step + 1:
-                frame_path = frames[-1]
-                # Generate thumbnails for quick preview
-                try:
-                    from PIL import Image
-                    for d in [fpv_dir, bird_dir]:
-                        df = sorted(glob.glob(os.path.join(d, "rgb_*.png")))
-                        if df:
-                            tp = df[-1].replace(".png","_thumb.jpg")
-                            with Image.open(df[-1]) as im:
-                                if im.mode in ('RGBA','P'): im = im.convert('RGB')
-                                im.thumbnail((480,270)); im.save(tp,"JPEG",quality=80)
-                except: pass
-                break
-            time.sleep(0.1)
-        if not frame_path:
+        # Animate runners to the start-of-step sim_t, then render the
+        # DECISION frame (the single image the VLM will see this step).
+        # It also lands in the *_smooth folders as a normal frame.
+        pose_runners_at(sim_t)
+        fpv_smooth_path, bird_smooth_path = render_frame()
+        if not fpv_smooth_path:
             log(f"[BENCH] Step {step}: frame timeout"); break
+        # Copy the decision frame into the decision folders, numbered by step.
+        frame_path = os.path.join(fpv_dir, f"rgb_{step:04d}.png")
+        shutil.copy(fpv_smooth_path, frame_path)
+        if bird_smooth_path:
+            shutil.copy(bird_smooth_path, os.path.join(bird_dir, f"rgb_{step:04d}.png"))
+        # Generate thumbnails for quick preview
+        try:
+            from PIL import Image
+            for d in [fpv_dir, bird_dir]:
+                df = sorted(glob.glob(os.path.join(d, "rgb_*.png")))
+                if df:
+                    tp = df[-1].replace(".png","_thumb.jpg")
+                    with Image.open(df[-1]) as im:
+                        if im.mode in ('RGBA','P'): im = im.convert('RGB')
+                        im.thumbnail((480,270)); im.save(tp,"JPEG",quality=80)
+        except: pass
 
         # Build prompt
         ph = phases[cur_phase]
@@ -520,7 +612,33 @@ try:
 
         log(f"[BENCH] Step {step}: ({ax:.2f},{ay:.2f}) yaw={ayaw:.0f} dist={dist:.2f} phase={cur_phase+1}/{len(phases)}")
 
-        action, fallback = query_vlm(frame_path, prompt, sys_prompt, step)
+        # ── Query VLM asynchronously; render filler frames while it thinks ──
+        # The agent holds its pose (it has not decided yet) but the runners keep
+        # moving, so the *_smooth video shows continuous motion with no leap.
+        import threading
+        vlm_result = {}
+        def _vlm_worker():
+            vlm_result["out"] = query_vlm(frame_path, prompt, sys_prompt, step)
+        vlm_thread = threading.Thread(target=_vlm_worker)
+        vlm_thread.start()
+        filler_t = sim_t
+        filler_n = 0
+        # Render filler frames while the VLM thinks. Also enforce a minimum
+        # per-step sim-time advance (RUNNER_TIME_PER_STEP) so the runner still
+        # progresses even when the VLM responds faster than that.
+        min_filler_t = sim_t + RUNNER_TIME_PER_STEP
+        while vlm_thread.is_alive() or filler_t < min_filler_t:
+            filler_t += 1.0 / FILLER_FPS
+            pose_runners_at(filler_t)
+            render_frame()  # filler frame -> *_smooth folders only
+            filler_n += 1
+        vlm_thread.join()
+        action, fallback = vlm_result.get("out", ("MOVE_FORWARD", True))
+        # Advance sim_t past the thinking time so the next decision frame is
+        # continuous with the filler frames just rendered.
+        sim_t = filler_t
+        if filler_n:
+            log(f"[BENCH] Step {step}: rendered {filler_n} filler frames during VLM thinking")
         action_fb = ""
 
         # STOP confirm
@@ -610,7 +728,9 @@ try:
         ayaw = wrap_angle_deg(ayaw)
         did_move = abs(ax-pre_x) > 0.001 or abs(ay-pre_y) > 0.001
         nav_hist[-1]["moved"] = did_move
-        sim_t += RUNNER_TIME_PER_STEP
+        # sim_t already advanced continuously to filler_t through the thinking
+        # time. The next decision frame renders at exactly sim_t, so playback is
+        # seamless. No extra fixed bump — that was the source of the leap.
     else:
         log(f"[BENCH] TIMEOUT after {max_steps} steps, dist={dist:.2f}")
 
@@ -627,12 +747,17 @@ try:
     log(f"[BENCH] Results: SR={metrics['task_success_rate']} SP={metrics['subtask_progress']:.0%} "
         f"GD={metrics['goal_distance_m']:.2f}m Steps={metrics['steps_used']}")
 
+    # ── Clean up render scratch dirs ──
+    for d in [fpv_scratch, bird_scratch]:
+        try: shutil.rmtree(d)
+        except: pass
+
     # ── Generate media (HD + Preview) via gen_media.sh ──
     import subprocess
     gen_media_sh = "/home/qi/hc/Puppeteer/zehao_task/gen_media.sh"
     if os.path.exists(gen_media_sh):
         log("[BENCH] Running gen_media.sh...")
-        mr = subprocess.run(["bash", gen_media_sh, RUN_DIR], capture_output=True, text=True, timeout=120)
+        mr = subprocess.run(["bash", gen_media_sh, RUN_DIR], capture_output=True, text=True, timeout=600)
         log(f"[BENCH] gen_media rc={mr.returncode}")
 
     # ── 2D Trajectory Map ──
