@@ -14,23 +14,32 @@ DOCKER_CONTAINER = "vlm-jupyter"  #"bench-isaac"
 RUNNER_PATH = "/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/bench_runner.py"
 VLLM_URL = "http://localhost:8300/v1/chat/completions"
 
+MAX_VLM_CALLS = 50      # per-episode VLM-call cap, passed to the runner
+TASK_TIMEOUT = 5400     # per-task wall-clock cap (s) — full episodes + Isaac boot
+
 def run_task(task_id, batch_name="", dry_run=False):
     """Run a single task inside the Isaac Sim Docker container."""
-    
+
     batch_env = f"-e BATCH_NAME={batch_name} " if batch_name else ""
-    cmd = (f'docker exec -e TASK_ID={task_id} -e VLLM_URL={VLLM_URL} {batch_env}'
+    cmd = (f'docker exec -e TASK_ID={task_id} -e VLLM_URL={VLLM_URL} '
+           f'-e MAX_VLM_CALLS={MAX_VLM_CALLS} {batch_env}'
            f'{DOCKER_CONTAINER} /isaac-sim/python.sh {RUNNER_PATH}')
     print(f"\n{'='*60}")
     print(f"  Running: {task_id}")
     print(f"  Command: {cmd}")
     print(f"{'='*60}")
-    
+
     if dry_run:
         print("  [DRY RUN] Skipped")
         return None
-    
+
     t0 = time.time()
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=1800)
+    try:
+        result = subprocess.run(cmd, shell=True, capture_output=True,
+                                text=True, timeout=TASK_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        print(f"  TIMEOUT after {TASK_TIMEOUT}s — skipping task")
+        return None
     elapsed = time.time() - t0
     
     print(f"  Exit code: {result.returncode} ({elapsed:.0f}s)")
@@ -71,15 +80,16 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Print commands without executing")
     parser.add_argument("--report-only", action="store_true", help="Only aggregate and print existing results")
     parser.add_argument("--batch-name", type=str, default="", help="Optional unified outer directory name for this batch run")
-    parser.add_argument("--ssh", type=str, default="", help="SSH host to run on (e.g. GPU-843)")
-    parser.add_argument("--container", type=str, default="bench-isaac", help="Docker container name to use")
+    parser.add_argument("--container", type=str, default="vlm-jupyter", help="Docker container name to use")
     parser.add_argument("--vllm-url", type=str, default="http://localhost:8300/v1/chat/completions", help="URL of the VLM API endpoint")
+    parser.add_argument("--max-vlm-calls", type=int, default=50, help="Per-episode VLM-call cap")
     args = parser.parse_args()
 
     # Update globals based on args
-    global DOCKER_CONTAINER, VLLM_URL
+    global DOCKER_CONTAINER, VLLM_URL, MAX_VLM_CALLS
     DOCKER_CONTAINER = args.container
     VLLM_URL = args.vllm_url
+    MAX_VLM_CALLS = args.max_vlm_calls
 
     bench = json.load(open(TASKS_JSON))
     all_tasks = bench["tasks"]
