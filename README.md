@@ -18,6 +18,17 @@ stay on this branch.
 - vLLM server (Qwen3-VL-30B) serves the VLM on `localhost:8300`.
 - If Isaac Sim segfaults on startup (happens after the container has been up a
   long time / many runs): `ssh GPU-843 'docker restart vlm-jupyter'`, wait ~10s.
+- **OptiX denoiser** — PathTracing's denoiser needs `/usr/share/nvidia/nvoptix.bin`,
+  which the container image is missing (NVIDIA runtime does not auto-mount this
+  96 MB data file even with `NVIDIA_DRIVER_CAPABILITIES=all`). Without it,
+  renders are noisy (~17× more high-freq noise). It was `docker cp`'d in, but
+  **a container restart loses it** — after any `docker restart vlm-jupyter`,
+  re-run:
+  ```
+  ssh GPU-843 'docker cp /usr/share/nvidia/nvoptix.bin vlm-jupyter:/usr/share/nvidia/nvoptix.bin'
+  ```
+  (The DLSS-RR "not supported on H100" warning is a separate, unfixable Isaac
+  bug affecting RayTracedLighting mode only — irrelevant to PathTracing.)
 - Python syntax check: `PYTHONPYCACHEPREFIX=/tmp/pycache python3 -m py_compile <f>`
   (the repo `__pycache__` is root-owned; the prefix dodges it).
 
@@ -98,13 +109,11 @@ steps, `vlm_calls`, `actions_per_call`, timing breakdown. Aggregated into
 
 ## Open TODOs
 
-- **Render noise.** At 960×540 PathTracing noise is visible — lowering
-  resolution removed the free "downscale denoising" a 1080p image got. Noise
-  is governed by `rt_subframes` (16 decision / 4 filler), NOT resolution.
-  Real fixes, in order of value: (a) fix the OptiX denoiser — the container's
-  `nvoptix.bin` is missing so the denoiser silently fails; fixing it would
-  give clean images at low spp for free; (b) raise `rt_subframes` (slower);
-  (c) RayTracedLighting instead of PathTracing.
+- **Render noise — RESOLVED.** The OptiX denoiser was silently failing because
+  the container lacked `/usr/share/nvidia/nvoptix.bin`. Copying it in (see
+  Environment) restored the denoiser: measured high-freq noise dropped 2.09 →
+  0.12 (~17×) at the same 960×540 / `rt_subframes`, for free (no slowdown).
+  Only caveat: a container restart loses the file — re-copy it (Environment).
 - **Agent gets stuck (oscillation).** On some tasks the VLM repeatedly turns
   ±15° and collides without escaping — a VLM-capability issue. Decision was
   **not to intervene** in agent behaviour.
