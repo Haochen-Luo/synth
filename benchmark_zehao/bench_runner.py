@@ -801,10 +801,22 @@ try:
             filler_t = sim_t
 
             # ── Visibility gate ──
-            # Filler frames only smooth a VISIBLE runner. If no runner is in
-            # the FPV frustum this step, skip the (expensive) filler renders.
+            # Filler frames only smooth a VISIBLE runner; skip the (expensive)
+            # filler renders only if the runner is off-screen for the WHOLE
+            # step. A single step-start check misses a runner that walks INTO
+            # view mid-step (it pops in with no transition frames). This step's
+            # filler frames cover sim-time [sim_t, sim_t + n_filler/FILLER_FPS]
+            # but n_filler is unknown until the VLM returns — so scan a fixed
+            # window long enough to cover the worst case (a slow VLM advances
+            # the runner a few sim-seconds). Render filler if the runner is
+            # visible at ANY scan point. The scan is pure geometry (~free).
+            VIS_SCAN_WINDOW = 3.0  # sim-seconds scanned ahead of sim_t
+            VIS_SCAN_POINTS = 16
             _t_vis = time.time()
-            runner_on_screen = runner_visible(ax, ay, ayaw, sim_t)
+            runner_on_screen = any(
+                runner_visible(ax, ay, ayaw,
+                               sim_t + VIS_SCAN_WINDOW * k / (VIS_SCAN_POINTS - 1))
+                for k in range(VIS_SCAN_POINTS))
             timing["visibility_check"] += time.time() - _t_vis
             timing["n_runner_visible" if runner_on_screen else "n_runner_hidden"] += 1
 
