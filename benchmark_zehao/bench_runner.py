@@ -507,8 +507,9 @@ try:
     smooth_counter = [0]  # global running index for *_smooth folders
     # ── Timing probes ── accumulate wall-clock seconds by category so the log
     # can show where each episode actually spends its time (render vs VLM).
-    timing = {"render_decision": 0.0, "render_filler": 0.0,
-              "vlm": 0.0, "n_decision": 0, "n_filler": 0, "n_vlm": 0}
+    timing = {"render_decision": 0.0, "render_filler": 0.0, "vlm": 0.0,
+              "visibility_check": 0.0, "n_decision": 0, "n_filler": 0,
+              "n_vlm": 0, "n_runner_visible": 0, "n_runner_hidden": 0}
 
     def pose_runners_at(t):
         """Move only the runners/dancer to their pose at sim-time t. Agent untouched."""
@@ -527,6 +528,30 @@ try:
         # USD evaluates the runner's baked animation samples before rendering.
         timeline.set_current_time(at_)
         sim_app.update()
+
+    # ── Obstacle-runner visibility (FOV-frustum, pure geometry) ──
+    # Filler frames only matter if a moving runner is on screen — that is the
+    # only thing they smooth. If no runner is in the agent's FPV frustum this
+    # step, the filler renders are wasted. runner_visible() answers that with
+    # a few trig ops (no raycast, no occlusion — per design, FOV coverage is
+    # taken as "visible"). FPV horizontal FOV is 90° (focal 17 / aperture 34).
+    FPV_HALF_FOV = 45.0  # degrees, half of the 90° horizontal FOV
+
+    def runner_visible(cam_x, cam_y, cam_yaw, t):
+        """True if any obstacle runner is inside the FPV horizontal FOV cone
+        at sim-time t. Pure geometry — cost is negligible vs a render."""
+        specs = [s for s in (runner1_spec, runner2_spec) if s]
+        for spec in specs:
+            rp, _ = sample_human_motion(spec, t, anim_fps)
+            dx, dy = rp[0] - cam_x, rp[1] - cam_y
+            yaw = math.radians(cam_yaw)
+            fwd = dx * math.cos(yaw) + dy * math.sin(yaw)
+            side = -dx * math.sin(yaw) + dy * math.cos(yaw)
+            if fwd <= 0.05:
+                continue  # behind the camera
+            if math.degrees(math.atan2(abs(side), fwd)) <= FPV_HALF_FOV:
+                return True
+        return False
 
     def _wait_scratch(scratch, prev_n):
         t0 = time.time()
@@ -774,18 +799,33 @@ try:
             vlm_thread = threading.Thread(target=_vlm_worker)
             vlm_thread.start()
             filler_t = sim_t
-            filler_n = 0
-            # Render filler frames while the VLM thinks; also ensure at least
-            # MIN_FILLER_FRAMES so the runner visibly progresses even on a fast
-            # VLM response.
-            while vlm_thread.is_alive() or filler_n < MIN_FILLER_FRAMES:
-                filler_t += 1.0 / FILLER_FPS
-                pose_runners_at(filler_t)
-                _t_fr = time.time()
-                render_frame(filler=True)  # cheap, fpv-only -> *_smooth
-                timing["render_filler"] += time.time() - _t_fr
-                timing["n_filler"] += 1
-                filler_n += 1
+
+            # ── Visibility gate ──
+            # Filler frames only smooth a VISIBLE runner. If no runner is in
+            # the FPV frustum this step, skip the (expensive) filler renders.
+            _t_vis = time.time()
+            runner_on_screen = runner_visible(ax, ay, ayaw, sim_t)
+            timing["visibility_check"] += time.time() - _t_vis
+            timing["n_runner_visible" if runner_on_screen else "n_runner_hidden"] += 1
+
+            if runner_on_screen:
+                # Render filler frames while the VLM thinks; at least
+                # MIN_FILLER_FRAMES so the runner visibly progresses.
+                filler_n = 0
+                while vlm_thread.is_alive() or filler_n < MIN_FILLER_FRAMES:
+                    filler_t += 1.0 / FILLER_FPS
+                    pose_runners_at(filler_t)
+                    _t_fr = time.time()
+                    render_frame(filler=True)  # cheap, fpv-only -> *_smooth
+                    timing["render_filler"] += time.time() - _t_fr
+                    timing["n_filler"] += 1
+                    filler_n += 1
+            else:
+                # Runner off-screen: skip filler renders entirely. Still wait
+                # for the VLM, then advance sim_t by one step's worth so the
+                # runner's animation keeps flowing (no leap when it reappears).
+                vlm_thread.join()
+                filler_t = sim_t + RUNNER_TIME_PER_STEP
             vlm_thread.join()
             timing["vlm"] += time.time() - _t_vlm
             timing["n_vlm"] += 1
@@ -795,8 +835,9 @@ try:
             cur_executed = []
             vlm_calls += 1
             sim_t = filler_t
+            _vis_tag = "runner visible" if runner_on_screen else "runner off-screen, no filler"
             log(f"[BENCH] Step {step}: VLM call #{vlm_calls} -> plan={plan_queue} "
-                f"({filler_n} filler frames)")
+                f"({_vis_tag})")
             action_fb = ""
 
         # Pop the next action from the queue
@@ -963,6 +1004,12 @@ try:
         f"{rd/max(1,nd):.1f}s/frame) | filler-render {rf:.0f}s ({nf} frames, "
         f"{rf/max(1,nf):.1f}s/frame) | vlm-window {vt:.0f}s ({nv} calls, "
         f"{vt/nv:.1f}s/call) | pure-vlm≈{max(0,vt-rf):.0f}s")
+    # Visibility-gated filler: how many VLM-call steps had the runner on screen
+    # (filler rendered) vs off-screen (filler skipped — render saved).
+    rv, rh = timing["n_runner_visible"], timing["n_runner_hidden"]
+    vc = timing["visibility_check"]
+    log(f"[BENCH] VISIBILITY GATE: runner on-screen {rv} steps / off-screen {rh} "
+        f"steps (filler skipped) | visibility-check total {vc*1000:.0f}ms")
     metrics["timing"] = {k: round(v, 1) for k, v in timing.items()}
 
     # ── Clean up render scratch dirs ──
