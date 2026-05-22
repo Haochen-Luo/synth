@@ -50,6 +50,9 @@ DANCER_MESH_GROUND_Z = 0.8961  # bbox-calibrated Z for dancer mesh
 
 # ── Run dir: results/L1/01-L1_20260514_183000/ ──
 ts = _dt.datetime.now().strftime('%Y%m%d_%H%M%S')
+batch_name = os.environ.get("BATCH_NAME", "")
+if batch_name:
+    RESULTS_BASE = os.path.join(RESULTS_BASE, batch_name)
 RUN_DIR = os.path.join(RESULTS_BASE, level, f"{tid}_{ts}")
 os.makedirs(RUN_DIR, exist_ok=True)
 LOG = os.path.join(RUN_DIR, "run.log")
@@ -149,8 +152,11 @@ try:
     # ── Resolve target positions for each phase ──
     resolved_targets = []
     pickup_prim_path = None
+    target_prim_paths = set()
+    target_classes = set()
     for ph in phases:
         tobj = ph["target_object"]
+        target_classes.add(tobj)
         if tobj.startswith("__human_"):
             # Use human initial position
             idx = int(tobj.replace("__human_","").replace("__",""))
@@ -164,6 +170,7 @@ try:
             # Find door prim
             dp = find_prim_by_factory(stage, "door")
             if dp:
+                target_prim_paths.add(dp)
                 c = get_prim_world_center(stage, dp)
                 resolved_targets.append(c[:2] if c else [6, 11])
             else:
@@ -172,6 +179,7 @@ try:
         else:
             pp = find_prim_by_factory(stage, tobj)
             if pp:
+                target_prim_paths.add(pp)
                 c = get_prim_world_center(stage, pp)
                 if c:
                     resolved_targets.append(c[:2])
@@ -199,11 +207,37 @@ try:
                     xf = UsdGeom.Xformable(prim)
                     try: xf.ClearXformOpOrder()
                     except: pass
-                    xf.AddTranslateOp().Set(Gf.Vec3d(pa[0], pa[1], pa[2]))
+                    attr = prim.GetAttribute("xformOp:translate")
+                    if attr.IsValid():
+                        if attr.GetTypeName().type == Gf.Vec3f:
+                            attr.Set(Gf.Vec3f(pa[0], pa[1], pa[2]))
+                        else:
+                            attr.Set(Gf.Vec3d(pa[0], pa[1], pa[2]))
+                        xf.SetXformOpOrder([UsdGeom.XformOp(attr)])
+                    else:
+                        xf.AddTranslateOp().Set(Gf.Vec3d(pa[0], pa[1], pa[2]))
                     resolved_targets[i] = [pa[0], pa[1]]
                     if ph["action"] == "PICK_UP":
                         pickup_prim = prim; pickup_prim_path = pp
                     log(f"[BENCH] Placed {tobj} at {pa}")
+
+    # ── Guarantee Target Uniqueness ──
+    # Hide and deactivate all other objects of the same target classes to avoid Ambiguous Instructions
+    props_prim = stage.GetPrimAtPath("/World/InteractiveProps")
+    if props_prim and props_prim.IsValid():
+        for child in props_prim.GetChildren():
+            c_name = child.GetName()
+            c_path = child.GetPath().pathString
+            
+            is_target_class = False
+            for tc in target_classes:
+                if tc in c_name:
+                    is_target_class = True
+                    break
+            
+            if is_target_class and c_path not in target_prim_paths:
+                child.SetActive(False)
+                log(f"[BENCH] Deactivated duplicate non-target prop: {c_path}")
 
     # ── Instance agent ──
     human_usd = sf["human_usds"][0] if sf["human_usds"] else None
@@ -302,6 +336,7 @@ try:
     bird_cam = UsdGeom.Camera.Define(stage, "/World/BirdCamera")
     bird_cam.CreateFocalLengthAttr().Set(12.0)  # Wider angle for top-down
     bird_cam.CreateHorizontalApertureAttr().Set(34.0)
+    bird_cam.CreateClippingRangeAttr().Set(Gf.Vec2f(3.5, 10000.0))
     bxf = UsdGeom.Xformable(bird_cam); bxf.ClearXformOpOrder()
     bt = bxf.AddTranslateOp(); bo = bxf.AddOrientOp()
     
@@ -400,12 +435,16 @@ try:
             cxf = UsdGeom.Xformable(nav_cam)
             try: cxf.ClearXformOpOrder()
             except: pass
-            cam_x = ax + 0.3 * math.cos(math.radians(ayaw))
-            cam_y = ay + 0.3 * math.sin(math.radians(ayaw))
+            cam_x = ax + 0.1 * math.cos(math.radians(ayaw))
+            cam_y = ay + 0.1 * math.sin(math.radians(ayaw))
             # DO NOT ADD GROUND_Z: EYE_H is absolute height from floor. 
             # Adding GROUND_Z pushed the camera into the ceiling (2.25m).
             cxf.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, EYE_H))
             cxf.AddOrientOp().Set(cam_quat(ayaw, apitch))
+            # Fix FPV clipping into NPC or own arms when close
+            nav_cam_prim = UsdGeom.Camera(nav_cam)
+            if nav_cam_prim:
+                nav_cam_prim.CreateClippingRangeAttr().Set(Gf.Vec2f(0.3, 10000.0))
 
         # Animate runner 1 (obstacle)
         if runner1_spec and r1_ops:
@@ -555,7 +594,7 @@ try:
             dx = math.cos(math.radians(ayaw)); dy = math.sin(math.radians(ayaw))
             blocked = False
             for sz in [0.5, 1.0]:
-                hit = query_if.sweep_sphere_closest(0.2, carb.Float3(ax,ay,sz),
+                hit = query_if.sweep_sphere_closest(0.40, carb.Float3(ax,ay,sz),
                                                      carb.Float3(dx,dy,0), STEP_DIST)
                 if hit["hit"]: blocked = True; break
             if not blocked:
