@@ -21,7 +21,7 @@ stay on this branch.
 - **OptiX denoiser** — PathTracing's denoiser needs `/usr/share/nvidia/nvoptix.bin`,
   which the container image is missing (NVIDIA runtime does not auto-mount this
   96 MB data file even with `NVIDIA_DRIVER_CAPABILITIES=all`). Without it,
-  renders are noisy (~17× more high-freq noise). It was `docker cp`'d in, but
+  renders are noisy. It was `docker cp`'d in, but
   **a container restart loses it** — after any `docker restart vlm-jupyter`,
   re-run:
   ```
@@ -109,11 +109,15 @@ steps, `vlm_calls`, `actions_per_call`, timing breakdown. Aggregated into
 
 ## Open TODOs
 
-- **Render noise — RESOLVED.** The OptiX denoiser was silently failing because
-  the container lacked `/usr/share/nvidia/nvoptix.bin`. Copying it in (see
-  Environment) restored the denoiser: measured high-freq noise dropped 2.09 →
-  0.12 (~17×) at the same 960×540 / `rt_subframes`, for free (no slowdown).
-  Only caveat: a container restart loses the file — re-copy it (Environment).
+- **Render noise — PARTLY improved.** The OptiX denoiser was silently failing
+  (container lacked `/usr/share/nvidia/nvoptix.bin`). Copying it in (see
+  Environment) restored it: whole-image high-freq noise dropped ~20.4 → ~4.6
+  (~4.4×) at the same 960×540 / `rt_subframes`, for free. NOTE: flat walls
+  denoise nearly perfectly, but complex/dark regions (window, rug) still show
+  residual noise (~5-6) — visible when viewed full-size. The denoiser cleans,
+  it cannot invent detail; to go further raise `rt_subframes` (cleaner input,
+  slower) or raise resolution. Caveat: a container restart loses the file —
+  re-copy it (Environment).
 - **Agent gets stuck (oscillation).** On some tasks the VLM repeatedly turns
   ±15° and collides without escaping — a VLM-capability issue. Decision was
   **not to intervene** in agent behaviour.
