@@ -23,7 +23,10 @@ RESULTS_BASE = os.path.join(SCRIPT_DIR, "results")
 STEP_DIST = 0.25; TURN_ANG = 15.0; TILT_ANG = 5.0
 PITCH_MIN = -30; PITCH_MAX = 10; PITCH_INIT = -10
 EYE_H = 1.58; MESH_YAW_OFF = 90.0; RUNNER_TIME_PER_STEP = 0.5
-STOP_CONFIRM = 2
+DONE_CONFIRM = 2
+# Hard cap on consecutive PAUSE actions. After this many in a row the next
+# prompt appends a directive asking the VLM to choose a different action.
+PAUSE_HARDCAP = 3
 # Episode ends at whichever limit is hit FIRST: 150 physical steps OR 50 VLM
 # calls. With multi-action planning the two are decoupled; capping VLM calls
 # keeps evaluation fast and bounds the planning/reasoning budget.
@@ -59,7 +62,13 @@ else:
 tid = task["id"]; level = task["level"]
 scene_dir = os.path.join(SCRIPT_DIR, task["scene_dir"])
 phases = task["phases"]; max_steps = task.get("max_steps", MAX_STEPS)
-is_multi = len(phases) > 1 or phases[0]["action"] != "STOP"
+# Normalize legacy "STOP" phase-completion action to "DONE" so the rest of
+# the code only has to recognize one name. The benchmark JSON still uses
+# "STOP" — we leave the file untouched and rewrite in memory.
+for _p in phases:
+    if _p.get("action") == "STOP":
+        _p["action"] = "DONE"
+is_multi = len(phases) > 1 or phases[0]["action"] != "DONE"
 agent_start_xy = task["agent_start"]; agent_start_yaw = task["agent_yaw"]
 
 RUNNER_MESH_GROUND_Z = 0.6773  # bbox-calibrated Z for runner mesh ground contact
@@ -83,8 +92,11 @@ log(f"[BENCH] Instruction: {task['instruction']}")
 log(f"[BENCH] Phases: {len(phases)}, MaxSteps={max_steps}")
 
 # ── VLM query ──
-ALL_ACTIONS = ["MOVE_FORWARD","TURN_LEFT","TURN_RIGHT","STOP","PICK_UP","PUT_DOWN","TURN_ON","TILT_UP","TILT_DOWN"]
-ACTION_RE = re.compile(r"ACTION:\s*(" + "|".join(ALL_ACTIONS) + r")", re.IGNORECASE)
+ALL_ACTIONS = ["MOVE_FORWARD","TURN_LEFT","TURN_RIGHT","DONE","PAUSE","PICK_UP","PUT_DOWN","TURN_ON","TILT_UP","TILT_DOWN"]
+# STOP is accepted as a back-compat alias for DONE (older prompts / task JSON
+# / VLM drift). It is rewritten to DONE before any downstream code sees it.
+_PARSE_ALIASES = {"STOP": "DONE"}
+ACTION_RE = re.compile(r"ACTION:\s*(" + "|".join(ALL_ACTIONS + list(_PARSE_ALIASES)) + r")", re.IGNORECASE)
 # Multi-action plan: "PLAN: MOVE_FORWARD, MOVE_FORWARD, TURN_LEFT, ..."
 PLAN_RE = re.compile(r"PLAN:\s*(.+)", re.IGNORECASE)
 PLAN_LEN = 5  # max actions the VLM may queue per call
@@ -107,13 +119,15 @@ def query_vlm(img_path, prompt, system_prompt, step=0):
         with open(resp_log, "a") as f:
             f.write(json.dumps({"step":step,"response":text}) + "\n")
         m = ACTION_RE.search(text.upper())
-        if m: return m.group(1), False
-        # Fallback: last mentioned action
+        if m:
+            a = m.group(1).upper()
+            return _PARSE_ALIASES.get(a, a), False
+        # Fallback: last mentioned action (including aliases — STOP -> DONE)
         best, bi = "MOVE_FORWARD", -1
-        for a in ALL_ACTIONS:
+        for a in ALL_ACTIONS + list(_PARSE_ALIASES):
             i = text.upper().rfind(a)
             if i > bi: bi, best = i, a
-        return best, True
+        return _PARSE_ALIASES.get(best, best), True
     except Exception as e:
         log(f"[VLM] Error: {e}"); return "MOVE_FORWARD", True
 
@@ -883,9 +897,15 @@ try:
                 ms = "BLOCKED" if h.get("blocked") else ("moved" if h.get("moved") else "no movement")
                 hlines.append(f"Step {h['step']}: {h['action']} ({ms}, yaw={h['yaw']:.0f}°)")
             prompt += " Recent history:\n" + "\n".join(hlines)
+            # No-progress warning. PAUSE counts as no-movement, so a PAUSE run
+            # will trip this just like any other stuck pattern.
             rm = [h.get("moved", True) for h in nav_hist[-3:]]
             if len(rm) >= 3 and not any(rm):
                 prompt += "\n⚠ WARNING: You have NOT moved for 3+ steps. Try a different direction."
+            # PAUSE hard cap — neutral wording, no scenario assumption.
+            recent_pause = [h["action"] == "PAUSE" for h in nav_hist[-PAUSE_HARDCAP:]]
+            if len(recent_pause) >= PAUSE_HARDCAP and all(recent_pause):
+                prompt += f"\nYou have paused {PAUSE_HARDCAP} times consecutively. Choose a different action now."
 
         fq = check_frame_quality(frame_path)
         if fq.get('guidance'): prompt += fq['guidance']
@@ -950,11 +970,11 @@ try:
         log(f"[BENCH] Step {step}: action={action} ({_vis_tag})")
         action_fb = ""
 
-        # STOP confirm — verify with a single-action query before accepting
-        if action == "STOP":
-            for cr in range(1, STOP_CONFIRM):
-                ca, _ = query_vlm(frame_path, "You chose STOP. Is the target within arm's reach? Confirm.", sys_prompt, step)
-                if ca != "STOP": action = ca; break
+        # DONE confirm — verify with a single-action query before accepting
+        if action == "DONE":
+            for cr in range(1, DONE_CONFIRM):
+                ca, _ = query_vlm(frame_path, "You chose DONE. Is the target within arm's reach? Confirm.", sys_prompt, step)
+                if ca != "DONE": action = ca; break
 
         pre_x, pre_y = ax, ay
         pre_phase = cur_phase
@@ -965,17 +985,24 @@ try:
                          "blocked_reason":None,"blocked_detail":None})
 
         # ── Execute action ──
-        if action == "STOP":
-            if ph["action"] == "STOP" and dist < tgt_radius:
+        if action == "DONE":
+            if ph["action"] == "DONE" and dist < tgt_radius:
                 cur_phase += 1
-                log(f"[BENCH] STOP success phase {cur_phase}/{len(phases)} dist={dist:.2f}")
+                log(f"[BENCH] DONE success phase {cur_phase}/{len(phases)} dist={dist:.2f}")
                 if cur_phase >= len(phases):
                     log(f"[BENCH] ALL PHASES DONE — SUCCESS at step {step}")
                     break
                 tgt = resolved_targets[cur_phase]
             else:
-                action_fb = f"STOP rejected: still need to {ph['desc']}."
-                log(f"[BENCH] STOP rejected dist={dist:.2f}")
+                action_fb = f"DONE rejected: still need to {ph['desc']}."
+                log(f"[BENCH] DONE rejected dist={dist:.2f}")
+
+        elif action == "PAUSE":
+            # Stand still for one step. No XY change, no yaw change.
+            # sim_t still advances via the filler/no-filler path above, so
+            # runners keep moving. The "not moved 3+ steps" warning will fire
+            # if PAUSE is chosen repeatedly without progress.
+            pass
 
         elif action == "PICK_UP":
             if ph["action"] == "PICK_UP" and dist < tgt_radius:
@@ -1207,7 +1234,7 @@ try:
         xs = [h["x"] for h in nav_hist]; ys = [h["y"] for h in nav_hist]
         actions = [h["action"] for h in nav_hist]
         act_colors = {"MOVE_FORWARD":"#00ff88","TURN_LEFT":"#ff6b6b","TURN_RIGHT":"#4ecdc4",
-                      "STOP":"#ffd93d","PICK_UP":"#c084fc","PUT_DOWN":"#f472b6",
+                      "DONE":"#ffd93d","PAUSE":"#a3a3a3","PICK_UP":"#c084fc","PUT_DOWN":"#f472b6",
                       "TURN_ON":"#fbbf24","TILT_UP":"#94a3b8","TILT_DOWN":"#64748b"}
         for i in range(len(xs)-1):
             c = act_colors.get(actions[i],"#888")

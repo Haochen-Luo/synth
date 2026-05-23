@@ -143,13 +143,14 @@ You can ONLY output ONE of these actions:
 - TURN_RIGHT (rotate 15 degrees to the right)
 - TILT_UP (tilt camera up by 5 degrees)
 - TILT_DOWN (tilt camera down by 5 degrees)
-- STOP (you believe you have reached the target)
+- PAUSE (stand still for one step — your position and facing don't change, but time passes and other agents keep moving)
+- DONE (you believe you have reached the target — this is your final answer for this navigation)
 
 Rules:
 - If you see the target directly ahead and close, move toward it.
 - If the target is to your left or right, turn toward it first.
 - If a person is blocking your path, turn to find an alternate route.
-- When you are very close to the target (within arm's reach), output STOP.
+- When you are very close to the target (within arm's reach), output DONE.
 
 First, briefly explain your reasoning. Then, as the VERY LAST line, output ONLY:
 ACTION: <action_name>"""
@@ -164,16 +165,17 @@ You can ONLY output ONE of these actions:
 - TURN_RIGHT (rotate 15 degrees to the right)
 - TILT_UP (tilt camera up by 5 degrees)
 - TILT_DOWN (tilt camera down by 5 degrees)
+- PAUSE (stand still for one step — your position and facing don't change, but time passes and other agents keep moving)
 - PICK_UP (pick up an object near you — only works when very close)
 - PUT_DOWN (put down the object you are carrying — only works near target)
 - TURN_ON (turn on a device near you — only works when very close)
-- STOP (you have completed the final step of the task)
+- DONE (you have completed the final step of the task)
 
 Rules:
 - Think step by step: what sub-task should I do next?
 - Do NOT attempt PICK_UP/PUT_DOWN unless the object is within arm's reach.
 - Navigate RIGHT NEXT TO the target before interacting.
-- Only use STOP after ALL steps of the task are done.
+- Only use DONE after ALL steps of the task are done.
 
 First, briefly explain your reasoning. Then, as the VERY LAST line, output ONLY:
 ACTION: <action_name>"""
