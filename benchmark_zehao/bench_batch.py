@@ -14,7 +14,7 @@ DOCKER_CONTAINER = "vlm-jupyter"  #"bench-isaac"
 RUNNER_PATH = "/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/bench_runner.py"
 VLLM_URL = "http://localhost:8300/v1/chat/completions"
 
-MAX_VLM_CALLS = 50      # per-episode VLM-call cap, passed to the runner
+MAX_STEPS = 100         # per-episode step cap, passed to the runner
 TASK_TIMEOUT = 5400     # per-task wall-clock cap (s) — full episodes + Isaac boot
 NVOPTIX_HOST = "/usr/share/nvidia/nvoptix.bin"  # host copy for the OptiX denoiser
 
@@ -40,7 +40,7 @@ def _run_once(task_id, batch_name, dry_run):
     """One docker-exec attempt. Returns (returncode, stdout, stderr, elapsed)."""
     batch_env = f"-e BATCH_NAME={batch_name} " if batch_name else ""
     cmd = (f'docker exec -e TASK_ID={task_id} -e VLLM_URL={VLLM_URL} '
-           f'-e MAX_VLM_CALLS={MAX_VLM_CALLS} {batch_env}'
+           f'-e MAX_STEPS={MAX_STEPS} {batch_env}'
            f'{DOCKER_CONTAINER} /isaac-sim/python.sh {RUNNER_PATH}')
     print(f"  Command: {cmd}")
     if dry_run:
@@ -112,14 +112,14 @@ def main():
     parser.add_argument("--batch-name", type=str, default="", help="Optional unified outer directory name for this batch run")
     parser.add_argument("--container", type=str, default="vlm-jupyter", help="Docker container name to use")
     parser.add_argument("--vllm-url", type=str, default="http://localhost:8300/v1/chat/completions", help="URL of the VLM API endpoint")
-    parser.add_argument("--max-vlm-calls", type=int, default=50, help="Per-episode VLM-call cap")
+    parser.add_argument("--max-steps", type=int, default=100, help="Per-episode step cap")
     args = parser.parse_args()
 
     # Update globals based on args
-    global DOCKER_CONTAINER, VLLM_URL, MAX_VLM_CALLS
+    global DOCKER_CONTAINER, VLLM_URL, MAX_STEPS
     DOCKER_CONTAINER = args.container
     VLLM_URL = args.vllm_url
-    MAX_VLM_CALLS = args.max_vlm_calls
+    MAX_STEPS = args.max_steps
 
     bench = json.load(open(TASKS_JSON))
     all_tasks = bench["tasks"]

@@ -27,7 +27,9 @@ STOP_CONFIRM = 2
 # Episode ends at whichever limit is hit FIRST: 150 physical steps OR 50 VLM
 # calls. With multi-action planning the two are decoupled; capping VLM calls
 # keeps evaluation fast and bounds the planning/reasoning budget.
-MAX_VLM_CALLS = int(os.environ.get("MAX_VLM_CALLS", "50"))
+# Step cap (single-action mode: 1 VLM call per step, so this is also the VLM
+# budget). Set via env to override per-run.
+MAX_STEPS = int(os.environ.get("MAX_STEPS", "100"))
 # Bird-view smooth video toggle. False (default, prototype speed): no bird
 # _smooth folder, no bird filler frames — the bird video is built from the
 # per-step decision frames in vlm_nav_frames_bird/. True: full bird _smooth
@@ -52,11 +54,11 @@ else:
         print(f"ERROR: TASK_ID={task_id!r} not found. Available: {list(tasks_map.keys())}")
         sys.exit(1)
     task = tasks_map[task_id]
-    task["max_steps"] = bench.get("max_steps", 150)
+    task["max_steps"] = MAX_STEPS
 
 tid = task["id"]; level = task["level"]
 scene_dir = os.path.join(SCRIPT_DIR, task["scene_dir"])
-phases = task["phases"]; max_steps = task.get("max_steps", 150)
+phases = task["phases"]; max_steps = task.get("max_steps", MAX_STEPS)
 is_multi = len(phases) > 1 or phases[0]["action"] != "STOP"
 agent_start_xy = task["agent_start"]; agent_start_yaw = task["agent_yaw"]
 
@@ -627,18 +629,7 @@ try:
     apitch = PITCH_INIT; sim_t = 0.0
     cur_phase = 0; inventory = []; action_fb = ""
     nav_hist = []; lamp_on = False
-    # Multi-action planning: the VLM returns a queue of up to PLAN_LEN actions.
-    # The agent executes them one per step; the queue is cleared (forcing a
-    # re-query) on collision or when a phase target is reached. This cuts VLM
-    # calls roughly PLAN_LEN-fold without changing the physical step budget.
-    plan_queue = []
-    vlm_calls = 0
-    # Plan history: for each VLM call, record what it PLANNED, what was actually
-    # EXECUTED, and the OUTCOME (why the plan ended). Shown back to the VLM so it
-    # can learn from blocked plans instead of repeating the same wall collision.
-    plan_history = []
-    cur_planned = []      # the full plan from the current VLM call
-    cur_executed = []     # actions actually executed from cur_planned so far
+    vlm_calls = 0   # episode counter (== step count in single-action mode)
 
     log(f"[BENCH] Starting nav loop: start=({ax},{ay}) yaw={ayaw}")
 
@@ -740,130 +731,90 @@ try:
 
         ph = phases[cur_phase]
         log(f"[BENCH] Step {step}: ({ax:.2f},{ay:.2f}) yaw={ayaw:.0f} dist={dist:.2f} "
-            f"phase={cur_phase+1}/{len(phases)} queued={len(plan_queue)}")
+            f"phase={cur_phase+1}/{len(phases)}")
 
-        # ── Refill the action plan only when the queue is empty ──
-        # This is the multi-action planning: one VLM call yields up to PLAN_LEN
-        # actions, executed across the next PLAN_LEN steps.
-        if not plan_queue and vlm_calls >= MAX_VLM_CALLS:
-            log(f"[BENCH] VLM call budget reached ({MAX_VLM_CALLS}) — ending episode "
-                f"at step {step}, dist={dist:.2f}")
-            break
-        queried_this_step = False
-        if not plan_queue:
-            queried_this_step = True
-            # Build prompt
-            if is_multi:
-                inv_s = ','.join(inventory) if inventory else 'empty'
-                lamp_s = " Lamp: ON." if lamp_on else ""
-                prompt = (f"Current objective: go to {ph['desc']} and use {ph['action']}. "
-                          f"Carrying: [{inv_s}].{lamp_s} Progress: step {cur_phase+1}/{len(phases)}. "
-                          f"Plan your next actions.")
-                if action_fb:
-                    prompt += f" ⚠ PREVIOUS ACTION FAILED: {action_fb}"
-            else:
-                prompt = f"Navigate to {ph['desc']}. Plan your next actions."
+        # ── Build prompt for this step ──
+        # Single-action mode: the VLM picks ONE action from the current frame.
+        # (Multi-action planning was tried but caused regressions: the VLM
+        # would commit to several MOVE_FORWARDs from a single frame, walking
+        # into obstacles it would have noticed on the next frame.)
+        if is_multi:
+            inv_s = ','.join(inventory) if inventory else 'empty'
+            lamp_s = " Lamp: ON." if lamp_on else ""
+            prompt = (f"Current objective: go to {ph['desc']} and use {ph['action']}. "
+                      f"Carrying: [{inv_s}].{lamp_s} Progress: step {cur_phase+1}/{len(phases)}. "
+                      f"What action should you take?")
+            if action_fb:
+                prompt += f" ⚠ PREVIOUS ACTION FAILED: {action_fb}"
+        else:
+            prompt = f"Navigate to {ph['desc']}. What action should you take?"
 
-            # ── Plan history — show the VLM its last few plans, what was
-            # actually executed, and why each plan ended. This lets it avoid
-            # repeating a plan that just walked into a wall.
-            if plan_history:
-                hlines = []
-                for ph_rec in plan_history[-4:]:
-                    pl = ",".join(ph_rec["planned"])
-                    ex = ",".join(ph_rec["executed"]) if ph_rec["executed"] else "(none)"
-                    hlines.append(f"  planned [{pl}] -> executed [{ex}] -> {ph_rec['outcome']}")
-                prompt += ("\nYour recent plans (most recent last):\n" + "\n".join(hlines)
-                           + "\nIf a plan was BLOCKED, the route ahead is obstructed — "
-                             "choose a clearly different direction now.")
-                # Stuck detection: 3+ consecutive plans that moved nowhere
-                stuck = sum(1 for r in plan_history[-3:]
-                            if all(a in ("MOVE_FORWARD",) for a in r["planned"][:1])
-                            and "BLOCKED" in r["outcome"])
-                if stuck >= 3:
-                    prompt += ("\n⚠ WARNING: 3+ plans in a row were blocked immediately. "
-                               "You MUST turn substantially (queue several TURN_LEFT or "
-                               "TURN_RIGHT) before moving forward again.")
+        # ── Recent action history (per-step, no plan-queue layer) ──
+        if nav_hist:
+            recent = nav_hist[-8:]
+            hlines = []
+            for h in recent:
+                ms = "BLOCKED" if h.get("blocked") else ("moved" if h.get("moved") else "no movement")
+                hlines.append(f"Step {h['step']}: {h['action']} ({ms}, yaw={h['yaw']:.0f}°)")
+            prompt += " Recent history:\n" + "\n".join(hlines)
+            rm = [h.get("moved", True) for h in nav_hist[-3:]]
+            if len(rm) >= 3 and not any(rm):
+                prompt += "\n⚠ WARNING: You have NOT moved for 3+ steps. Try a different direction."
 
-            fq = check_frame_quality(frame_path)
-            if fq.get('guidance'): prompt += fq['guidance']
+        fq = check_frame_quality(frame_path)
+        if fq.get('guidance'): prompt += fq['guidance']
 
-            # ── Query VLM asynchronously; render filler frames while it thinks ──
-            # The agent holds its pose (it has not decided yet) but the runners
-            # keep moving, so the *_smooth video stays leap-free.
-            import threading
-            vlm_result = {}
-            def _vlm_worker():
-                vlm_result["out"] = query_vlm_plan(frame_path, prompt, sys_prompt, step)
-            _t_vlm = time.time()
-            vlm_thread = threading.Thread(target=_vlm_worker)
-            vlm_thread.start()
-            filler_t = sim_t
+        # ── Query VLM concurrently; render filler frames while it thinks ──
+        # The agent holds its pose (it has not decided yet) but the runner keeps
+        # moving, so the *_smooth video stays leap-free.
+        import threading
+        vlm_result = {}
+        def _vlm_worker():
+            vlm_result["out"] = query_vlm(frame_path, prompt, sys_prompt, step)
+        _t_vlm = time.time()
+        vlm_thread = threading.Thread(target=_vlm_worker)
+        vlm_thread.start()
+        filler_t = sim_t
 
-            # ── Visibility gate ──
-            # Filler frames only smooth a VISIBLE runner; skip the (expensive)
-            # filler renders only if the runner is off-screen for the WHOLE
-            # step. A single step-start check misses a runner that walks INTO
-            # view mid-step (it pops in with no transition frames). This step's
-            # filler frames cover sim-time [sim_t, sim_t + n_filler/FILLER_FPS]
-            # but n_filler is unknown until the VLM returns — so scan a fixed
-            # window long enough to cover the worst case (a slow VLM advances
-            # the runner a few sim-seconds). Render filler if the runner is
-            # visible at ANY scan point. The scan is pure geometry (~free).
-            VIS_SCAN_WINDOW = 3.0  # sim-seconds scanned ahead of sim_t
-            VIS_SCAN_POINTS = 16
-            _t_vis = time.time()
-            runner_on_screen = any(
-                runner_visible(ax, ay, ayaw,
-                               sim_t + VIS_SCAN_WINDOW * k / (VIS_SCAN_POINTS - 1))
-                for k in range(VIS_SCAN_POINTS))
-            timing["visibility_check"] += time.time() - _t_vis
-            timing["n_runner_visible" if runner_on_screen else "n_runner_hidden"] += 1
+        # Visibility gate — skip filler renders if the runner is off-screen
+        # for the whole step. Scan a 3s window of sim-time (cheap geometry).
+        VIS_SCAN_WINDOW = 3.0; VIS_SCAN_POINTS = 16
+        _t_vis = time.time()
+        runner_on_screen = any(
+            runner_visible(ax, ay, ayaw,
+                           sim_t + VIS_SCAN_WINDOW * k / (VIS_SCAN_POINTS - 1))
+            for k in range(VIS_SCAN_POINTS))
+        timing["visibility_check"] += time.time() - _t_vis
+        timing["n_runner_visible" if runner_on_screen else "n_runner_hidden"] += 1
 
-            if runner_on_screen:
-                # Render filler frames while the VLM thinks; at least
-                # MIN_FILLER_FRAMES so the runner visibly progresses.
-                filler_n = 0
-                while vlm_thread.is_alive() or filler_n < MIN_FILLER_FRAMES:
-                    filler_t += 1.0 / FILLER_FPS
-                    pose_runners_at(filler_t)
-                    _t_fr = time.time()
-                    render_frame(filler=True)  # cheap, fpv-only -> *_smooth
-                    timing["render_filler"] += time.time() - _t_fr
-                    timing["n_filler"] += 1
-                    filler_n += 1
-            else:
-                # Runner off-screen: skip filler renders entirely. Still wait
-                # for the VLM, then advance sim_t by one step's worth so the
-                # runner's animation keeps flowing (no leap when it reappears).
-                vlm_thread.join()
-                filler_t = sim_t + RUNNER_TIME_PER_STEP
+        if runner_on_screen:
+            filler_n = 0
+            while vlm_thread.is_alive() or filler_n < MIN_FILLER_FRAMES:
+                filler_t += 1.0 / FILLER_FPS
+                pose_runners_at(filler_t)
+                _t_fr = time.time()
+                render_frame(filler=True)
+                timing["render_filler"] += time.time() - _t_fr
+                timing["n_filler"] += 1
+                filler_n += 1
+        else:
             vlm_thread.join()
-            timing["vlm"] += time.time() - _t_vlm
-            timing["n_vlm"] += 1
-            plan, fallback = vlm_result.get("out", (["MOVE_FORWARD"], True))
-            plan_queue = list(plan)
-            cur_planned = list(plan)   # remember the full plan for history
-            cur_executed = []
-            vlm_calls += 1
-            sim_t = filler_t
-            _vis_tag = "runner visible" if runner_on_screen else "runner off-screen, no filler"
-            log(f"[BENCH] Step {step}: VLM call #{vlm_calls} -> plan={plan_queue} "
-                f"({_vis_tag})")
-            action_fb = ""
-
-        # Pop the next action from the queue
-        action = plan_queue.pop(0)
-        cur_executed.append(action)
-        fallback = False
+            filler_t = sim_t + RUNNER_TIME_PER_STEP
+        vlm_thread.join()
+        timing["vlm"] += time.time() - _t_vlm
+        timing["n_vlm"] += 1
+        action, fallback = vlm_result.get("out", ("MOVE_FORWARD", True))
+        vlm_calls += 1
+        sim_t = filler_t
+        _vis_tag = "runner visible" if runner_on_screen else "runner off-screen, no filler"
+        log(f"[BENCH] Step {step}: action={action} ({_vis_tag})")
+        action_fb = ""
 
         # STOP confirm — verify with a single-action query before accepting
         if action == "STOP":
             for cr in range(1, STOP_CONFIRM):
                 ca, _ = query_vlm(frame_path, "You chose STOP. Is the target within arm's reach? Confirm.", sys_prompt, step)
-                if ca != "STOP":
-                    action = ca; plan_queue = []  # plan was wrong, re-query next step
-                    break
+                if ca != "STOP": action = ca; break
 
         pre_x, pre_y = ax, ay
         pre_phase = cur_phase
@@ -948,40 +899,10 @@ try:
         ayaw = wrap_angle_deg(ayaw)
         did_move = abs(ax-pre_x) > 0.001 or abs(ay-pre_y) > 0.001
         nav_hist[-1]["moved"] = did_move
-        # Advance sim_t for the runner. On a VLM-call step the filler loop
-        # already advanced sim_t to filler_t. On a queued-action step (no VLM
-        # call) NOTHING advanced it — so bump it here by RUNNER_TIME_PER_STEP,
-        # otherwise the runner freezes during queued actions and then leaps at
-        # the next VLM call.
-        if not queried_this_step:
-            sim_t += RUNNER_TIME_PER_STEP
-
-        # ── Decide whether the current plan ends here, and why.
-        # A plan ends if the world changed unexpectedly (collision / phase
-        # target reached / interaction failed) OR the queue drained naturally.
-        collided = nav_hist[-1]["blocked"]
-        phase_changed = cur_phase != pre_phase
-        action_failed = bool(action_fb) and not pre_fb
-        plan_interrupted = collided or phase_changed or action_failed
-        plan_ended = plan_interrupted or not plan_queue
-
-        if plan_ended and cur_planned:
-            if collided:
-                outcome = f"BLOCKED at action {len(cur_executed)} ({action})"
-            elif phase_changed:
-                outcome = f"sub-task completed ({action})"
-            elif action_failed:
-                outcome = f"action failed ({action_fb})"
-            else:
-                outcome = "plan completed, no obstruction"
-            plan_history.append({"planned": list(cur_planned),
-                                  "executed": list(cur_executed),
-                                  "outcome": outcome})
-            if plan_interrupted and plan_queue:
-                log(f"[BENCH] Step {step}: aborting queued plan ({outcome}), "
-                    f"dropped {len(plan_queue)} action(s) -> re-query next step")
-                plan_queue = []
-            cur_planned = []; cur_executed = []
+        # sim_t was already advanced this step by the filler loop (or by
+        # RUNNER_TIME_PER_STEP if the runner was off-screen). Single-action
+        # mode queries the VLM every step, so there's no "no-VLM-this-step"
+        # path that would leave sim_t un-advanced.
     else:
         log(f"[BENCH] TIMEOUT after {max_steps} steps, dist={dist:.2f}")
 
@@ -994,7 +915,6 @@ try:
     metrics["vlm_calls"] = vlm_calls
     metrics["actions_per_call"] = round(metrics["steps_used"] / max(1, vlm_calls), 2)
     results = {"task": task, "metrics": metrics, "nav_history": nav_hist,
-               "plan_history": plan_history,
                "resolved_targets": resolved_targets,
                "agent_start": agent_start_xy, "agent_yaw": agent_start_yaw}
     with open(os.path.join(RUN_DIR, "vlm_nav_history.json"), "w") as f:
