@@ -185,6 +185,9 @@ def compute_metrics(nav_history, task_config, completed_phases, total_phases):
     sr = 1.0 if completed_phases >= total_phases else 0.0
     sp = completed_phases / max(1, total_phases)
     gd = nav_history[-1]["dist_to_target"] if nav_history else float('inf')
+    static_collisions = sum(1 for h in nav_history if h.get("blocked_reason") == "static_obstacle")
+    dynamic_collisions = sum(1 for h in nav_history if h.get("blocked_reason") == "dynamic_runner")
+    collision_count = static_collisions + dynamic_collisions
     return {
         "task_id": task_config["id"],
         "level": task_config["level"],
@@ -199,6 +202,10 @@ def compute_metrics(nav_history, task_config, completed_phases, total_phases):
         "steps_used": n_steps,
         "max_steps": task_config.get("max_steps", 150),
         "timeout": n_steps >= task_config.get("max_steps", 150),
+        "collision_count": collision_count,
+        "static_collision_count": static_collisions,
+        "dynamic_runner_collision_count": dynamic_collisions,
+        "collision_rate": round(collision_count / max(1, n_steps), 3),
     }
 
 def aggregate_metrics(all_results):
@@ -218,6 +225,11 @@ def aggregate_metrics(all_results):
             "avg_subtask_progress": sum(r["subtask_progress"] for r in rs) / n,
             "avg_goal_distance_m": sum(r["goal_distance_m"] for r in rs) / n,
             "avg_steps_used": sum(r["steps_used"] for r in rs) / n,
+            "avg_collision_count": sum(r.get("collision_count", 0) for r in rs) / n,
+            "avg_static_collision_count": sum(r.get("static_collision_count", 0) for r in rs) / n,
+            "avg_dynamic_runner_collision_count": sum(r.get("dynamic_runner_collision_count", 0) for r in rs) / n,
+            "avg_agent_pushed_events": sum(r.get("agent_pushed_events", 0) for r in rs) / n,
+            "avg_agent_pushed_frames": sum(r.get("agent_pushed_frames", 0) for r in rs) / n,
             "avg_steps_success": (
                 sum(r["steps_used"] for r in rs if r["success"]) /
                 max(1, sum(1 for r in rs if r["success"]))
@@ -233,6 +245,9 @@ def aggregate_metrics(all_results):
             "avg_subtask_progress": sum(r["subtask_progress"] for r in all_results) / n_all,
             "avg_goal_distance_m": sum(r["goal_distance_m"] for r in all_results) / n_all,
             "avg_steps_used": sum(r["steps_used"] for r in all_results) / n_all,
+            "avg_collision_count": sum(r.get("collision_count", 0) for r in all_results) / n_all,
+            "avg_agent_pushed_events": sum(r.get("agent_pushed_events", 0) for r in all_results) / n_all,
+            "avg_agent_pushed_frames": sum(r.get("agent_pushed_frames", 0) for r in all_results) / n_all,
         }
     return summary
 
@@ -246,18 +261,27 @@ def print_report(summary, all_results):
         print(f"\n  {level} ({s['n_tasks']} tasks):")
         print(f"    SR={s['success_rate']:.1%}  SP={s['avg_subtask_progress']:.1%}  "
               f"GD={s['avg_goal_distance_m']:.2f}m  Steps={s['avg_steps_used']:.0f}  "
+              f"Coll={s.get('avg_collision_count', 0):.1f}  "
+              f"Pushed={s.get('avg_agent_pushed_events', 0):.1f}ev/"
+              f"{s.get('avg_agent_pushed_frames', 0):.1f}fr  "
               f"Timeout={s['timeout_rate']:.0%}")
-    
+
     o = summary.get("overall", {})
     if o:
         print(f"\n  OVERALL ({o['n_tasks']} tasks):")
         print(f"    SR={o['success_rate']:.1%}  SP={o['avg_subtask_progress']:.1%}  "
-              f"GD={o['avg_goal_distance_m']:.2f}m  Steps={o['avg_steps_used']:.0f}")
-    
+              f"GD={o['avg_goal_distance_m']:.2f}m  Steps={o['avg_steps_used']:.0f}  "
+              f"Coll={o.get('avg_collision_count', 0):.1f}  "
+              f"Pushed={o.get('avg_agent_pushed_events', 0):.1f}ev/"
+              f"{o.get('avg_agent_pushed_frames', 0):.1f}fr")
+
     print("\n  Per-task details:")
     for r in all_results:
         s = "✅" if r["success"] else ("⏰" if r["timeout"] else "❌")
         print(f"    {s} {r['task_id']:8s}  SP={r['subtask_progress']:.0%}  "
               f"GD={r['goal_distance_m']:.1f}m  Steps={r['steps_used']}  "
+              f"Coll={r.get('collision_count', 0)}  "
+              f"Pushed={r.get('agent_pushed_events', 0)}ev/"
+              f"{r.get('agent_pushed_frames', 0)}fr  "
               f"{r['instruction'][:50]}")
     print("="*70)

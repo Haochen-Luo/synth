@@ -463,12 +463,13 @@ try:
         log(f"[BENCH] Runner1: scale={runner_scale}, GROUND_Z={GROUND_Z:.4f}")
 
     # Runner 2 (if multi-runner scene)
-    r2_ops = {}; runner2_spec = None
+    r2_ops = {}; runner2_spec = None; r2_prim = None
     if len(all_runner_specs) > 1:
         runner2_spec = all_runner_specs[1]
         for n2 in ["obj_2_run_anim_2", "obj_2__run__anim_2"]:
             r2p = stage.GetPrimAtPath(f"/World/Humans/{n2}")
             if r2p and r2p.IsValid():
+                r2_prim = r2p
                 r2xf = UsdGeom.Xformable(r2p)
                 try: r2xf.ClearXformOpOrder()
                 except: pass
@@ -513,11 +514,100 @@ try:
               "visibility_check": 0.0, "n_decision": 0, "n_filler": 0,
               "n_vlm": 0, "n_runner_visible": 0, "n_runner_hidden": 0}
 
+    # Collision/event bookkeeping. Collisions are process-quality metrics:
+    # they block the attempted move, but final success is still goal completion.
+    collision_events = []
+    collision_counts = {
+        "static_obstacle": 0,
+        "dynamic_runner_predicted": 0,
+        "agent_pushed_events": 0,
+        "agent_pushed_frames": 0,
+    }
+
+    def _xy(v):
+        return [round(float(v[0]), 3), round(float(v[1]), 3)]
+
+    def record_collision_event(ev):
+        ev = dict(ev)
+        if "sim_t" in ev:
+            ev["sim_t"] = round(float(ev["sim_t"]), 3)
+        collision_events.append(ev)
+
+    # XY circle approximation for agent vs runner. SAFE_RADIUS is the minimum
+    # center-to-center distance: if a runner's baked pose would land closer
+    # than this, the agent is pushed outward (push_agent_if_overlap) — Zehao's
+    # runner trajectories have no collision check, so we enforce mutual
+    # exclusion here. DYNAMIC_* is the forward-path prediction used by
+    # MOVE_FORWARD to refuse moves that would step into a runner's future XY.
+    AGENT_RADIUS = 0.40
+    RUNNER_RADIUS = 0.35
+    SAFE_RADIUS = AGENT_RADIUS + RUNNER_RADIUS
+    DYNAMIC_COLLISION_MARGIN = 0.10
+    DYNAMIC_COLLISION_RADIUS = SAFE_RADIUS + DYNAMIC_COLLISION_MARGIN
+    DYNAMIC_CHECK_SAMPLES = 5
+    # First frame of an ongoing contact is recorded as an "event"; subsequent
+    # frames advance "frames" but not "events" until contact breaks.
+    agent_push_active = {"runner1": False, "runner2": False}
+
+    def baked_runner_xy_at(t):
+        """Read-only: baked XY of each runner at sim-time t. No xform writes."""
+        rp1 = sample_human_motion(runner1_spec, t, anim_fps)[0] if runner1_spec else None
+        rp2 = sample_human_motion(runner2_spec, t, anim_fps)[0] if runner2_spec else None
+        return rp1, rp2
+
+    def push_agent_if_overlap(ax, ay, t, step=None, frame_kind="decision"):
+        """Two 3D bodies cannot overlap. If a runner's baked XY at sim-time t
+        is within SAFE_RADIUS of the agent, push the AGENT radially outward
+        until the gap is exactly SAFE_RADIUS. Returns new (ax, ay) and a list
+        of overlap events (one per runner). Records contact bookkeeping:
+        first frame of contact -> event; every contact frame -> frames count.
+        For "prime" frame_kind, bookkeeping is skipped (init state only)."""
+        rp1, rp2 = baked_runner_xy_at(t)
+        events = []
+        for name, rp in (("runner1", rp1), ("runner2", rp2)):
+            if rp is None:
+                if agent_push_active.get(name): agent_push_active[name] = False
+                continue
+            dxr = ax - rp[0]; dyr = ay - rp[1]
+            d = math.hypot(dxr, dyr)
+            if d < SAFE_RADIUS:
+                if d < 1e-4:
+                    nx, ny = 1.0, 0.0  # degenerate: pick arbitrary axis
+                else:
+                    nx, ny = dxr / d, dyr / d
+                overlap = SAFE_RADIUS - d
+                ax_before, ay_before = ax, ay
+                ax += nx * overlap
+                ay += ny * overlap
+                was_active = agent_push_active.get(name, False)
+                if frame_kind != "prime":
+                    collision_counts["agent_pushed_frames"] += 1
+                    if not was_active:
+                        collision_counts["agent_pushed_events"] += 1
+                        record_collision_event({
+                            "step": step,
+                            "type": "agent_pushed_by_runner",
+                            "runner": name,
+                            "frame_kind": frame_kind,
+                            "sim_t": t,
+                            "overlap_m": round(overlap, 3),
+                            "agent_xy_before": _xy([ax_before, ay_before]),
+                            "agent_xy_after": _xy([ax, ay]),
+                            "runner_xy": _xy(rp),
+                        })
+                agent_push_active[name] = True
+                events.append(name)
+            else:
+                if agent_push_active.get(name): agent_push_active[name] = False
+        return ax, ay, events
+
     def pose_runners_at(t):
-        """Move only the runners/dancer to their pose at sim-time t. Agent untouched."""
+        """Set runners/dancer to their baked pose at sim-time t. PURE — does
+        not touch the agent. Agent overlap resolution is handled separately
+        by push_agent_if_overlap so the two concerns stay testable."""
         if runner1_spec and r1_ops:
-            rp, rr = sample_human_motion(runner1_spec, t, anim_fps)
-            r1_ops["t"].Set(Gf.Vec3d(rp[0], rp[1], GROUND_Z))
+            rp1, rr = sample_human_motion(runner1_spec, t, anim_fps)
+            r1_ops["t"].Set(Gf.Vec3d(rp1[0], rp1[1], GROUND_Z))
             ryr = math.radians(rr[2])
             r1_ops["o"].Set(Gf.Quatf(math.cos(ryr/2), 0, 0, math.sin(ryr/2)))
         if runner2_spec and r2_ops:
@@ -530,6 +620,34 @@ try:
         # USD evaluates the runner's baked animation samples before rendering.
         timeline.set_current_time(at_)
         sim_app.update()
+
+    def predict_dynamic_runner_block(ax0, ay0, dx, dy, t0):
+        """Return collision detail if this MOVE_FORWARD would intersect a
+        runner's predicted XY disk over the action interval."""
+        specs = [("runner1", runner1_spec), ("runner2", runner2_spec)]
+        best = None
+        for i in range(DYNAMIC_CHECK_SAMPLES):
+            alpha = i / max(1, DYNAMIC_CHECK_SAMPLES - 1)
+            agent_xy = [ax0 + STEP_DIST * dx * alpha, ay0 + STEP_DIST * dy * alpha]
+            tt = t0 + RUNNER_TIME_PER_STEP * alpha
+            for runner_name, spec in specs:
+                if not spec:
+                    continue
+                rp, _ = sample_human_motion(spec, tt, anim_fps)
+                d = math.hypot(agent_xy[0] - rp[0], agent_xy[1] - rp[1])
+                if d < DYNAMIC_COLLISION_RADIUS:
+                    detail = {
+                        "runner": runner_name,
+                        "sample_alpha": round(alpha, 3),
+                        "sim_t": tt,
+                        "agent_xy": _xy(agent_xy),
+                        "runner_xy": _xy(rp),
+                        "distance_m": round(d, 3),
+                        "threshold_m": round(DYNAMIC_COLLISION_RADIUS, 3),
+                    }
+                    if best is None or d < best["distance_m"]:
+                        best = detail
+        return best
 
     # ── Obstacle-runner visibility (FOV-frustum, pure geometry) ──
     # Filler frames only matter if a moving runner is on screen — that is the
@@ -638,6 +756,10 @@ try:
     # otherwise captures the stale warmup-phase pose, which made step 0's
     # frame leap. Priming once here lets every render_frame() be a single
     # render with no per-frame double cost.
+    # If a runner happens to spawn overlapping the agent's start, resolve it
+    # before priming so the very first frame is overlap-free. Use frame_kind
+    # "prime" to skip event bookkeeping (initial-condition fix, not contact).
+    ax, ay, _ = push_agent_if_overlap(ax, ay, sim_t, step=0, frame_kind="prime")
     a_trans.Set(Gf.Vec3d(ax, ay, GROUND_Z))
     myaw0 = math.radians(ayaw + MESH_YAW_OFF)
     a_orient.Set(Gf.Quatf(math.cos(myaw0/2), 0, 0, math.sin(myaw0/2)))
@@ -657,6 +779,10 @@ try:
         tgt_radius = phases[cur_phase]["radius"]
         dist = math.sqrt((ax-tgt[0])**2 + (ay-tgt[1])**2)
 
+        # Resolve any agent-runner overlap BEFORE writing the agent + camera
+        # xforms so the decision frame the VLM sees has no penetration.
+        ax, ay, _ = push_agent_if_overlap(ax, ay, sim_t, step=step, frame_kind="decision")
+
         # Update agent pose
         a_trans.Set(Gf.Vec3d(ax, ay, GROUND_Z))
         myaw = math.radians(ayaw + MESH_YAW_OFF)
@@ -669,7 +795,7 @@ try:
             except: pass
             cam_x = ax + 0.1 * math.cos(math.radians(ayaw))
             cam_y = ay + 0.1 * math.sin(math.radians(ayaw))
-            # DO NOT ADD GROUND_Z: EYE_H is absolute height from floor. 
+            # DO NOT ADD GROUND_Z: EYE_H is absolute height from floor.
             # Adding GROUND_Z pushed the camera into the ceiling (2.25m).
             cxf.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, EYE_H))
             cxf.AddOrientOp().Set(cam_quat(ayaw, apitch))
@@ -744,10 +870,10 @@ try:
             prompt = (f"Current objective: go to {ph['desc']} and use {ph['action']}. "
                       f"Carrying: [{inv_s}].{lamp_s} Progress: step {cur_phase+1}/{len(phases)}. "
                       f"What action should you take?")
-            if action_fb:
-                prompt += f" ⚠ PREVIOUS ACTION FAILED: {action_fb}"
         else:
             prompt = f"Navigate to {ph['desc']}. What action should you take?"
+        if action_fb:
+            prompt += f" ⚠ PREVIOUS ACTION FAILED: {action_fb}"
 
         # ── Recent action history (per-step, no plan-queue layer) ──
         if nav_hist:
@@ -791,6 +917,20 @@ try:
             filler_n = 0
             while vlm_thread.is_alive() or filler_n < MIN_FILLER_FRAMES:
                 filler_t += 1.0 / FILLER_FPS
+                # Resolve agent-runner overlap at this filler timestep and
+                # follow the (possibly-pushed) agent position with the camera.
+                # The agent's facing (ayaw) is held — only XY can shift from
+                # being bumped.
+                ax, ay, _ = push_agent_if_overlap(ax, ay, filler_t, step=step, frame_kind="filler")
+                a_trans.Set(Gf.Vec3d(ax, ay, GROUND_Z))
+                if nav_cam and nav_cam.IsValid():
+                    cxf_f = UsdGeom.Xformable(nav_cam)
+                    try: cxf_f.ClearXformOpOrder()
+                    except: pass
+                    cam_x = ax + 0.1 * math.cos(math.radians(ayaw))
+                    cam_y = ay + 0.1 * math.sin(math.radians(ayaw))
+                    cxf_f.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, EYE_H))
+                    cxf_f.AddOrientOp().Set(cam_quat(ayaw, apitch))
                 pose_runners_at(filler_t)
                 _t_fr = time.time()
                 render_frame(filler=True)
@@ -820,7 +960,9 @@ try:
         pre_phase = cur_phase
         pre_fb = action_fb
         nav_hist.append({"step":step,"x":round(ax,3),"y":round(ay,3),"yaw":round(ayaw,1),
-                         "dist_to_target":round(dist,3),"action":action,"moved":False,"blocked":False})
+                         "dist_to_target":round(dist,3),"action":action,
+                         "moved":False,"blocked":False,
+                         "blocked_reason":None,"blocked_detail":None})
 
         # ── Execute action ──
         if action == "STOP":
@@ -883,7 +1025,34 @@ try:
             dx = math.cos(math.radians(ayaw)); dy = math.sin(math.radians(ayaw))
             blocked = False
             hit_info = None
+            dynamic_hit = predict_dynamic_runner_block(ax, ay, dx, dy, sim_t)
+            if dynamic_hit:
+                blocked = True
+                collision_counts["dynamic_runner_predicted"] += 1
+                nav_hist[-1]["blocked"] = True
+                nav_hist[-1]["blocked_reason"] = "dynamic_runner"
+                nav_hist[-1]["blocked_detail"] = (
+                    f"{dynamic_hit['runner']} dist={dynamic_hit['distance_m']:.3f}m "
+                    f"threshold={dynamic_hit['threshold_m']:.3f}m"
+                )
+                action_fb = "MOVE_FORWARD blocked by a moving person. Try turning or choosing another route."
+                record_collision_event({
+                    "step": step,
+                    "type": "dynamic_runner",
+                    "action": action,
+                    "sim_t": dynamic_hit["sim_t"],
+                    "agent_xy": dynamic_hit["agent_xy"],
+                    "runner": dynamic_hit["runner"],
+                    "runner_xy": dynamic_hit["runner_xy"],
+                    "distance_m": dynamic_hit["distance_m"],
+                    "threshold_m": dynamic_hit["threshold_m"],
+                    "result": "move_blocked",
+                })
+                log(f"[BENCH] Step {step}: DYNAMIC COLLISION blocked "
+                    f"{dynamic_hit['runner']} dist={dynamic_hit['distance_m']:.3f}m")
             for sz in [0.5, 1.0]:
+                if blocked:
+                    break
                 hit = query_if.sweep_sphere_closest(0.40, carb.Float3(ax,ay,sz),
                                                      carb.Float3(dx,dy,0), STEP_DIST)
                 if not hit["hit"]:
@@ -899,13 +1068,30 @@ try:
                 blocked = True; break
             if not blocked:
                 ax += STEP_DIST * dx; ay += STEP_DIST * dy
-            else:
+            elif hit_info:
+                collision_counts["static_obstacle"] += 1
                 nav_hist[-1]["blocked"] = True
-                if hit_info:
-                    log(f"[BENCH] Step {step}: COLLISION at z={hit_info[0]} "
-                        f"dist={hit_info[2]:.3f}m hit={hit_info[1].split('/')[-1][:60]}")
-                else:
-                    log(f"[BENCH] Step {step}: COLLISION")
+                nav_hist[-1]["blocked_reason"] = "static_obstacle"
+                nav_hist[-1]["blocked_detail"] = (
+                    f"z={hit_info[0]} dist={hit_info[2]:.3f}m "
+                    f"hit={hit_info[1].split('/')[-1][:60]}"
+                )
+                action_fb = "MOVE_FORWARD blocked by an obstacle. Try turning or choosing another route."
+                record_collision_event({
+                    "step": step,
+                    "type": "static_obstacle",
+                    "action": action,
+                    "sim_t": sim_t,
+                    "agent_xy": _xy([ax, ay]),
+                    "hit_z": hit_info[0],
+                    "hit_path": hit_info[1],
+                    "distance_m": round(float(hit_info[2]), 3),
+                    "result": "move_blocked",
+                })
+                log(f"[BENCH] Step {step}: COLLISION at z={hit_info[0]} "
+                    f"dist={hit_info[2]:.3f}m hit={hit_info[1].split('/')[-1][:60]}")
+            elif blocked:
+                nav_hist[-1]["blocked"] = True
 
         elif action == "TURN_LEFT": ayaw += TURN_ANG
         elif action == "TURN_RIGHT": ayaw -= TURN_ANG
@@ -930,17 +1116,16 @@ try:
     # physical-step metrics (which stay comparable to single-action runs).
     metrics["vlm_calls"] = vlm_calls
     metrics["actions_per_call"] = round(metrics["steps_used"] / max(1, vlm_calls), 2)
-    results = {"task": task, "metrics": metrics, "nav_history": nav_hist,
-               "resolved_targets": resolved_targets,
-               "agent_start": agent_start_xy, "agent_yaw": agent_start_yaw}
-    with open(os.path.join(RUN_DIR, "vlm_nav_history.json"), "w") as f:
-        json.dump(results, f, indent=2)
-    with open(os.path.join(RUN_DIR, "results.json"), "w") as f:
-        json.dump(results, f, indent=2)
-
-    log(f"[BENCH] Results: SR={metrics['task_success_rate']} SP={metrics['subtask_progress']:.0%} "
-        f"GD={metrics['goal_distance_m']:.2f}m Steps={metrics['steps_used']} "
-        f"VLMcalls={vlm_calls} ({metrics['actions_per_call']} actions/call)")
+    metrics["static_collision_count"] = collision_counts["static_obstacle"]
+    metrics["dynamic_runner_collision_count"] = collision_counts["dynamic_runner_predicted"]
+    metrics["agent_pushed_events"] = collision_counts["agent_pushed_events"]
+    metrics["agent_pushed_frames"] = collision_counts["agent_pushed_frames"]
+    # Total collisions = static blocks + predicted-dynamic blocks + push contacts.
+    metrics["collision_count"] = (
+        metrics["static_collision_count"] +
+        metrics["dynamic_runner_collision_count"] +
+        metrics["agent_pushed_events"]
+    )
 
     # ── Timing breakdown — where did the episode spend wall-clock time? ──
     # NOTE: the VLM thread and filler renders run CONCURRENTLY, so "vlm" (the
@@ -948,6 +1133,45 @@ try:
     rd, rf = timing["render_decision"], timing["render_filler"]
     vt = timing["vlm"]
     nd, nf, nv = timing["n_decision"], timing["n_filler"], max(1, timing["n_vlm"])
+    metrics["timing"] = {k: round(v, 1) for k, v in timing.items()}
+
+    collision_summary = {
+        "total": metrics["collision_count"],
+        "static_obstacle": metrics["static_collision_count"],
+        "dynamic_runner_predicted": metrics["dynamic_runner_collision_count"],
+        "agent_pushed_events": metrics["agent_pushed_events"],
+        "agent_pushed_frames": metrics["agent_pushed_frames"],
+    }
+    collisions = {
+        "summary": collision_summary,
+        "config": {
+            "agent_radius_m": AGENT_RADIUS,
+            "runner_radius_m": RUNNER_RADIUS,
+            "safe_radius_m": SAFE_RADIUS,
+            "dynamic_collision_margin_m": DYNAMIC_COLLISION_MARGIN,
+            "dynamic_collision_radius_m": DYNAMIC_COLLISION_RADIUS,
+        },
+        "events": collision_events,
+    }
+    results = {"task": task, "metrics": metrics, "nav_history": nav_hist,
+               "resolved_targets": resolved_targets,
+               "agent_start": agent_start_xy, "agent_yaw": agent_start_yaw}
+    with open(os.path.join(RUN_DIR, "vlm_nav_history.json"), "w") as f:
+        json.dump(results, f, indent=2)
+    with open(os.path.join(RUN_DIR, "results.json"), "w") as f:
+        json.dump(results, f, indent=2)
+    with open(os.path.join(RUN_DIR, "collisions.json"), "w") as f:
+        json.dump(collisions, f, indent=2)
+
+    log(f"[BENCH] Results: SR={metrics['task_success_rate']} SP={metrics['subtask_progress']:.0%} "
+        f"GD={metrics['goal_distance_m']:.2f}m Steps={metrics['steps_used']} "
+        f"VLMcalls={vlm_calls} ({metrics['actions_per_call']} actions/call) "
+        f"Collisions={metrics['collision_count']} "
+        f"(static={metrics['static_collision_count']}, "
+        f"dyn-predicted={metrics['dynamic_runner_collision_count']}, "
+        f"pushed={metrics['agent_pushed_events']} events/"
+        f"{metrics['agent_pushed_frames']} frames)")
+
     log(f"[BENCH] TIMING: decision-render {rd:.0f}s ({nd} frames, "
         f"{rd/max(1,nd):.1f}s/frame) | filler-render {rf:.0f}s ({nf} frames, "
         f"{rf/max(1,nf):.1f}s/frame) | vlm-window {vt:.0f}s ({nv} calls, "
@@ -958,7 +1182,6 @@ try:
     vc = timing["visibility_check"]
     log(f"[BENCH] VISIBILITY GATE: runner on-screen {rv} steps / off-screen {rh} "
         f"steps (filler skipped) | visibility-check total {vc*1000:.0f}ms")
-    metrics["timing"] = {k: round(v, 1) for k, v in timing.items()}
 
     # ── Clean up render scratch dirs ──
     for d in [fpv_scratch, bird_scratch]:

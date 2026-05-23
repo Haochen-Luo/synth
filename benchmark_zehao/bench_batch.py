@@ -167,7 +167,10 @@ def main():
             m = result["metrics"]
             status = "✅" if m["success"] else ("⏰" if m["timeout"] else "❌")
             print(f"  {status} SR={m['task_success_rate']} SP={m['subtask_progress']:.0%} "
-                  f"GD={m['goal_distance_m']:.1f}m Steps={m['steps_used']}")
+                  f"GD={m['goal_distance_m']:.1f}m Steps={m['steps_used']} "
+                  f"Coll={m.get('collision_count', 0)} "
+                  f"Pushed={m.get('agent_pushed_events', 0)}ev/"
+                  f"{m.get('agent_pushed_frames', 0)}fr")
 
     if all_metrics:
         summary = aggregate_metrics(all_metrics)
