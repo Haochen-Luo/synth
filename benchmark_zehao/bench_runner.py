@@ -882,14 +882,30 @@ try:
             query_if = omni.physx.get_physx_scene_query_interface()
             dx = math.cos(math.radians(ayaw)); dy = math.sin(math.radians(ayaw))
             blocked = False
+            hit_info = None
             for sz in [0.5, 1.0]:
                 hit = query_if.sweep_sphere_closest(0.40, carb.Float3(ax,ay,sz),
                                                      carb.Float3(dx,dy,0), STEP_DIST)
-                if hit["hit"]: blocked = True; break
+                if not hit["hit"]:
+                    continue
+                hit_path = (hit.get("rigidBody") or hit.get("collider") or "").lower()
+                # Ignore the floor under our feet — the sweep sphere bottom
+                # (z=sz-0.40) sits below the floor top, so PhysX reports an
+                # overlap with the floor mesh at distance 0. This is not an
+                # obstacle ahead; verify_tasks_isaac.py uses the same filter.
+                if "floor" in hit_path or "ground" in hit_path:
+                    continue
+                hit_info = (sz, hit_path, hit.get("distance", -1))
+                blocked = True; break
             if not blocked:
                 ax += STEP_DIST * dx; ay += STEP_DIST * dy
             else:
-                nav_hist[-1]["blocked"] = True; log(f"[BENCH] Step {step}: COLLISION")
+                nav_hist[-1]["blocked"] = True
+                if hit_info:
+                    log(f"[BENCH] Step {step}: COLLISION at z={hit_info[0]} "
+                        f"dist={hit_info[2]:.3f}m hit={hit_info[1].split('/')[-1][:60]}")
+                else:
+                    log(f"[BENCH] Step {step}: COLLISION")
 
         elif action == "TURN_LEFT": ayaw += TURN_ANG
         elif action == "TURN_RIGHT": ayaw -= TURN_ANG
