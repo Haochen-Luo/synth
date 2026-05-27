@@ -614,6 +614,31 @@ try:
                 else:
                     nx, ny = dxr / d, dyr / d
                 overlap = SAFE_RADIUS - d
+                # ── Validate push against static geometry ──
+                # Use sweep_sphere to check the push direction won't shove the
+                # agent into a wall. query_if may not exist yet (scene setup
+                # phase), so guard with try/except.
+                try:
+                    for sz in [0.5, 1.0]:
+                        wall_hit = query_if.sweep_sphere_closest(
+                            0.40, carb.Float3(ax, ay, sz),
+                            carb.Float3(nx, ny, 0), overlap + 0.05)
+                        if wall_hit["hit"]:
+                            wp = (wall_hit.get("rigidBody") or
+                                  wall_hit.get("collider") or "").lower()
+                            if any(w in wp for w in
+                                   ("floor","ground","rug","blanket","towel","mat")):
+                                continue  # walkable surface, not a wall
+                            wd = float(wall_hit.get("distance", 0))
+                            # Clamp overlap so agent stops before the wall
+                            safe_overlap = max(wd - 0.05, 0.0)
+                            if safe_overlap < 0.01:
+                                overlap = 0.0  # wall is right here, skip push
+                            else:
+                                overlap = min(overlap, safe_overlap)
+                            break
+                except Exception:
+                    pass  # query_if not ready yet (prime phase), push anyway
                 ax_before, ay_before = ax, ay
                 ax += nx * overlap
                 ay += ny * overlap
