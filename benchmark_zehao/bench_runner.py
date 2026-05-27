@@ -41,8 +41,8 @@ ENABLE_BIRD_SMOOTH = os.environ.get("ENABLE_BIRD_SMOOTH", "0") == "1"
 # Render resolution for FPV + bird render products. PathTracing cost scales
 # ~linearly with pixel count, so 960x540 renders ~4x faster than 1920x1080.
 # Lowered for prototype iteration speed; set RENDER_W/RENDER_H env to override.
-RENDER_W = int(os.environ.get("RENDER_W", "960"))
-RENDER_H = int(os.environ.get("RENDER_H", "540"))
+RENDER_W = int(os.environ.get("RENDER_W", "640"))
+RENDER_H = int(os.environ.get("RENDER_H", "360"))
 
 # ── Load task config ──
 task_id = os.environ.get("TASK_ID", "")
@@ -515,7 +515,7 @@ try:
     # FILLER_FPS controls how many in-between frames are rendered per second of
     # sim-time while the VLM is thinking. Higher = smoother runner motion.
     # Lowered 6 -> 3 to roughly halve filler render load (prototype speed).
-    FILLER_FPS = 3.0
+    FILLER_FPS = 10.0  # match anim fps to avoid trajectory undersampling at corners
     FILLER_SUBFRAMES = 4   # filler frames are video-only -> cheap PathTracing
     DECISION_SUBFRAMES = 16  # decision frames (VLM sees these) stay full quality
     # Render at least this many filler frames per step so the runner visibly
