@@ -308,11 +308,16 @@ try:
     # semantic_classes.py. This scales: new scenes just need their factories
     # mapped there, no per-asset manual inspection.
     target_semantic = {semantic_class_of(tc) for tc in target_classes}
+    log(f"[BENCH] Target semantic classes: {target_semantic}")
+    log(f"[BENCH] Target prim paths: {target_prim_paths}")
     for container_path in ["/World/InteractiveProps", "/World/Env"]:
         container = stage.GetPrimAtPath(container_path)
         if not container or not container.IsValid():
+            log(f"[BENCH] Container {container_path} NOT FOUND or invalid — skipping")
             continue
-        for child in container.GetChildren():
+        children = container.GetChildren()
+        log(f"[BENCH] Scanning {container_path}: {len(children)} children")
+        for child in children:
             c_name = child.GetName()
             c_path = child.GetPath().pathString
 
@@ -1092,11 +1097,14 @@ try:
                 if not hit["hit"]:
                     continue
                 hit_path = (hit.get("rigidBody") or hit.get("collider") or "").lower()
-                # Ignore the floor under our feet — the sweep sphere bottom
+                # Ignore thin floor-level objects — the sweep sphere bottom
                 # (z=sz-0.40) sits below the floor top, so PhysX reports an
-                # overlap with the floor mesh at distance 0. This is not an
-                # obstacle ahead; verify_tasks_isaac.py uses the same filter.
-                if "floor" in hit_path or "ground" in hit_path:
+                # overlap at distance 0. These are not real obstacles:
+                #   floor/ground  — floor meshes
+                #   rug           — RugFactory (flat textile, ~1cm thick)
+                #   blanket/towel — draped textiles that may touch the floor
+                WALKABLE = ("floor", "ground", "rug", "blanket", "towel", "mat")
+                if any(w in hit_path for w in WALKABLE):
                     continue
                 hit_info = (sz, hit_path, hit.get("distance", -1))
                 blocked = True; break
