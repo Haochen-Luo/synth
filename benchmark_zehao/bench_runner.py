@@ -586,39 +586,73 @@ try:
     # First frame of an ongoing contact is recorded as an "event"; subsequent
     # frames advance "frames" but not "events" until contact breaks.
     agent_push_active = {"runner1": False, "runner2": False}
+    # ── Runner freeze state (corner deadlock resolution) ──
+    # When a runner can't be pushed away from the agent without clipping
+    # through a wall (corner deadlock), the runner freezes at its last valid
+    # position until its baked trajectory naturally exits the conflict zone.
+    runner_frozen = {"runner1": False, "runner2": False}
+    runner_frozen_pos = {"runner1": None, "runner2": None}
 
     def baked_runner_xy_at(t):
-        """Read-only: baked XY of each runner at sim-time t. No xform writes."""
-        rp1 = sample_human_motion(runner1_spec, t, anim_fps)[0] if runner1_spec else None
-        rp2 = sample_human_motion(runner2_spec, t, anim_fps)[0] if runner2_spec else None
+        """Effective XY of each runner at sim-time t. Returns frozen position
+        when a runner is in deadlock freeze, otherwise the baked trajectory."""
+        if runner1_spec:
+            rp1 = (runner_frozen_pos["runner1"] if runner_frozen["runner1"]
+                   else sample_human_motion(runner1_spec, t, anim_fps)[0])
+        else:
+            rp1 = None
+        if runner2_spec:
+            rp2 = (runner_frozen_pos["runner2"] if runner_frozen["runner2"]
+                   else sample_human_motion(runner2_spec, t, anim_fps)[0])
+        else:
+            rp2 = None
         return rp1, rp2
 
     def push_agent_if_overlap(ax, ay, t, step=None, frame_kind="decision"):
-        """Two 3D bodies cannot overlap. If a runner's baked XY at sim-time t
-        is within SAFE_RADIUS of the agent, push the AGENT radially outward
-        until the gap is exactly SAFE_RADIUS. Returns new (ax, ay) and a list
-        of overlap events (one per runner). Records contact bookkeeping:
-        first frame of contact -> event; every contact frame -> frames count.
-        For "prime" frame_kind, bookkeeping is skipped (init state only)."""
-        rp1, rp2 = baked_runner_xy_at(t)
+        """Resolve agent-runner overlap with wall-aware push + deadlock freeze.
+
+        1. Normal: push agent radially away from runner.
+        2. Wall blocks push: wall-slide (push perpendicular along wall).
+        3. Corner deadlock (both blocked): freeze runner at last valid pos,
+           don't move agent. Runner stays frozen until baked trajectory
+           naturally exits SAFE_RADIUS.
+
+        Returns new (ax, ay) and a list of overlap event names."""
         events = []
-        for name, rp in (("runner1", rp1), ("runner2", rp2)):
-            if rp is None:
+        for name, spec in (("runner1", runner1_spec), ("runner2", runner2_spec)):
+            if not spec:
                 if agent_push_active.get(name): agent_push_active[name] = False
                 continue
+
+            # Always read baked position to check for unfreeze
+            baked_pos = sample_human_motion(spec, t, anim_fps)[0]
+            baked_d = math.hypot(ax - baked_pos[0], ay - baked_pos[1])
+
+            # Use effective position (frozen or baked)
+            if runner_frozen[name]:
+                rp = runner_frozen_pos[name]
+                # Unfreeze check: baked trajectory left the conflict zone
+                if baked_d >= SAFE_RADIUS:
+                    runner_frozen[name] = False
+                    rp = baked_pos  # resume baked trajectory
+                    runner_frozen_pos[name] = list(baked_pos)
+                    log(f"[BENCH] {name} unfrozen — baked trajectory exited conflict zone")
+                else:
+                    # Still frozen — don't push agent, keep runner in place
+                    continue
+            else:
+                rp = baked_pos
+
             dxr = ax - rp[0]; dyr = ay - rp[1]
             d = math.hypot(dxr, dyr)
             if d < SAFE_RADIUS:
                 if d < 1e-4:
-                    nx, ny = 1.0, 0.0  # degenerate: pick arbitrary axis
+                    nx, ny = 1.0, 0.0
                 else:
                     nx, ny = dxr / d, dyr / d
                 overlap = SAFE_RADIUS - d
+
                 # ── Wall-slide push resolution ──
-                # Like real physics: if pushed toward a wall, slide along it.
-                # 1. Try full push in (nx,ny). If blocked, clamp to wall.
-                # 2. Apply remaining displacement perpendicular (wall-slide).
-                # 3. If perpendicular also blocked (corner), accept overlap.
                 def _sweep_clear(ox, oy, dx, dy, dist):
                     """Return max safe travel distance along (dx,dy)."""
                     try:
@@ -635,32 +669,51 @@ try:
                                     continue
                                 return max(float(h.get("distance", 0)) - 0.05, 0.0)
                     except Exception:
-                        pass  # query_if not ready (prime phase)
-                    return dist  # no wall, full distance OK
+                        pass
+                    return dist
 
-                # Step 1: push in primary direction, clamped by wall
+                # Step 1: push primary direction
                 primary = min(overlap, _sweep_clear(ax, ay, nx, ny, overlap))
-                ax_before, ay_before = ax, ay
-                ax += nx * primary
-                ay += ny * primary
                 remaining = overlap - primary
 
-                # Step 2: wall-slide — push remainder perpendicular to (nx,ny)
+                # Step 2: wall-slide perpendicular
+                slide = 0.0
                 if remaining > 0.01:
-                    # Try both perpendicular directions, pick the one away
-                    # from runner (dot product with runner→agent vector)
                     perp1x, perp1y = -ny, nx
                     perp2x, perp2y = ny, -nx
-                    # Prefer the perpendicular that moves agent away from runner
                     dot1 = perp1x * dxr + perp1y * dyr
                     if dot1 >= 0:
                         px, py = perp1x, perp1y
                     else:
                         px, py = perp2x, perp2y
                     slide = min(remaining,
-                                _sweep_clear(ax, ay, px, py, remaining))
+                                _sweep_clear(ax + nx * primary,
+                                             ay + ny * primary,
+                                             px, py, remaining))
+                    remaining -= slide
+
+                # Step 3: deadlock — freeze runner instead of accepting overlap
+                if remaining > 0.01:
+                    # Can't fully resolve — freeze runner, don't move agent
+                    runner_frozen[name] = True
+                    if runner_frozen_pos[name] is None:
+                        # First freeze: use baked pos clamped to SAFE_RADIUS
+                        runner_frozen_pos[name] = list(rp)
+                    log(f"[BENCH] {name} FROZEN — corner deadlock "
+                        f"(remaining={remaining:.3f}m)")
+                    continue  # don't push agent at all
+
+                # Apply resolved push
+                ax_before, ay_before = ax, ay
+                ax += nx * primary
+                ay += ny * primary
+                if slide > 0:
                     ax += px * slide
                     ay += py * slide
+
+                # Update last valid runner position (for future freeze)
+                runner_frozen_pos[name] = list(rp)
+
                 was_active = agent_push_active.get(name, False)
                 if frame_kind != "prime":
                     collision_counts["agent_pushed_frames"] += 1
@@ -681,20 +734,30 @@ try:
                 events.append(name)
             else:
                 if agent_push_active.get(name): agent_push_active[name] = False
+                # Update last valid position when not overlapping
+                runner_frozen_pos[name] = list(rp)
         return ax, ay, events
 
     def pose_runners_at(t):
-        """Set runners/dancer to their baked pose at sim-time t. PURE — does
-        not touch the agent. Agent overlap resolution is handled separately
-        by push_agent_if_overlap so the two concerns stay testable."""
+        """Set runners/dancer to their baked pose at sim-time t.
+        When a runner is frozen (corner deadlock), its position stays at the
+        frozen position while rotation still follows the baked data."""
         if runner1_spec and r1_ops:
             rp1, rr = sample_human_motion(runner1_spec, t, anim_fps)
-            r1_ops["t"].Set(Gf.Vec3d(rp1[0], rp1[1], GROUND_Z))
+            if runner_frozen["runner1"] and runner_frozen_pos["runner1"]:
+                pos = runner_frozen_pos["runner1"]
+            else:
+                pos = rp1
+            r1_ops["t"].Set(Gf.Vec3d(pos[0], pos[1], GROUND_Z))
             ryr = math.radians(rr[2])
             r1_ops["o"].Set(Gf.Quatf(math.cos(ryr/2), 0, 0, math.sin(ryr/2)))
         if runner2_spec and r2_ops:
             rp2, rr2 = sample_human_motion(runner2_spec, t, anim_fps)
-            r2_ops["t"].Set(Gf.Vec3d(rp2[0], rp2[1], GROUND_Z))
+            if runner_frozen["runner2"] and runner_frozen_pos["runner2"]:
+                pos2 = runner_frozen_pos["runner2"]
+            else:
+                pos2 = rp2
+            r2_ops["t"].Set(Gf.Vec3d(pos2[0], pos2[1], GROUND_Z))
             ry2 = math.radians(rr2[2])
             r2_ops["o"].Set(Gf.Quatf(math.cos(ry2/2), 0, 0, math.sin(ry2/2)))
         at_ = anim_start/anim_fps + (t % anim_dur) if anim_dur > 0 else t
