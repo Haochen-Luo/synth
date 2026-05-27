@@ -637,9 +637,9 @@ try:
                     rp = baked_pos  # resume baked trajectory
                     runner_frozen_pos[name] = list(baked_pos)
                     log(f"[BENCH] {name} unfrozen — baked trajectory exited conflict zone")
-                else:
-                    # Still frozen — don't push agent, keep runner in place
-                    continue
+                # else: still frozen — use frozen_pos as rp and fall through
+                # to overlap check below (handles agent being pushed toward
+                # frozen runner by another runner)
             else:
                 rp = baked_pos
 
