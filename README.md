@@ -82,6 +82,17 @@ All on branch `benchmark-multiaction`:
 7. **Filler-frame timing model** — runner advances smoothly during VLM
    thinking; `gen_media.sh` builds video from `*_smooth` (fpv) / per-step
    (bird) frames at `SMOOTH_FPS=3` (matches `FILLER_FPS`).
+8. **Runner Pose Frozen Coordinates** — Prevented runners from getting stuck in
+   corners and pushing the agent into illegal coordinates. Frozen runners retain
+   their last valid coordinates while keeping rotation updates active.
+9. **Multi-Runner Collision Fall-Through** — Integrated frozen runner coordinate
+   checks in the agent overlap pass to resolve sandwich deadlocks correctly.
+10. **Automatic Spawn Yaw Calculation (`update_yaw_auto.py`)** — Automates agent
+    spawn orientation. L1/L3 tasks face the target center, and L2/L4 tasks
+    face 180 degrees away.
+11. **Adjusted Spawn Configuration (`benchmark_tasks_0527fix.json`)** — Relocated
+    spawns for `case02-L1`, `case03-L1`, and `case09-L1` to prevent spawning
+    inside partitions/mezzanines, verified via initial frame FPV and bird-view.
 
 ---
 
