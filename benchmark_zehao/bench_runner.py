@@ -614,34 +614,53 @@ try:
                 else:
                     nx, ny = dxr / d, dyr / d
                 overlap = SAFE_RADIUS - d
-                # ── Validate push against static geometry ──
-                # Use sweep_sphere to check the push direction won't shove the
-                # agent into a wall. query_if may not exist yet (scene setup
-                # phase), so guard with try/except.
-                try:
-                    for sz in [0.5, 1.0]:
-                        wall_hit = query_if.sweep_sphere_closest(
-                            0.40, carb.Float3(ax, ay, sz),
-                            carb.Float3(nx, ny, 0), overlap + 0.05)
-                        if wall_hit["hit"]:
-                            wp = (wall_hit.get("rigidBody") or
-                                  wall_hit.get("collider") or "").lower()
-                            if any(w in wp for w in
-                                   ("floor","ground","rug","blanket","towel","mat")):
-                                continue  # walkable surface, not a wall
-                            wd = float(wall_hit.get("distance", 0))
-                            # Clamp overlap so agent stops before the wall
-                            safe_overlap = max(wd - 0.05, 0.0)
-                            if safe_overlap < 0.01:
-                                overlap = 0.0  # wall is right here, skip push
-                            else:
-                                overlap = min(overlap, safe_overlap)
-                            break
-                except Exception:
-                    pass  # query_if not ready yet (prime phase), push anyway
+                # ── Wall-slide push resolution ──
+                # Like real physics: if pushed toward a wall, slide along it.
+                # 1. Try full push in (nx,ny). If blocked, clamp to wall.
+                # 2. Apply remaining displacement perpendicular (wall-slide).
+                # 3. If perpendicular also blocked (corner), accept overlap.
+                def _sweep_clear(ox, oy, dx, dy, dist):
+                    """Return max safe travel distance along (dx,dy)."""
+                    try:
+                        for sz in [0.5, 1.0]:
+                            h = query_if.sweep_sphere_closest(
+                                0.40, carb.Float3(ox, oy, sz),
+                                carb.Float3(dx, dy, 0), dist + 0.05)
+                            if h["hit"]:
+                                wp = (h.get("rigidBody") or
+                                      h.get("collider") or "").lower()
+                                if any(w in wp for w in
+                                       ("floor","ground","rug","blanket",
+                                        "towel","mat")):
+                                    continue
+                                return max(float(h.get("distance", 0)) - 0.05, 0.0)
+                    except Exception:
+                        pass  # query_if not ready (prime phase)
+                    return dist  # no wall, full distance OK
+
+                # Step 1: push in primary direction, clamped by wall
+                primary = min(overlap, _sweep_clear(ax, ay, nx, ny, overlap))
                 ax_before, ay_before = ax, ay
-                ax += nx * overlap
-                ay += ny * overlap
+                ax += nx * primary
+                ay += ny * primary
+                remaining = overlap - primary
+
+                # Step 2: wall-slide — push remainder perpendicular to (nx,ny)
+                if remaining > 0.01:
+                    # Try both perpendicular directions, pick the one away
+                    # from runner (dot product with runner→agent vector)
+                    perp1x, perp1y = -ny, nx
+                    perp2x, perp2y = ny, -nx
+                    # Prefer the perpendicular that moves agent away from runner
+                    dot1 = perp1x * dxr + perp1y * dyr
+                    if dot1 >= 0:
+                        px, py = perp1x, perp1y
+                    else:
+                        px, py = perp2x, perp2y
+                    slide = min(remaining,
+                                _sweep_clear(ax, ay, px, py, remaining))
+                    ax += px * slide
+                    ay += py * slide
                 was_active = agent_push_active.get(name, False)
                 if frame_kind != "prime":
                     collision_counts["agent_pushed_frames"] += 1
