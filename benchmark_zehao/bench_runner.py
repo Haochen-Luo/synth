@@ -327,6 +327,18 @@ try:
                 log(f"[BENCH] Deactivated same-semantic-class ({child_semantic}) "
                     f"non-target in {container_path}: {c_path}")
 
+    # ── DEBUG: dump all still-active prims in Env + InteractiveProps ──
+    for cp in ["/World/InteractiveProps", "/World/Env"]:
+        cprim = stage.GetPrimAtPath(cp)
+        if not cprim or not cprim.IsValid():
+            continue
+        active_children = [c for c in cprim.GetAllChildren() if c.IsActive()]
+        log(f"[BENCH][DEBUG] {cp}: {len(active_children)} active prims after dedup:")
+        for c in active_children:
+            cn = c.GetName()
+            cpath = c.GetPath().pathString
+            sem = semantic_class_of(cn)
+            log(f"[BENCH][DEBUG]   {sem:20s}  {cpath}")
     # ── Instance agent ──
     human_usd = sf["human_usds"][0] if sf["human_usds"] else None
     agent_prim = stage.DefinePrim("/World/Humans/agent_runner")

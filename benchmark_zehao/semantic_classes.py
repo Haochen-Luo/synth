@@ -21,11 +21,14 @@ inspection: new scenes only need their factories looked up here.
 # falls back to its own factory name (treated as its own unique class).
 SEMANTIC_CLASS = {
     # ── bookshelf: free-standing shelf furniture ──
+    # TVStandFactory included — visually too similar to bookshelf for VLM
+    # to reliably distinguish; grouping prevents ambiguous navigation.
     "SimpleBookcaseFactory": "bookshelf",
     "CellShelfFactory": "bookshelf",
     "LargeShelfFactory": "bookshelf",
     "TriangleShelfFactory": "bookshelf",
     "WallShelfFactory": "bookshelf",
+    "TVStandFactory": "bookshelf",
 
     # ── cabinet: closed storage furniture ──
     "CabinetFactory": "cabinet",
@@ -33,9 +36,6 @@ SEMANTIC_CLASS = {
     "SingleCabinetFactory": "cabinet",
     "CountertopFactory": "cabinet",
     "KitchenIslandFactory": "cabinet",
-
-    # ── tv_stand ──
-    "TVStandFactory": "tv_stand",
 
     # ── sofa ──
     "SofaFactory": "sofa",
