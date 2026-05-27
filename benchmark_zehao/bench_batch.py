@@ -8,7 +8,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 from bench_helpers import aggregate_metrics, print_report
 
-TASKS_JSON = os.path.join(SCRIPT_DIR, "benchmark_tasks.json")
+TASKS_JSON = os.environ.get("TASKS_JSON", os.path.join(SCRIPT_DIR, "benchmark_tasks.json"))
 RESULTS_DIR = os.path.join(SCRIPT_DIR, "results")
 DOCKER_CONTAINER = "vlm-jupyter"  #"bench-isaac"
 RUNNER_PATH = "/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/bench_runner.py"
@@ -39,8 +39,9 @@ def recover_container():
 def _run_once(task_id, batch_name, dry_run):
     """One docker-exec attempt. Returns (returncode, stdout, stderr, elapsed)."""
     batch_env = f"-e BATCH_NAME={batch_name} " if batch_name else ""
+    tasks_json_env = f"-e TASKS_JSON={TASKS_JSON} "
     cmd = (f'docker exec -e TASK_ID={task_id} -e VLLM_URL={VLLM_URL} '
-           f'-e MAX_STEPS={MAX_STEPS} {batch_env}'
+           f'-e MAX_STEPS={MAX_STEPS} {batch_env}{tasks_json_env}'
            f'{DOCKER_CONTAINER} /isaac-sim/python.sh {RUNNER_PATH}')
     print(f"  Command: {cmd}")
     if dry_run:

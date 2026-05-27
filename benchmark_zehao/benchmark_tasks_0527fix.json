@@ -1,0 +1,999 @@
+{
+  "benchmark": "4DSynth-Nav",
+  "version": "1.1",
+  "max_steps": 150,
+  "step_distance_m": 0.25,
+  "turn_angle_deg": 15.0,
+  "tilt_angle_deg": 5.0,
+  "camera_pitch_deg": -10,
+  "agent_eye_height_m": 1.58,
+  "scenes_base": "/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao",
+  "tasks": [
+    {
+      "id": "case01-L1",
+      "level": "L1",
+      "scene_dir": "native_case01_living_follow_full_physics_scene",
+      "instruction": "Go to the sofa.",
+      "agent_start": [
+        4.06,
+        12.27
+      ],
+      "agent_yaw": -29.7,
+      "phases": [
+        {
+          "name": "nav_sofa",
+          "target_object": "SofaFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the sofa",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case01-L2",
+      "level": "L2",
+      "scene_dir": "native_case01_living_follow_full_physics_scene",
+      "instruction": "Go to the bookshelf.",
+      "agent_start": [
+        6.3,
+        11.5
+      ],
+      "agent_yaw": 136.8,
+      "phases": [
+        {
+          "name": "nav_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case01-L3",
+      "level": "L3",
+      "scene_dir": "native_case01_living_follow_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
+      "agent_start": [
+        8.68,
+        11.2
+      ],
+      "agent_yaw": -56.9,
+      "phases": [
+        {
+          "name": "pick_book",
+          "target_object": "BookStackFactory",
+          "radius": 1.5,
+          "action": "PICK_UP",
+          "desc": "the book on the floor",
+          "place_at": [
+            8.0,
+            10.5,
+            0.15
+          ]
+        },
+        {
+          "name": "go_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.5,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case01-L4",
+      "level": "L4",
+      "scene_dir": "native_case01_living_follow_full_physics_scene",
+      "instruction": "Find the lamp and turn it on, then navigate to the sofa.",
+      "agent_start": [
+        10.0,
+        8.6
+      ],
+      "agent_yaw": -21.1,
+      "phases": [
+        {
+          "name": "turn_on_lamp",
+          "target_object": "DeskLampFactory",
+          "radius": 2.0,
+          "action": "TURN_ON",
+          "desc": "the desk lamp",
+          "place_at": null
+        },
+        {
+          "name": "go_sofa",
+          "target_object": "SofaFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the sofa",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case02-L1",
+      "level": "L1",
+      "scene_dir": "native_case02_living_two_people_full_physics_scene",
+      "instruction": "Go to the TV stand.",
+      "agent_start": [
+        14.5,
+        2.0
+      ],
+      "agent_yaw": 43.4,
+      "phases": [
+        {
+          "name": "nav_tvstand",
+          "target_object": "TVStandFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the TV stand",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case02-L2",
+      "level": "L2",
+      "scene_dir": "native_case02_living_two_people_full_physics_scene",
+      "instruction": "Go to the bookshelf.",
+      "agent_start": [
+        9.3,
+        3.6
+      ],
+      "agent_yaw": 163.7,
+      "phases": [
+        {
+          "name": "nav_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case02-L3",
+      "level": "L3",
+      "scene_dir": "native_case02_living_two_people_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
+      "agent_start": [
+        4.31,
+        5.03
+      ],
+      "agent_yaw": 4.0,
+      "phases": [
+        {
+          "name": "pick_book",
+          "target_object": "BookStackFactory",
+          "radius": 1.5,
+          "action": "PICK_UP",
+          "desc": "the book on the floor",
+          "place_at": [
+            13.4,
+            3.2,
+            0.15
+          ]
+        },
+        {
+          "name": "go_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.5,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case02-L4",
+      "level": "L4",
+      "scene_dir": "native_case02_living_two_people_full_physics_scene",
+      "instruction": "Find the lamp and turn it on, then navigate to the TV stand.",
+      "agent_start": [
+        9.3,
+        2.4
+      ],
+      "agent_yaw": 62.6,
+      "phases": [
+        {
+          "name": "turn_on_lamp",
+          "target_object": "DeskLampFactory",
+          "radius": 2.0,
+          "action": "TURN_ON",
+          "desc": "the desk lamp",
+          "place_at": null
+        },
+        {
+          "name": "go_tvstand",
+          "target_object": "TVStandFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the TV stand",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case03-L1",
+      "level": "L1",
+      "scene_dir": "native_case03_living_push_full_physics_scene",
+      "instruction": "Go to the sofa.",
+      "agent_start": [
+        5.5,
+        4.5
+      ],
+      "agent_yaw": -6.9,
+      "phases": [
+        {
+          "name": "nav_sofa",
+          "target_object": "SofaFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the sofa",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case03-L2",
+      "level": "L2",
+      "scene_dir": "native_case03_living_push_full_physics_scene",
+      "instruction": "Go to the bookshelf.",
+      "agent_start": [
+        8.7,
+        7.4
+      ],
+      "agent_yaw": 154.6,
+      "phases": [
+        {
+          "name": "nav_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case03-L3",
+      "level": "L3",
+      "scene_dir": "native_case03_living_push_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
+      "agent_start": [
+        5.81,
+        6.07
+      ],
+      "agent_yaw": -8.7,
+      "phases": [
+        {
+          "name": "pick_book",
+          "target_object": "BookStackFactory",
+          "radius": 1.5,
+          "action": "PICK_UP",
+          "desc": "the book on the floor",
+          "place_at": [
+            9.8,
+            4.7,
+            0.15
+          ]
+        },
+        {
+          "name": "go_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.5,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case03-L4",
+      "level": "L4",
+      "scene_dir": "native_case03_living_push_full_physics_scene",
+      "instruction": "Find the lamp and turn it on, then navigate to the sofa.",
+      "agent_start": [
+        8.7,
+        7.3
+      ],
+      "agent_yaw": 156.8,
+      "phases": [
+        {
+          "name": "turn_on_lamp",
+          "target_object": "DeskLampFactory",
+          "radius": 2.0,
+          "action": "TURN_ON",
+          "desc": "the desk lamp",
+          "place_at": null
+        },
+        {
+          "name": "go_sofa",
+          "target_object": "SofaFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the sofa",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case04-L1",
+      "level": "L1",
+      "scene_dir": "native_case04_living_two_runners_full_physics_scene",
+      "instruction": "Go to the sofa.",
+      "agent_start": [
+        7.49,
+        8.96
+      ],
+      "agent_yaw": -47.2,
+      "phases": [
+        {
+          "name": "nav_sofa",
+          "target_object": "SofaFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the sofa",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case04-L2",
+      "level": "L2",
+      "scene_dir": "native_case04_living_two_runners_full_physics_scene",
+      "instruction": "Go to the bookshelf.",
+      "agent_start": [
+        9.4,
+        4.1
+      ],
+      "agent_yaw": -37.4,
+      "phases": [
+        {
+          "name": "nav_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case04-L3",
+      "level": "L3",
+      "scene_dir": "native_case04_living_two_runners_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
+      "agent_start": [
+        8.23,
+        0.99
+      ],
+      "agent_yaw": 63.7,
+      "phases": [
+        {
+          "name": "pick_book",
+          "target_object": "BookStackFactory",
+          "radius": 1.5,
+          "action": "PICK_UP",
+          "desc": "the book on the floor",
+          "place_at": [
+            7.6,
+            7.1,
+            0.15
+          ]
+        },
+        {
+          "name": "go_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.5,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case04-L4",
+      "level": "L4",
+      "scene_dir": "native_case04_living_two_runners_full_physics_scene",
+      "instruction": "Find the lamp and turn it on, then navigate to the sofa.",
+      "agent_start": [
+        9.4,
+        7.7
+      ],
+      "agent_yaw": -111.6,
+      "phases": [
+        {
+          "name": "turn_on_lamp",
+          "target_object": "DeskLampFactory",
+          "radius": 2.0,
+          "action": "TURN_ON",
+          "desc": "the desk lamp",
+          "place_at": null
+        },
+        {
+          "name": "go_sofa",
+          "target_object": "SofaFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the sofa",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case05-L1",
+      "level": "L1",
+      "scene_dir": "native_case05_dining_turn_left_full_physics_scene",
+      "instruction": "Go to the dining table.",
+      "agent_start": [
+        6.57,
+        8.77
+      ],
+      "agent_yaw": -173.3,
+      "phases": [
+        {
+          "name": "nav_tabledining",
+          "target_object": "TableDiningFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the dining table",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case05-L2",
+      "level": "L2",
+      "scene_dir": "native_case05_dining_turn_left_full_physics_scene",
+      "instruction": "Go to the bookshelf.",
+      "agent_start": [
+        4.3,
+        6.4
+      ],
+      "agent_yaw": -151.0,
+      "phases": [
+        {
+          "name": "nav_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case05-L3",
+      "level": "L3",
+      "scene_dir": "native_case05_dining_turn_left_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
+      "agent_start": [
+        4.92,
+        1.49
+      ],
+      "agent_yaw": 141.8,
+      "phases": [
+        {
+          "name": "pick_book",
+          "target_object": "BookStackFactory",
+          "radius": 1.5,
+          "action": "PICK_UP",
+          "desc": "the book on the floor",
+          "place_at": [
+            4.7,
+            7.1,
+            0.15
+          ]
+        },
+        {
+          "name": "go_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.5,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case05-L4",
+      "level": "L4",
+      "scene_dir": "native_case05_dining_turn_left_full_physics_scene",
+      "instruction": "Find the lamp and turn it on, then navigate to the dining table.",
+      "agent_start": [
+        4.3,
+        6.3
+      ],
+      "agent_yaw": -132.5,
+      "phases": [
+        {
+          "name": "turn_on_lamp",
+          "target_object": "DeskLampFactory",
+          "radius": 2.0,
+          "action": "TURN_ON",
+          "desc": "the desk lamp",
+          "place_at": null
+        },
+        {
+          "name": "go_tabledining",
+          "target_object": "TableDiningFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the dining table",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case06-L1",
+      "level": "L1",
+      "scene_dir": "native_case06_dining_two_people_full_physics_scene",
+      "instruction": "Go to the dining table.",
+      "agent_start": [
+        0.22,
+        8.49
+      ],
+      "agent_yaw": 121.9,
+      "phases": [
+        {
+          "name": "nav_tabledining",
+          "target_object": "TableDiningFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the dining table",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case06-L2",
+      "level": "L2",
+      "scene_dir": "native_case06_dining_two_people_full_physics_scene",
+      "instruction": "Go to the bookshelf.",
+      "agent_start": [
+        -0.2,
+        9.2
+      ],
+      "agent_yaw": 129.7,
+      "phases": [
+        {
+          "name": "nav_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case06-L3",
+      "level": "L3",
+      "scene_dir": "native_case06_dining_two_people_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
+      "agent_start": [
+        -0.43,
+        10.76
+      ],
+      "agent_yaw": -123.3,
+      "phases": [
+        {
+          "name": "pick_book",
+          "target_object": "BookStackFactory",
+          "radius": 1.5,
+          "action": "PICK_UP",
+          "desc": "the book on the floor",
+          "place_at": [
+            0.2,
+            8.6,
+            0.15
+          ]
+        },
+        {
+          "name": "go_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.5,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case06-L4",
+      "level": "L4",
+      "scene_dir": "native_case06_dining_two_people_full_physics_scene",
+      "instruction": "Find the lamp and turn it on, then navigate to the dining table.",
+      "agent_start": [
+        -0.2,
+        9.2
+      ],
+      "agent_yaw": 115.7,
+      "phases": [
+        {
+          "name": "turn_on_lamp",
+          "target_object": "DeskLampFactory",
+          "radius": 2.0,
+          "action": "TURN_ON",
+          "desc": "the desk lamp",
+          "place_at": null
+        },
+        {
+          "name": "go_tabledining",
+          "target_object": "TableDiningFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the dining table",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case07-L1",
+      "level": "L1",
+      "scene_dir": "native_case07_dining_zoom_full_physics_scene",
+      "instruction": "Go to the dining table.",
+      "agent_start": [
+        2.36,
+        6.88
+      ],
+      "agent_yaw": 31.2,
+      "phases": [
+        {
+          "name": "nav_tabledining",
+          "target_object": "TableDiningFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the dining table",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case07-L2",
+      "level": "L2",
+      "scene_dir": "native_case07_dining_zoom_full_physics_scene",
+      "instruction": "Go to the bookshelf.",
+      "agent_start": [
+        4.2,
+        7.1
+      ],
+      "agent_yaw": 27.7,
+      "phases": [
+        {
+          "name": "nav_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case07-L3",
+      "level": "L3",
+      "scene_dir": "native_case07_dining_zoom_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
+      "agent_start": [
+        3.78,
+        7.92
+      ],
+      "agent_yaw": 27.0,
+      "phases": [
+        {
+          "name": "pick_book",
+          "target_object": "BookStackFactory",
+          "radius": 1.5,
+          "action": "PICK_UP",
+          "desc": "the book on the floor",
+          "place_at": [
+            3.7,
+            7.1,
+            0.15
+          ]
+        },
+        {
+          "name": "go_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.5,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case07-L4",
+      "level": "L4",
+      "scene_dir": "native_case07_dining_zoom_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the cabinet.",
+      "agent_start": [
+        2.4,
+        6.5
+      ],
+      "agent_yaw": -144.9,
+      "phases": [
+        {
+          "name": "pick_book",
+          "target_object": "BookStackFactory",
+          "radius": 1.5,
+          "action": "PICK_UP",
+          "desc": "the book on the floor",
+          "place_at": [
+            4.7,
+            6.1,
+            0.15
+          ]
+        },
+        {
+          "name": "go_singlecabinet",
+          "target_object": "SingleCabinetFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the cabinet",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case09-L1",
+      "level": "L1",
+      "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
+      "instruction": "Go to the coffee table.",
+      "agent_start": [
+        6.5,
+        3.5
+      ],
+      "agent_yaw": 169.1,
+      "phases": [
+        {
+          "name": "nav_coffeetable",
+          "target_object": "CoffeeTableFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the coffee table",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case09-L2",
+      "level": "L2",
+      "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
+      "instruction": "Go to the desk lamp.",
+      "agent_start": [
+        5.0,
+        5.1
+      ],
+      "agent_yaw": -144.3,
+      "phases": [
+        {
+          "name": "nav_desklamp",
+          "target_object": "DeskLampFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the desk lamp",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case09-L3",
+      "level": "L3",
+      "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the TV stand.",
+      "agent_start": [
+        9.72,
+        2.72
+      ],
+      "agent_yaw": 86.4,
+      "phases": [
+        {
+          "name": "pick_book",
+          "target_object": "BookStackFactory",
+          "radius": 1.5,
+          "action": "PICK_UP",
+          "desc": "the book on the floor",
+          "place_at": [
+            8.0,
+            6.1,
+            0.15
+          ]
+        },
+        {
+          "name": "go_tvstand",
+          "target_object": "TVStandFactory",
+          "radius": 2.5,
+          "action": "STOP",
+          "desc": "the TV stand",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case09-L4",
+      "level": "L4",
+      "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
+      "instruction": "Find the lamp and turn it on, then navigate to the coffee table.",
+      "agent_start": [
+        5.0,
+        5.1
+      ],
+      "agent_yaw": -144.3,
+      "phases": [
+        {
+          "name": "turn_on_lamp",
+          "target_object": "DeskLampFactory",
+          "radius": 2.0,
+          "action": "TURN_ON",
+          "desc": "the desk lamp",
+          "place_at": null
+        },
+        {
+          "name": "go_coffeetable",
+          "target_object": "CoffeeTableFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the coffee table",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case10-L1",
+      "level": "L1",
+      "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
+      "instruction": "Go to the dining table.",
+      "agent_start": [
+        2.66,
+        5.21
+      ],
+      "agent_yaw": 88.6,
+      "phases": [
+        {
+          "name": "nav_tabledining",
+          "target_object": "TableDiningFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the dining table",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case10-L2",
+      "level": "L2",
+      "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
+      "instruction": "Go to the bookshelf.",
+      "agent_start": [
+        3.3,
+        6.7
+      ],
+      "agent_yaw": -171.9,
+      "phases": [
+        {
+          "name": "nav_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case10-L3",
+      "level": "L3",
+      "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
+      "agent_start": [
+        9.12,
+        1.69
+      ],
+      "agent_yaw": 69.3,
+      "phases": [
+        {
+          "name": "pick_book",
+          "target_object": "BookStackFactory",
+          "radius": 1.5,
+          "action": "PICK_UP",
+          "desc": "the book on the floor",
+          "place_at": [
+            5.6,
+            7.4,
+            0.15
+          ]
+        },
+        {
+          "name": "go_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.5,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case10-L4",
+      "level": "L4",
+      "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
+      "instruction": "Pick up the book from the floor and bring it to the kitchen cabinet.",
+      "agent_start": [
+        3.3,
+        6.7
+      ],
+      "agent_yaw": -171.4,
+      "phases": [
+        {
+          "name": "pick_book",
+          "target_object": "BookStackFactory",
+          "radius": 1.5,
+          "action": "PICK_UP",
+          "desc": "the book on the floor",
+          "place_at": [
+            6.6,
+            6.4,
+            0.15
+          ]
+        },
+        {
+          "name": "go_kitchencabinet",
+          "target_object": "KitchenCabinetFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the kitchen cabinet",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case12-L1",
+      "level": "L1",
+      "scene_dir": "native_case12_living_two_runners_push_full_physics_scene",
+      "instruction": "Go to the sofa.",
+      "agent_start": [
+        8.36,
+        2.98
+      ],
+      "agent_yaw": 160.8,
+      "phases": [
+        {
+          "name": "nav_sofa",
+          "target_object": "SofaFactory",
+          "radius": 3.0,
+          "action": "STOP",
+          "desc": "the sofa",
+          "place_at": null
+        }
+      ]
+    },
+    {
+      "id": "case12-L2",
+      "level": "L2",
+      "scene_dir": "native_case12_living_two_runners_push_full_physics_scene",
+      "instruction": "Go to the bookshelf.",
+      "agent_start": [
+        7.4,
+        3.0
+      ],
+      "agent_yaw": 42.9,
+      "phases": [
+        {
+          "name": "nav_simplebookcase",
+          "target_object": "SimpleBookcaseFactory",
+          "radius": 2.0,
+          "action": "STOP",
+          "desc": "the bookshelf",
+          "place_at": null
+        }
+      ]
+    }
+  ]
+}
