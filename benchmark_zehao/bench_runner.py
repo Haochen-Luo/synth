@@ -295,6 +295,11 @@ try:
                     log(f"[BENCH] Placed {tobj} at {pa}")
 
     # ── Guarantee Target Uniqueness (by SEMANTIC CLASS) ──
+    # 0527_worldenv_invisible: extended to /World/Env/ in addition to
+    # /World/InteractiveProps. Scene-built furniture under /World/Env/ was
+    # previously missed, allowing duplicate bookshelves etc. to remain visible
+    # and confuse VLM navigation instructions.
+    #
     # An instruction like "go to the bookshelf" is ambiguous if the scene has
     # several shelf-like factories (SimpleBookcase, CellShelf, LargeShelf, ...).
     # We deactivate every prop in the SAME SEMANTIC CLASS as a target that is
@@ -303,9 +308,11 @@ try:
     # semantic_classes.py. This scales: new scenes just need their factories
     # mapped there, no per-asset manual inspection.
     target_semantic = {semantic_class_of(tc) for tc in target_classes}
-    props_prim = stage.GetPrimAtPath("/World/InteractiveProps")
-    if props_prim and props_prim.IsValid():
-        for child in props_prim.GetChildren():
+    for container_path in ["/World/InteractiveProps", "/World/Env"]:
+        container = stage.GetPrimAtPath(container_path)
+        if not container or not container.IsValid():
+            continue
+        for child in container.GetChildren():
             c_name = child.GetName()
             c_path = child.GetPath().pathString
 
@@ -313,7 +320,7 @@ try:
             if child_semantic in target_semantic and c_path not in target_prim_paths:
                 child.SetActive(False)
                 log(f"[BENCH] Deactivated same-semantic-class ({child_semantic}) "
-                    f"non-target prop: {c_path}")
+                    f"non-target in {container_path}: {c_path}")
 
     # ── Instance agent ──
     human_usd = sf["human_usds"][0] if sf["human_usds"] else None
