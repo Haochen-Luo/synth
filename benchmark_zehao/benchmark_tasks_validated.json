@@ -159,7 +159,7 @@
       "id": "case02-L3",
       "level": "L3",
       "scene_dir": "native_case02_living_two_people_full_physics_scene",
-      "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
+      "instruction": "Pick up the book from the floor and bring it to the shelf.",
       "agent_start": [
         4.31,
         5.03
@@ -180,10 +180,10 @@
         },
         {
           "name": "go_simplebookcase",
-          "target_object": "SimpleBookcaseFactory",
+          "target_object": "LargeShelfFactory",
           "radius": 2.5,
           "action": "STOP",
-          "desc": "the bookshelf",
+          "desc": "the large shelf",
           "place_at": null
         }
       ]
@@ -346,7 +346,7 @@
       "id": "case04-L2",
       "level": "L2",
       "scene_dir": "native_case04_living_two_runners_full_physics_scene",
-      "instruction": "Go to the bookshelf.",
+      "instruction": "Go to the sofa.",
       "agent_start": [
         9.4,
         4.1
@@ -355,10 +355,10 @@
       "phases": [
         {
           "name": "nav_simplebookcase",
-          "target_object": "SimpleBookcaseFactory",
+          "target_object": "SofaFactory",
           "radius": 2.0,
           "action": "STOP",
-          "desc": "the bookshelf",
+          "desc": "the sofa",
           "place_at": null
         }
       ]
@@ -367,7 +367,7 @@
       "id": "case04-L3",
       "level": "L3",
       "scene_dir": "native_case04_living_two_runners_full_physics_scene",
-      "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
+      "instruction": "Pick up the book from the floor and bring it to the TV stand.",
       "agent_start": [
         8.23,
         0.99
@@ -388,10 +388,10 @@
         },
         {
           "name": "go_simplebookcase",
-          "target_object": "SimpleBookcaseFactory",
+          "target_object": "TVStandFactory",
           "radius": 2.5,
           "action": "STOP",
-          "desc": "the bookshelf",
+          "desc": "the TV stand",
           "place_at": null
         }
       ]
