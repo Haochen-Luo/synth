@@ -182,6 +182,12 @@ For future tasks and more robust spawn generations, we have discovered that ever
 * This floor mesh's 3D bounding box serves as the absolute ground truth area for valid indoor spawn points (distinct from mezzanine/exterior spaces).
 * Any auto-nudge or auto-fix verification tool can query this mesh boundary to determine if a spawn is valid, or fallback/resample within it.
 
+### PathTracing Fallback Lighting Overexposure
+In `bench_runner.py`, there is a fallback lighting logic that adds 5 `SphereLight`s (intensity 80000.0) in a fixed `±2m` cross around the agent's spawn point because PathTracing mode otherwise renders pitch-black if native scene lights are inadequate.
+Since `scene_objects` bounds are missing from all task specs, this fallback is always triggered.
+**Impact**: If the agent spawns near a wall or in a narrow room (e.g. `case02-L3` at `Y=1.25`), the `-2m` offset places one of the 80000.0 intensity lights deep inside or behind the wall geometry. This causes massive ray-bounced light bleeding ("fireflies") and locally blows out the exposure of the room in FPV and Bird views.
+**Fix**: Left as a legacy issue as it guarantees scenes are at least visible for VLM evaluation. A future fix should either use a properly ray-cast uniform `RectLight` ceiling panel, or calculate strict scene bounds using the Infinigen floor meshes to ensure fill-lights never spawn inside walls.
+
 ---
 
 ## References
