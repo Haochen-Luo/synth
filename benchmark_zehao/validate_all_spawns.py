@@ -72,8 +72,285 @@ from bench_helpers import discover_scene_files, find_prim_by_factory, get_prim_w
 _8DIRS = [(1,0),(-1,0),(0,1),(0,-1),
           (0.707,0.707),(-0.707,0.707),(0.707,-0.707),(-0.707,-0.707)]
 
-def find_floor_bbox(stage):
-    """Return (xmin, ymin, xmax, ymax) from the living_room floor Xform."""
+# ── 2D Geometry utilities (ported from extract_bev_annotation_data_blender.py) ──
+
+def polygon_area(poly):
+    """Signed area of a 2D polygon (positive = CCW)."""
+    n = len(poly)
+    if n < 3:
+        return 0.0
+    acc = 0.0
+    for i in range(n):
+        j = (i + 1) % n
+        acc += poly[i][0] * poly[j][1] - poly[j][0] * poly[i][1]
+    return acc * 0.5
+
+def convex_hull(points):
+    """Andrew's monotone chain convex hull. Returns CCW polygon."""
+    uniq = sorted({(round(float(p[0]), 5), round(float(p[1]), 5)) for p in points})
+    if len(uniq) <= 2:
+        return [[float(x), float(y)] for x, y in uniq]
+    def cross(o, a, b):
+        return (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0])
+    lower = []
+    for p in uniq:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    upper = []
+    for p in reversed(uniq):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+    return [[float(x), float(y)] for x, y in lower[:-1] + upper[:-1]]
+
+def order_boundary_loop(edges, coords):
+    if not edges:
+        return []
+    adj = {}
+    for a, b in edges:
+        adj.setdefault(a, []).append(b)
+        adj.setdefault(b, []).append(a)
+    start = min(adj, key=lambda idx: (coords[idx][0], coords[idx][1]))
+    loop = [start]
+    prev = None
+    cur = start
+    for _ in range(max(4, len(edges) + 4)):
+        nxts = [n for n in adj.get(cur, []) if n != prev]
+        if not nxts:
+            break
+        if len(nxts) > 1:
+            nxts.sort(key=lambda n: (coords[n][0], coords[n][1]))
+        nxt = nxts[0]
+        if nxt == start:
+            break
+        loop.append(nxt)
+        prev, cur = cur, nxt
+    poly = [coords[idx] for idx in loop]
+    if polygon_area(poly) < 0:
+        poly.reverse()
+    return poly
+
+def boundary_edge_components(edges):
+    adj = {}
+    for edge in edges:
+        a, b = edge
+        adj.setdefault(a, []).append(edge)
+        adj.setdefault(b, []).append(edge)
+    visited = set()
+    components = []
+    for edge in edges:
+        key = (min(edge[0], edge[1]), max(edge[0], edge[1]))
+        if key in visited:
+            continue
+        stack = [edge]
+        comp = []
+        while stack:
+            cur = stack.pop()
+            cur_key = (min(cur[0], cur[1]), max(cur[0], cur[1]))
+            if cur_key in visited:
+                continue
+            visited.add(cur_key)
+            comp.append(cur)
+            for v in cur:
+                for nxt in adj.get(v, []):
+                    nxt_key = (min(nxt[0], nxt[1]), max(nxt[0], nxt[1]))
+                    if nxt_key not in visited:
+                        stack.append(nxt)
+        if comp:
+            components.append(comp)
+    return components
+
+def candidate_boundary_loops(edges, coords):
+    loops = []
+    for comp in boundary_edge_components(edges):
+        loop = order_boundary_loop(comp, coords)
+        if len(loop) >= 3 and abs(polygon_area(loop)) > 1e-5:
+            loops.append(loop)
+    loops.sort(key=lambda poly: -abs(polygon_area(poly)))
+    return loops
+
+def point_in_polygon_xy(px, py, poly):
+    """Ray-casting point-in-polygon test."""
+    if len(poly) < 3:
+        return True
+    inside = False
+    j = len(poly) - 1
+    for i in range(len(poly)):
+        xi, yi = float(poly[i][0]), float(poly[i][1])
+        xj, yj = float(poly[j][0]), float(poly[j][1])
+        if (yi > py) != (yj > py):
+            x_cross = (xj - xi) * (py - yi) / (yj - yi) + xi
+            if px < x_cross:
+                inside = not inside
+        j = i
+    return inside
+
+def shrink_polygon(poly, margin):
+    """Approximate inward shrink by moving each vertex toward centroid."""
+    if len(poly) < 3 or margin <= 0:
+        return poly
+    cx = sum(p[0] for p in poly) / len(poly)
+    cy = sum(p[1] for p in poly) / len(poly)
+    result = []
+    for p in poly:
+        dx, dy = p[0] - cx, p[1] - cy
+        d = math.hypot(dx, dy)
+        if d < 1e-6:
+            result.append(p)
+        else:
+            shrink = min(margin / d, 0.9)  # don't collapse
+            result.append([p[0] - dx * shrink, p[1] - dy * shrink])
+    return result
+
+# ── Floor detection (replicates BEV pipeline room selection logic) ──
+
+ROOM_TOKENS = ("living_room", "living-room", "dining_room", "dining-room",
+               "bedroom", "bathroom", "kitchen", "hallway")
+ROOM_PRIORITY = ("living_room", "living-room", "dining_room", "dining-room",
+                 "bedroom", "kitchen", "hallway", "bathroom")
+
+def find_floor_polygon(stage):
+    """Extract the primary room's floor polygon from USD mesh vertices.
+    Returns (polygon_2d, bbox_tuple) or (None, None).
+    polygon_2d is a list of [x,y] points forming the convex hull.
+    bbox_tuple is (xmin, ymin, xmax, ymax) for reference.
+    """
+    # Collect all floor Mesh prims grouped by room key
+    rooms = {}  # room_key -> {"floor_meshes": [...], "all_xy": [...]}
+    for prim in stage.Traverse():
+        name_lower = prim.GetName().lower()
+        path_lower = str(prim.GetPath()).lower()
+        # Must be a room structure prim
+        if not any(tok in path_lower for tok in ROOM_TOKENS):
+            continue
+        # Must be a floor part
+        if "floor" not in name_lower:
+            continue
+        # Must be active & visible
+        if not prim.IsActive():
+            continue
+        # Get room key from parent path
+        # e.g. /World/Env/living_room_0_0_floor/living_room_0_0_floor
+        # room key = "living_room_0_0"
+        parts = prim.GetPath().pathString.split("/")
+        room_key = None
+        for part in parts:
+            pl = part.lower()
+            if any(tok in pl for tok in ROOM_TOKENS) and "floor" in pl:
+                room_key = pl.replace("_floor", "")
+                break
+        if not room_key:
+            continue
+
+        # Try to read mesh vertices
+        mesh = UsdGeom.Mesh(prim)
+        if not mesh:
+            continue
+        points_attr = mesh.GetPointsAttr()
+        if not points_attr or not points_attr.HasValue():
+            # If this is an Xform, look for child Mesh
+            continue
+        pts = points_attr.Get()
+        if not pts or len(pts) == 0:
+            continue
+
+        # Transform vertices to world space
+        xf_cache = UsdGeom.XformCache()
+        world_xf = xf_cache.GetLocalToWorldTransform(prim)
+        room = rooms.setdefault(room_key, {"xy": [], "edges": [], "coords": {}, "kind": ""})
+        
+        # Read faces to extract precise boundary edges
+        face_counts_attr = mesh.GetFaceVertexCountsAttr()
+        face_indices_attr = mesh.GetFaceVertexIndicesAttr()
+        if face_counts_attr and face_counts_attr.HasValue() and face_indices_attr and face_indices_attr.HasValue():
+            face_counts = face_counts_attr.Get()
+            face_indices = face_indices_attr.Get()
+            offset = 0
+            edge_counts = {}
+            for count in face_counts:
+                face_verts = face_indices[offset:offset+count]
+                for i in range(count):
+                    a = face_verts[i]
+                    b = face_verts[(i + 1) % count]
+                    # Local index to global offset for this specific room key
+                    ga = a + len(room["coords"])
+                    gb = b + len(room["coords"])
+                    key = (min(ga, gb), max(ga, gb))
+                    edge_counts[key] = edge_counts.get(key, 0) + 1
+                offset += count
+            
+            # Map new vertices to coords dict
+            base_idx = len(room["coords"])
+            for i, p in enumerate(pts):
+                wp = world_xf.Transform(Gf.Vec3d(float(p[0]), float(p[1]), float(p[2])))
+                xy = [float(wp[0]), float(wp[1])]
+                room["coords"][base_idx + i] = xy
+                room["xy"].append(xy)
+            
+            # Store edges that appear exactly once (boundary edges)
+            for edge, count in edge_counts.items():
+                if count == 1:
+                    room["edges"].append(edge)
+        else:
+            # Fallback if no faces: just add points for convex hull
+            for p in pts:
+                wp = world_xf.Transform(Gf.Vec3d(float(p[0]), float(p[1]), float(p[2])))
+                room["xy"].append([float(wp[0]), float(wp[1])])
+        # Determine room kind for priority
+        for tok in ROOM_PRIORITY:
+            if tok.replace("-", "_") in room_key or tok in room_key:
+                room["kind"] = tok
+                break
+
+    if not rooms:
+        log("[VAL]   No floor mesh vertices found, falling back to Xform bbox")
+        return _find_floor_bbox_fallback(stage)
+
+    # Select primary room (highest priority, largest area)
+    best_room = None
+    best_priority = len(ROOM_PRIORITY)
+    best_area = 0
+    for rk, rv in rooms.items():
+        if len(rv["xy"]) < 3:
+            continue
+        hull = convex_hull(rv["xy"])
+        area = abs(polygon_area(hull))
+        kind = rv["kind"]
+        priority = len(ROOM_PRIORITY)
+        for i, tok in enumerate(ROOM_PRIORITY):
+            if tok.replace("-", "_") in rk or tok in rk:
+                priority = i
+                break
+        if priority < best_priority or (priority == best_priority and area > best_area):
+            best_priority = priority
+            best_area = area
+            best_room = rv
+
+    if not best_room or len(best_room["xy"]) < 3:
+        log("[VAL]   No valid floor polygon found, falling back to Xform bbox")
+        return _find_floor_bbox_fallback(stage)
+
+    # Attempt to build precise concave boundary loop from edges
+    boundary_poly = None
+    if best_room["edges"]:
+        loops = candidate_boundary_loops(best_room["edges"], best_room["coords"])
+        if loops:
+            boundary_poly = loops[0]
+            log(f"[VAL]   Using precise concave boundary: {len(boundary_poly)} vertices")
+
+    if not boundary_poly:
+        boundary_poly = convex_hull(best_room["xy"])
+        log(f"[VAL]   Using convex hull fallback: {len(boundary_poly)} vertices")
+
+    xs = [p[0] for p in boundary_poly]
+    ys = [p[1] for p in boundary_poly]
+    bbox = (min(xs), min(ys), max(xs), max(ys))
+    log(f"[VAL]   Floor polygon area={abs(polygon_area(boundary_poly)):.1f}m²")
+    return boundary_poly, bbox
+
+def _find_floor_bbox_fallback(stage):
+    """Fallback: use Xform bbox when mesh vertices aren't readable."""
     for prim in stage.Traverse():
         name = prim.GetName().lower()
         if name.endswith("_floor") and prim.GetTypeName() in ("Xform", "Scope"):
@@ -84,16 +361,21 @@ def find_floor_bbox(stage):
             box = bound.GetBox()
             mn, mx = box.GetMin(), box.GetMax()
             if mx[0] > mn[0] and mx[1] > mn[1]:
-                return (float(mn[0]), float(mn[1]), float(mx[0]), float(mx[1]))
-    return None
+                bbox = (float(mn[0]), float(mn[1]), float(mx[0]), float(mx[1]))
+                # Create rectangle polygon from bbox
+                poly = [
+                    [bbox[0], bbox[1]], [bbox[2], bbox[1]],
+                    [bbox[2], bbox[3]], [bbox[0], bbox[3]]
+                ]
+                return poly, bbox
+    return None, None
 
-def check_in_floor(x, y, bbox, margin=FLOOR_INSET):
-    """Check if (x,y) is within floor bbox, inset by margin."""
-    if bbox is None:
+def check_in_floor(x, y, floor_poly, margin=FLOOR_INSET):
+    """Check if (x,y) is within the floor polygon (shrunk by margin)."""
+    if floor_poly is None:
         return True  # can't check, assume OK
-    xmin, ymin, xmax, ymax = bbox
-    return (xmin + margin <= x <= xmax - margin and
-            ymin + margin <= y <= ymax - margin)
+    shrunk = shrink_polygon(floor_poly, margin)
+    return point_in_polygon_xy(x, y, shrunk)
 
 def check_collision_clear(query_if, cx, cy):
     """PhysX sweep — returns True if spawn is clear."""
@@ -168,13 +450,13 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
         sim_app.update()
     stage = omni.usd.get_context().get_stage()
 
-    # ── Floor bbox ──
-    floor_bbox = find_floor_bbox(stage)
+    # ── Floor polygon (precise room boundary) ──
+    floor_poly, floor_bbox = find_floor_polygon(stage)
     if floor_bbox:
         log(f"[VAL] Floor bbox: x=[{floor_bbox[0]:.2f}, {floor_bbox[2]:.2f}] "
             f"y=[{floor_bbox[1]:.2f}, {floor_bbox[3]:.2f}]")
     else:
-        log(f"[VAL] ⚠ No floor bbox found — skipping bbox check")
+        log(f"[VAL] ⚠ No floor polygon found — skipping floor check")
 
     # ── PhysX init: need timeline to cook collision meshes ──
     timeline = omni.timeline.get_timeline_interface()
@@ -199,16 +481,16 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
             "checks": {}, "status": "PASS", "fixes": []
         }
 
-        # ── Check 1: Floor BBox ──
-        in_floor = check_in_floor(sx, sy, floor_bbox)
+        # ── Check 1: Floor Polygon ──
+        in_floor = check_in_floor(sx, sy, floor_poly)
         result["checks"]["floor_bbox"] = {
             "pass": in_floor,
             "floor_bbox": list(floor_bbox) if floor_bbox else None,
-            "detail": f"({sx:.2f}, {sy:.2f}) {'inside' if in_floor else 'OUTSIDE'} floor"
+            "detail": f"({sx:.2f}, {sy:.2f}) {'inside' if in_floor else 'OUTSIDE'} floor polygon"
         }
         if not in_floor:
             result["status"] = "FAIL"
-            log(f"[VAL] ❌ {tid}: OUTSIDE floor bbox ({sx:.2f}, {sy:.2f})")
+            log(f"[VAL] ❌ {tid}: OUTSIDE floor polygon ({sx:.2f}, {sy:.2f})")
 
         # ── Check 2: Collision Clearance ──
         coll_ok, coll_hit = check_collision_clear(query_if, sx, sy)
@@ -259,11 +541,14 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                 xmin, ymin, xmax, ymax = floor_bbox
                 best_dist = float('inf')
                 best_pt = None
-                # Grid search within floor bbox
+                # Grid search within floor bbox, filtered by polygon
                 gx = xmin + FLOOR_INSET
                 while gx <= xmax - FLOOR_INSET:
                     gy = ymin + FLOOR_INSET
                     while gy <= ymax - FLOOR_INSET:
+                        if not check_in_floor(gx, gy, floor_poly):
+                            gy += GRID_STEP
+                            continue
                         c_ok, _ = check_collision_clear(query_if, gx, gy)
                         if c_ok:
                             candidate_yaw = fix_yaw_for_fov(gx, gy, first_target_xy, level)
