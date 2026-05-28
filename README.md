@@ -158,6 +158,21 @@ steps, `vlm_calls`, `actions_per_call`, timing breakdown. Aggregated into
 
 ---
 
+## Spawn Validation Pipeline (V1 - V4)
+
+We built a robust, automated spawn coordinate validation and auto-fix system (`validate_all_spawns.py`) to eliminate edge-case bugs that previously caused agents to spawn outside rooms, clip into walls, or face blank walls. The following historical progression of fixes led to the current highly stable (V4) state:
+
+1. **V1: L-Shaped Room Void Bug:** Initially used Convex Hull/Bounding Box for the floor, causing agents to spawn in the external "black void" of L-shaped rooms.
+   * **Fix:** Ported precise **Concave Boundary** extraction logic from `extract_bev_annotation_data_blender.py`, matching single-occurrence boundary edges of the USD mesh faces to create an exact, non-convex 2D footprint.
+2. **V2: `shrink_polygon` Bulge Bug:** An artificial inward shrink algorithm mistakenly pushed "inner corner" vertices outward, causing the safe zone to bulge into the void.
+   * **Fix:** Deleted `shrink_polygon` entirely. Relied strictly on the precise concave footprint.
+3. **V3: `WALKABLE` Whitelist Exploit:** The PhysX collision sweep originally whitelisted `wall` and `exterior`, causing physical wall collisions to be ignored and allowing spawns just outside the room.
+   * **Fix:** Removed structural elements from the whitelist. It now strictly allows only floor-level surfaces (`floor`, `rug`, `mat`).
+4. **V4: Forward Clearance Raycast ("Staring at a Wall"):** Agents could mathematically satisfy FOV constraints but end up physically with their camera pressed into a wall or painting (e.g., L2/L4 rotating exactly 180° into a wall, or L1/L3 looking at a target located in a different room).
+   * **Fix:** Injected a 1.2m `check_forward_clearance` raycast. For L2/L4, the script tests multiple angles (180, 150, 210...) until it finds a clear view. For L1/L3, if the view to the target is blocked, it rejects the `(x, y)` coordinate entirely and resamples the room.
+
+---
+
 ## Known Issues / Future Work
 
 ### Frozen Runner Visual Mismatch (Low Priority)
