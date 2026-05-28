@@ -170,12 +170,17 @@ the current frame.
 **Impact**: Visual only — collision detection and task logic are correct.
 **Fix**: Record the freeze timecode and freeze both `timeline.set_current_time()` and
 `r*_ops["o"].Set()` to that timecode. Requires non-trivial changes to `pose_runners_at()`.
-
 ### Camera Near-Clip Through Thin Geometry
 When the agent is pushed very close to thin geometry (window frames, glass doors),
 the camera may visually "see through" the geometry due to the 0.3m near-clip distance.
 Mitigated by increasing `_sweep_clear` wall buffer from 0.05→0.15m (2025-05-28), but
 grazing-angle approaches can still place the camera close to walls.
+
+### Ground Truth Walkable Bounding Boxes (Infinigen Floor Meshes)
+For future tasks and more robust spawn generations, we have discovered that every Compiled Scene USDA has a explicit floor geometry prim representing the Infinigen room structure:
+* Path: `/World/Env/.../living_room_0_0_floor` (and similarly structured `living_room_0_0_wall` / `living_room_0_0_exterior`).
+* This floor mesh's 3D bounding box serves as the absolute ground truth area for valid indoor spawn points (distinct from mezzanine/exterior spaces).
+* Any auto-nudge or auto-fix verification tool can query this mesh boundary to determine if a spawn is valid, or fallback/resample within it.
 
 ---
 

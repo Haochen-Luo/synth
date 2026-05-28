@@ -161,10 +161,10 @@
       "scene_dir": "native_case02_living_two_people_full_physics_scene",
       "instruction": "Pick up the book from the floor and bring it to the shelf.",
       "agent_start": [
-        4.31,
-        5.03
+        9.3,
+        3.6
       ],
-      "agent_yaw": 4.0,
+      "agent_yaw": -125.0,
       "phases": [
         {
           "name": "pick_book",
@@ -301,7 +301,7 @@
         8.7,
         7.3
       ],
-      "agent_yaw": -62.7,
+      "agent_yaw": 0.0,
       "phases": [
         {
           "name": "turn_on_lamp",
