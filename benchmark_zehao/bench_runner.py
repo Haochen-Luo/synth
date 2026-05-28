@@ -176,7 +176,7 @@ try:
     sim_app = SimulationApp({"headless": True, "renderer": "RayTracedLighting"})
     import omni.usd, omni.replicator.core as rep
     from omni.isaac.core.utils.stage import open_stage, is_stage_loading
-    from pxr import Gf, UsdGeom, UsdLux
+    from pxr import Gf, Usd, UsdGeom, UsdLux
 
     # ── Load scene ──
     sf = discover_scene_files(scene_dir)
@@ -238,6 +238,7 @@ try:
 
     # ── Resolve target positions for each phase ──
     resolved_targets = []
+    resolved_half_extents = []  # XY half-extent per phase for edge-distance
     pickup_prim_path = None
     target_prim_paths = set()
     target_classes = set()
@@ -252,6 +253,7 @@ try:
                 resolved_targets.append([pos[0], pos[1]])
             else:
                 resolved_targets.append([0, 0])
+            resolved_half_extents.append(0.0)  # humans have no bbox
             log(f"[BENCH] Phase '{ph['name']}' -> human[{idx}] at {resolved_targets[-1]}")
         elif tobj == "door":
             # Find door prim
@@ -262,15 +264,29 @@ try:
                 resolved_targets.append(c[:2] if c else [6, 11])
             else:
                 resolved_targets.append([6, 11])
+            resolved_half_extents.append(0.0)  # door half-extent not critical
             log(f"[BENCH] Phase '{ph['name']}' -> door at {resolved_targets[-1]}")
         else:
             pp = find_prim_by_factory(stage, tobj)
             if pp:
                 target_prim_paths.add(pp)
                 c = get_prim_world_center(stage, pp)
+                # Compute XY half-extent for edge-based distance
+                he = 0.0
+                try:
+                    imageable = UsdGeom.Imageable(stage.GetPrimAtPath(pp))
+                    bound = imageable.ComputeWorldBound(Usd.TimeCode.Default(), "default")
+                    box = bound.GetBox()
+                    mn, mx = box.GetMin(), box.GetMax()
+                    bw, bd = mx[0]-mn[0], mx[1]-mn[1]
+                    if 0 < bw < 100:
+                        he = max(bw, bd) / 2.0
+                except Exception:
+                    pass
+                resolved_half_extents.append(he)
                 if c:
                     resolved_targets.append(c[:2])
-                    log(f"[BENCH] Phase '{ph['name']}' -> {tobj} prim={pp} center={c[:2]}")
+                    log(f"[BENCH] Phase '{ph['name']}' -> {tobj} prim={pp} center={c[:2]} half_ext={he:.2f}m")
                 else:
                     resolved_targets.append([5, 5])
                     log(f"[BENCH] WARNING: no bbox for {pp}")
@@ -279,6 +295,7 @@ try:
                     pickup_prim_path = pp
             else:
                 resolved_targets.append([5, 5])
+                resolved_half_extents.append(0.0)
                 log(f"[BENCH] WARNING: no prim found for {tobj}")
 
     # ── Place objects that need repositioning ──
@@ -1025,7 +1042,9 @@ try:
     for step in range(max_steps):
         tgt = resolved_targets[cur_phase]
         tgt_radius = phases[cur_phase]["radius"]
-        dist = math.sqrt((ax-tgt[0])**2 + (ay-tgt[1])**2)
+        tgt_half = resolved_half_extents[cur_phase] if cur_phase < len(resolved_half_extents) else 0.0
+        center_dist = math.sqrt((ax-tgt[0])**2 + (ay-tgt[1])**2)
+        dist = max(0.0, center_dist - tgt_half)  # edge-based distance
 
         # Resolve any agent-runner overlap BEFORE writing the agent + camera
         # xforms so the decision frame the VLM sees has no penetration.

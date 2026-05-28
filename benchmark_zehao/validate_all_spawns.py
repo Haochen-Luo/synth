@@ -387,6 +387,32 @@ def check_forward_clearance(query_if, sx, sy, yaw_deg, min_dist=1.2):
         return False
     return True
 
+def get_prim_half_extent_xy(stage, prim_path):
+    """Get the XY half-extent (max of width/2, depth/2) of a prim's world bbox.
+    Returns 0.0 if bbox cannot be computed (degenerate/invisible prim)."""
+    try:
+        from pxr import UsdGeom, Usd
+        prim = stage.GetPrimAtPath(prim_path)
+        if not prim.IsValid():
+            return 0.0
+        imageable = UsdGeom.Imageable(prim)
+        bound = imageable.ComputeWorldBound(Usd.TimeCode.Default(), "default")
+        box = bound.GetBox()
+        mn, mx = box.GetMin(), box.GetMax()
+        w = mx[0] - mn[0]
+        d = mx[1] - mn[1]
+        if w < 0 or w > 100:  # degenerate bbox guard
+            return 0.0
+        return max(w, d) / 2.0
+    except Exception:
+        return 0.0
+
+def dist_to_edge(agent_x, agent_y, target_x, target_y, half_extent):
+    """Compute distance from agent to the nearest surface of the target.
+    dist_to_edge = dist_to_center - half_extent, clamped to 0."""
+    center_dist = math.hypot(agent_x - target_x, agent_y - target_y)
+    return max(0.0, center_dist - half_extent)
+
 def check_line_of_sight(query_if, sx, sy, target_xy, target_z=None,
                         target_prim_path=None, target_factory=None):
     """Multi-ray LOS: cast N rays from agent camera to a spread of points
@@ -572,6 +598,7 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
         first_target_z = None
         first_target_prim_path = None
         first_target_factory = None
+        first_target_half_ext = 0.0  # XY half-extent for edge-distance
         if phases:
             tobj = phases[0]["target_object"]
             if not tobj.startswith("__human_"):
@@ -579,6 +606,7 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                 pp = find_prim_by_factory(stage, tobj)
                 if pp:
                     first_target_prim_path = pp
+                    first_target_half_ext = get_prim_half_extent_xy(stage, pp)
                 # Use place_at if present (L3 pick-up tasks relocate the
                 # object at runtime; validator must check the ACTUAL position)
                 pa = phases[0].get("place_at")
@@ -591,6 +619,8 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                     if c:
                         first_target_xy = c[:2]
                         first_target_z = c[2] if len(c) > 2 else None
+                if first_target_half_ext > 0:
+                    log(f"[VAL]   Target half-extent={first_target_half_ext:.2f}m (edge-distance mode)")
 
         # ── Check 3: FOV ──
         fov_ok, fov_detail = check_fov(sx, sy, yaw, first_target_xy, level)
@@ -645,13 +675,42 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                 result["status"] = "FAIL"
                 log(f"[VAL] ❌ {tid}: LOS blocked — {los_detail}")
 
+        # ── Check 6: Spawn-win (agent already within success radius) ──
+        # Uses edge-distance: dist_to_surface = dist_to_center - half_extent
+        tgt_radius = phases[0]["radius"] if phases else 0
+        spawn_win = False
+        if first_target_xy and tgt_radius > 0:
+            agent_to_center = math.hypot(sx - first_target_xy[0], sy - first_target_xy[1])
+            edge_dist = dist_to_edge(sx, sy, first_target_xy[0], first_target_xy[1], first_target_half_ext)
+            if edge_dist <= tgt_radius:
+                spawn_win = True
+                result["status"] = "FAIL"
+                result["checks"]["min_dist"] = {
+                    "pass": False,
+                    "agent_to_center": round(agent_to_center, 2),
+                    "edge_dist": round(edge_dist, 2),
+                    "half_extent": round(first_target_half_ext, 2),
+                    "required": tgt_radius,
+                    "detail": f"SPAWN_WIN: edge_dist={edge_dist:.2f}m (center={agent_to_center:.2f}-half={first_target_half_ext:.2f}) <= radius={tgt_radius:.1f}m"
+                }
+                log(f"[VAL] ❌ {tid}: SPAWN_WIN — edge_dist={edge_dist:.2f}m <= radius={tgt_radius:.1f}m")
+            else:
+                result["checks"]["min_dist"] = {
+                    "pass": True,
+                    "agent_to_center": round(agent_to_center, 2),
+                    "edge_dist": round(edge_dist, 2),
+                    "half_extent": round(first_target_half_ext, 2),
+                    "required": tgt_radius,
+                    "detail": f"edge_dist={edge_dist:.2f}m > radius={tgt_radius:.1f}m"
+                }
+
         # ── Auto-fix ──
         if result["status"] == "FAIL" and FIX_MODE:
             fixed = False
             new_x, new_y, new_yaw = sx, sy, yaw
 
-            # Strategy 1: If only FOV/clearance/LOS is wrong, just fix yaw
-            if in_floor and coll_ok and (not fov_ok or not fwd_ok or not los_ok):
+            # Strategy 1: If only FOV/clearance/LOS is wrong AND not spawn_win, just fix yaw
+            if in_floor and coll_ok and not spawn_win and (not fov_ok or not fwd_ok or not los_ok):
                 candidate_yaw = fix_yaw_for_fov(query_if, sx, sy, first_target_xy, level)
                 f_fov, _ = check_fov(sx, sy, candidate_yaw, first_target_xy, level)
                 f_fwd = check_forward_clearance(query_if, sx, sy, candidate_yaw, min_dist=1.2)
@@ -694,6 +753,11 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                                     target_prim_path=first_target_prim_path,
                                     target_factory=first_target_factory)
                             if fov_c and fwd_c and los_c:
+                                # Check min distance to target (prevent spawn_win) — edge-based
+                                d_to_tgt_edge = dist_to_edge(gx, gy, first_target_xy[0], first_target_xy[1], first_target_half_ext) if first_target_xy else 999
+                                if d_to_tgt_edge <= tgt_radius:
+                                    gy += GRID_STEP
+                                    continue
                                 d = math.hypot(gx - sx, gy - sy)
                                 if d < best_dist:
                                     best_dist = d

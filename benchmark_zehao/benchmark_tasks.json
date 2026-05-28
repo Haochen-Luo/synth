@@ -23,7 +23,7 @@
         {
           "name": "nav_sofa",
           "target_object": "SofaFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the sofa",
           "place_at": null
@@ -44,7 +44,7 @@
         {
           "name": "nav_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -58,14 +58,14 @@
       "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
       "agent_start": [
         7.43,
-        11.43
+        11.93
       ],
-      "agent_yaw": -58.5,
+      "agent_yaw": -68.2,
       "phases": [
         {
           "name": "pick_book",
           "target_object": "BookStackFactory",
-          "radius": 1.5,
+          "radius": 1.0,
           "action": "PICK_UP",
           "desc": "the book on the floor",
           "place_at": [
@@ -77,7 +77,7 @@
         {
           "name": "go_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.5,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -98,7 +98,7 @@
         {
           "name": "turn_on_lamp",
           "target_object": "DeskLampFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "TURN_ON",
           "desc": "the desk lamp",
           "place_at": null
@@ -106,7 +106,7 @@
         {
           "name": "go_sofa",
           "target_object": "SofaFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the sofa",
           "place_at": null
@@ -127,7 +127,7 @@
         {
           "name": "nav_tvstand",
           "target_object": "TVStandFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the TV stand",
           "place_at": null
@@ -148,7 +148,7 @@
         {
           "name": "nav_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -169,7 +169,7 @@
         {
           "name": "pick_book",
           "target_object": "BookStackFactory",
-          "radius": 1.5,
+          "radius": 1.0,
           "action": "PICK_UP",
           "desc": "the book on the floor",
           "place_at": [
@@ -181,7 +181,7 @@
         {
           "name": "go_simplebookcase",
           "target_object": "LargeShelfFactory",
-          "radius": 2.5,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the large shelf",
           "place_at": null
@@ -202,7 +202,7 @@
         {
           "name": "turn_on_lamp",
           "target_object": "DeskLampFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "TURN_ON",
           "desc": "the desk lamp",
           "place_at": null
@@ -210,7 +210,7 @@
         {
           "name": "go_tvstand",
           "target_object": "TVStandFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the TV stand",
           "place_at": null
@@ -223,15 +223,15 @@
       "scene_dir": "native_case03_living_push_full_physics_scene",
       "instruction": "Go to the sofa.",
       "agent_start": [
-        5.92,
-        4.42
+        6.42,
+        6.92
       ],
-      "agent_yaw": -6.3,
+      "agent_yaw": -57.8,
       "phases": [
         {
           "name": "nav_sofa",
           "target_object": "SofaFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the sofa",
           "place_at": null
@@ -252,7 +252,7 @@
         {
           "name": "nav_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -273,7 +273,7 @@
         {
           "name": "pick_book",
           "target_object": "BookStackFactory",
-          "radius": 1.5,
+          "radius": 1.0,
           "action": "PICK_UP",
           "desc": "the book on the floor",
           "place_at": [
@@ -285,7 +285,7 @@
         {
           "name": "go_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.5,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -306,7 +306,7 @@
         {
           "name": "turn_on_lamp",
           "target_object": "DeskLampFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "TURN_ON",
           "desc": "the desk lamp",
           "place_at": null
@@ -314,7 +314,7 @@
         {
           "name": "go_sofa",
           "target_object": "SofaFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the sofa",
           "place_at": null
@@ -335,7 +335,7 @@
         {
           "name": "nav_sofa",
           "target_object": "SofaFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the sofa",
           "place_at": null
@@ -356,7 +356,7 @@
         {
           "name": "nav_simplebookcase",
           "target_object": "SofaFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the sofa",
           "place_at": null
@@ -377,7 +377,7 @@
         {
           "name": "pick_book",
           "target_object": "BookStackFactory",
-          "radius": 1.5,
+          "radius": 1.0,
           "action": "PICK_UP",
           "desc": "the book on the floor",
           "place_at": [
@@ -389,7 +389,7 @@
         {
           "name": "go_simplebookcase",
           "target_object": "TVStandFactory",
-          "radius": 2.5,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the TV stand",
           "place_at": null
@@ -410,7 +410,7 @@
         {
           "name": "turn_on_lamp",
           "target_object": "DeskLampFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "TURN_ON",
           "desc": "the desk lamp",
           "place_at": null
@@ -418,7 +418,7 @@
         {
           "name": "go_sofa",
           "target_object": "SofaFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the sofa",
           "place_at": null
@@ -439,7 +439,7 @@
         {
           "name": "nav_tabledining",
           "target_object": "TableDiningFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the dining table",
           "place_at": null
@@ -460,7 +460,7 @@
         {
           "name": "nav_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -481,7 +481,7 @@
         {
           "name": "pick_book",
           "target_object": "BookStackFactory",
-          "radius": 1.5,
+          "radius": 1.0,
           "action": "PICK_UP",
           "desc": "the book on the floor",
           "place_at": [
@@ -493,7 +493,7 @@
         {
           "name": "go_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.5,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -514,7 +514,7 @@
         {
           "name": "turn_on_lamp",
           "target_object": "DeskLampFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "TURN_ON",
           "desc": "the desk lamp",
           "place_at": null
@@ -522,7 +522,7 @@
         {
           "name": "go_tabledining",
           "target_object": "TableDiningFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the dining table",
           "place_at": null
@@ -535,15 +535,15 @@
       "scene_dir": "native_case06_dining_two_people_full_physics_scene",
       "instruction": "Go to the dining table.",
       "agent_start": [
-        0.93,
-        7.93
+        1.43,
+        10.93
       ],
-      "agent_yaw": 132.9,
+      "agent_yaw": -131.5,
       "phases": [
         {
           "name": "nav_tabledining",
           "target_object": "TableDiningFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the dining table",
           "place_at": null
@@ -564,7 +564,7 @@
         {
           "name": "nav_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -585,7 +585,7 @@
         {
           "name": "pick_book",
           "target_object": "BookStackFactory",
-          "radius": 1.5,
+          "radius": 1.0,
           "action": "PICK_UP",
           "desc": "the book on the floor",
           "place_at": [
@@ -597,7 +597,7 @@
         {
           "name": "go_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.5,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -618,7 +618,7 @@
         {
           "name": "turn_on_lamp",
           "target_object": "DeskLampFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "TURN_ON",
           "desc": "the desk lamp",
           "place_at": null
@@ -626,7 +626,7 @@
         {
           "name": "go_tabledining",
           "target_object": "TableDiningFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the dining table",
           "place_at": null
@@ -647,7 +647,7 @@
         {
           "name": "nav_tabledining",
           "target_object": "TableDiningFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the dining table",
           "place_at": null
@@ -668,7 +668,7 @@
         {
           "name": "nav_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -689,7 +689,7 @@
         {
           "name": "pick_book",
           "target_object": "BookStackFactory",
-          "radius": 1.5,
+          "radius": 1.0,
           "action": "PICK_UP",
           "desc": "the book on the floor",
           "place_at": [
@@ -701,7 +701,7 @@
         {
           "name": "go_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.5,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -722,7 +722,7 @@
         {
           "name": "pick_book",
           "target_object": "BookStackFactory",
-          "radius": 1.5,
+          "radius": 1.0,
           "action": "PICK_UP",
           "desc": "the book on the floor",
           "place_at": [
@@ -734,7 +734,7 @@
         {
           "name": "go_singlecabinet",
           "target_object": "SingleCabinetFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the cabinet",
           "place_at": null
@@ -755,7 +755,7 @@
         {
           "name": "nav_coffeetable",
           "target_object": "CoffeeTableFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the coffee table",
           "place_at": null
@@ -776,7 +776,7 @@
         {
           "name": "nav_desklamp",
           "target_object": "DeskLampFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the desk lamp",
           "place_at": null
@@ -797,7 +797,7 @@
         {
           "name": "pick_book",
           "target_object": "BookStackFactory",
-          "radius": 1.5,
+          "radius": 1.0,
           "action": "PICK_UP",
           "desc": "the book on the floor",
           "place_at": [
@@ -809,7 +809,7 @@
         {
           "name": "go_tvstand",
           "target_object": "TVStandFactory",
-          "radius": 2.5,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the TV stand",
           "place_at": null
@@ -830,7 +830,7 @@
         {
           "name": "turn_on_lamp",
           "target_object": "DeskLampFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "TURN_ON",
           "desc": "the desk lamp",
           "place_at": null
@@ -838,7 +838,7 @@
         {
           "name": "go_coffeetable",
           "target_object": "CoffeeTableFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the coffee table",
           "place_at": null
@@ -851,15 +851,15 @@
       "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
       "instruction": "Go to the dining table.",
       "agent_start": [
-        2.42,
-        5.92
+        4.42,
+        5.42
       ],
-      "agent_yaw": 81.4,
+      "agent_yaw": 123.7,
       "phases": [
         {
           "name": "nav_tabledining",
           "target_object": "TableDiningFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the dining table",
           "place_at": null
@@ -880,7 +880,7 @@
         {
           "name": "nav_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -901,7 +901,7 @@
         {
           "name": "pick_book",
           "target_object": "BookStackFactory",
-          "radius": 1.5,
+          "radius": 1.0,
           "action": "PICK_UP",
           "desc": "the book on the floor",
           "place_at": [
@@ -913,7 +913,7 @@
         {
           "name": "go_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.5,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
@@ -934,7 +934,7 @@
         {
           "name": "pick_book",
           "target_object": "BookStackFactory",
-          "radius": 1.5,
+          "radius": 1.0,
           "action": "PICK_UP",
           "desc": "the book on the floor",
           "place_at": [
@@ -946,7 +946,7 @@
         {
           "name": "go_kitchencabinet",
           "target_object": "KitchenCabinetFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the kitchen cabinet",
           "place_at": null
@@ -967,7 +967,7 @@
         {
           "name": "nav_sofa",
           "target_object": "SofaFactory",
-          "radius": 3.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the sofa",
           "place_at": null
@@ -988,7 +988,7 @@
         {
           "name": "nav_simplebookcase",
           "target_object": "SimpleBookcaseFactory",
-          "radius": 2.0,
+          "radius": 1.5,
           "action": "STOP",
           "desc": "the bookshelf",
           "place_at": null
