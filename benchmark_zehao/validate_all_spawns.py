@@ -387,6 +387,52 @@ def check_forward_clearance(query_if, sx, sy, yaw_deg, min_dist=1.2):
         return False
     return True
 
+def check_line_of_sight(query_if, sx, sy, target_xy, target_z=None):
+    """Multi-ray LOS: cast N rays from agent camera to a spread of points
+    around the target. PASS if ANY ray reaches the target unblocked.
+    This is an existential check (∃), not universal (∀) — reduces false kills
+    from a single unlucky ray hitting shelf edges etc.
+    Returns (pass, detail_string)."""
+    if target_xy is None:
+        return True, "no_target"
+    tx, ty = target_xy
+    tz = target_z if target_z is not None else 1.0
+    origin_z = 1.0  # camera height
+
+    SPREAD = 0.3  # metres — covers visual extent of small objects
+    sample_targets = [
+        (tx, ty, tz),
+        (tx + SPREAD, ty, tz),
+        (tx - SPREAD, ty, tz),
+        (tx, ty + SPREAD, tz),
+        (tx, ty - SPREAD, tz),
+    ]
+
+    blocked_details = []
+    for stx, sty, stz in sample_targets:
+        dx, dy, dz = stx - sx, sty - sy, stz - origin_z
+        dist = math.sqrt(dx*dx + dy*dy + dz*dz)
+        if dist < 0.1:
+            return True, "agent_at_target"
+        nx, ny, nz = dx/dist, dy/dist, dz/dist
+        h = query_if.raycast_closest(
+            carb.Float3(sx, sy, origin_z),
+            carb.Float3(nx, ny, nz), dist)
+        if not h["hit"]:
+            return True, f"clear (no hit, dist={dist:.2f}m)"
+        hit_path = (h.get("rigidBody") or h.get("collider") or "").lower()
+        hit_dist = float(h.get("distance", 0))
+        # Walkable surface hit → not blocking
+        if any(w in hit_path for w in WALKABLE):
+            return True, f"clear (walkable hit: {hit_path.split('/')[-1][:40]})"
+        # Hit is beyond target → not blocking
+        if hit_dist >= dist - 0.3:
+            return True, f"clear (hit beyond target, hit_d={hit_dist:.2f} vs tgt_d={dist:.2f})"
+        blocked_details.append(f"{hit_path.split('/')[-1][:40]} @{hit_dist:.2f}m")
+
+    # ALL rays blocked
+    return False, f"ALL {len(sample_targets)} rays blocked: {'; '.join(blocked_details[:3])}"
+
 def check_fov(sx, sy, yaw_deg, target_xy, level):
     """
     L1/L3 → target MUST be within ±FOV_HALF_DEG of yaw (visible)
@@ -502,14 +548,18 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
 
         # ── Resolve first-phase target for FOV check ──
         first_target_xy = None
+        first_target_z = None
+        first_target_prim_path = None
         if phases:
             tobj = phases[0]["target_object"]
             if not tobj.startswith("__human_"):
                 pp = find_prim_by_factory(stage, tobj)
                 if pp:
+                    first_target_prim_path = pp
                     c = get_prim_world_center(stage, pp)
                     if c:
                         first_target_xy = c[:2]
+                        first_target_z = c[2] if len(c) > 2 else None
 
         # ── Check 3: FOV ──
         fov_ok, fov_detail = check_fov(sx, sy, yaw, first_target_xy, level)
@@ -527,17 +577,56 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
             result["status"] = "FAIL"
             log(f"[VAL] ❌ {tid}: Forward clearance failed (staring at a wall)")
 
+        # ── Check 4: Target in Room (audit — same room region) ──
+        target_in_room = True
+        if first_target_xy and floor_poly:
+            target_in_room = point_in_polygon_xy(
+                first_target_xy[0], first_target_xy[1], floor_poly)
+            agent_to_target = math.hypot(sx - first_target_xy[0], sy - first_target_xy[1])
+            result["checks"]["target_in_room"] = {
+                "pass": target_in_room,
+                "target_xy": list(first_target_xy),
+                "target_prim": first_target_prim_path,
+                "agent_to_target_dist": round(agent_to_target, 2),
+                "detail": (f"target at ({first_target_xy[0]:.2f},{first_target_xy[1]:.2f}) "
+                           f"{'inside' if target_in_room else 'OUTSIDE'} floor polygon, "
+                           f"dist={agent_to_target:.2f}m")
+            }
+            if not target_in_room:
+                log(f"[VAL] ⚠ {tid}: Target OUTSIDE floor polygon at "
+                    f"({first_target_xy[0]:.2f},{first_target_xy[1]:.2f}) — "
+                    f"may be in different room region (dist={agent_to_target:.2f}m)")
+
+        # ── Check 5: Line of Sight (L1/L3 only) ──
+        lnum = int(level.replace("L",""))
+        want_visible = (lnum % 2 == 1)
+        los_ok = True
+        if want_visible and first_target_xy:
+            los_ok, los_detail = check_line_of_sight(
+                query_if, sx, sy, first_target_xy, first_target_z)
+            result["checks"]["line_of_sight"] = {
+                "pass": los_ok,
+                "detail": los_detail
+            }
+            if not los_ok:
+                result["status"] = "FAIL"
+                log(f"[VAL] ❌ {tid}: LOS blocked — {los_detail}")
+
         # ── Auto-fix ──
         if result["status"] == "FAIL" and FIX_MODE:
             fixed = False
             new_x, new_y, new_yaw = sx, sy, yaw
 
-            # Strategy 1: If only FOV/clearance is wrong, just fix yaw
-            if in_floor and coll_ok and (not fov_ok or not fwd_ok):
+            # Strategy 1: If only FOV/clearance/LOS is wrong, just fix yaw
+            if in_floor and coll_ok and (not fov_ok or not fwd_ok or not los_ok):
                 candidate_yaw = fix_yaw_for_fov(query_if, sx, sy, first_target_xy, level)
                 f_fov, _ = check_fov(sx, sy, candidate_yaw, first_target_xy, level)
                 f_fwd = check_forward_clearance(query_if, sx, sy, candidate_yaw, min_dist=1.2)
-                if f_fov and f_fwd:
+                # For L1/L3, also check LOS at the candidate yaw (position unchanged)
+                f_los = True
+                if want_visible and first_target_xy:
+                    f_los, _ = check_line_of_sight(query_if, sx, sy, first_target_xy, first_target_z)
+                if f_fov and f_fwd and f_los:
                     new_yaw = candidate_yaw
                     result["fixes"].append(f"yaw: {yaw:.1f} → {new_yaw:.1f}")
                     log(f"[VAL] 🔧 {tid}: Fixed yaw {yaw:.1f} → {new_yaw:.1f}")
@@ -561,7 +650,11 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                             candidate_yaw = fix_yaw_for_fov(query_if, gx, gy, first_target_xy, level)
                             fov_c, _ = check_fov(gx, gy, candidate_yaw, first_target_xy, level)
                             fwd_c = check_forward_clearance(query_if, gx, gy, candidate_yaw, min_dist=1.2)
-                            if fov_c and fwd_c:
+                            # For L1/L3, also require LOS from this candidate
+                            los_c = True
+                            if want_visible and first_target_xy:
+                                los_c, _ = check_line_of_sight(query_if, gx, gy, first_target_xy, first_target_z)
+                            if fov_c and fwd_c and los_c:
                                 d = math.hypot(gx - sx, gy - sy)
                                 if d < best_dist:
                                     best_dist = d

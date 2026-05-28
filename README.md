@@ -203,19 +203,40 @@ Since `scene_objects` bounds are missing from all task specs, this fallback is a
 **Impact**: If the agent spawns near a wall or in a narrow room (e.g. `case02-L3` at `Y=1.25`), the `-2m` offset places one of the 80000.0 intensity lights deep inside or behind the wall geometry. This causes massive ray-bounced light bleeding ("fireflies") and locally blows out the exposure of the room in FPV and Bird views.
 **Fix**: Left as a legacy issue as it guarantees scenes are at least visible for VLM evaluation. A future fix should either use a properly ray-cast uniform `RectLight` ceiling panel, or calculate strict scene bounds using the Infinigen floor meshes to ensure fill-lights never spawn inside walls.
 
+### Cross-Room Target Resolution (Robustness)
+Currently, `find_prim_by_factory()` picks the first prim matching a factory name from the
+*entire* stage. If the same factory spawns furniture in multiple rooms (e.g. a
+`SimpleBookcaseFactory` in both the living room and the hallway), the target could resolve
+to a prim outside the agent's floor polygon. V5 validation audits this via
+`target_in_room` (all 38 current tasks pass), but for future-proofing:
+* **Auto-fix Option 1**: `find_all_prims_by_factory()` + `point_in_polygon_xy()` to prefer
+  an in-room instance of the same factory class.
+* **Auto-fix Option 2**: For L3 `place_at` targets, nudge `place_at` coordinates into
+  the floor polygon (JSON-only edit, no USD modification needed).
+* **Auto-fix Option 3**: If no in-room instance of the same semantic class exists, swap
+  to a different semantic class target that IS in-room, ensuring the chosen factory isn't
+  already used by another task in the same scene (uniqueness constraint).
+* **Last resort**: Flag as `UNFIXABLE` for manual review.
+
 ---
 
-## Upcoming Fixes (Next Session)
+## Spawn Validation Pipeline (V1 - V5)
 
-As of the end of the V4 validation run (2026-05-28), two newly discovered edge cases require immediate fixing in the next session:
+V1–V4 history documented below. **V5** adds:
 
-### 1. L1/L3 True Line of Sight (LOS) Failure (`case01-L3` Face-wall Bug)
-* **The Contradiction**: L1 and L3 tasks require the agent to visibly see the target upon spawning. In `case01-L3`, the agent mathematically faced the BookStack target and passed the 1.2m forward clearance check, but the target was located in an L-shaped alcove. The direct line of sight was blocked by the inner corner wall of the L-shaped room, causing the agent to stare at a blank wall.
-* **Proposed Method**: Overhaul `validate_all_spawns.py` to include a full **Line of Sight (LOS) Raycast** for L1 and L3 tasks. A ray must be cast from the agent directly to the target; if it hits *any* non-walkable geometry (like the corner wall) before reaching the target, the spawn coordinate is discarded and the agent is relocated to a spot with a truly unobstructed view.
-
-### 2. Bird's-Eye View "Red/Blue Sky" Bleed (`case06-L2`)
-* **The Contradiction**: Because we hide the ceiling to generate the Bird's-Eye View, the downward-facing camera looks through the empty void outside the room's walls and accidentally captures the bottom half of the Infinigen physical Sky Dome (which dynamically changes to red/blue/black depending on the time of day). As an indoor benchmark, projecting outdoor sky colors into the background is highly distracting.
-* **Proposed Method**: In `bench_runner.py`, dynamically generate a massive, completely black, unlit `UsdGeom.Mesh` plane at `Z = -1.0` (beneath the floor level). This will act as a solid dark backdrop, physically blocking the camera from seeing the sky dome through the void, guaranteeing a clean black background for all bird's-eye frames without altering indoor FPV lighting.
+12. **Multi-Ray Line of Sight (LOS) Check (`validate_all_spawns.py`)** — For L1/L3 tasks,
+    casts 5 rays from agent camera height to a ±0.3m spread around the target center.
+    Passes if *any* ray reaches the target unblocked (existential ∃ check, not universal ∀).
+    Prevents agents from spawning behind furniture or L-shaped wall corners that block
+    the view of the target they must navigate to.
+13. **Target-In-Room Audit** — Validates that each task's first-phase target prim center is
+    inside the primary room's concave floor polygon. Flags tasks where the target may be
+    in a different room region (hallway, mezzanine).
+14. **Bird's-Eye DomeLight Hide (`bench_runner.py`)** — The Infinigen `DomeLight` at
+    `/World/Env/env_light` projects an HDR sky texture onto an infinite sphere. With the
+    ceiling hidden for bird-eye view, some timecodes expose red/blue sky through wall gaps.
+    Fixed by `MakeInvisible()` on `/World/Env/` DomeLights (intensity=0.25, negligible vs
+    5× 80000 fill lights). Runner-scoped DomeLights under `/World/Humans/` are kept.
 
 ---
 

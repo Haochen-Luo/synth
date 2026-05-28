@@ -57,10 +57,10 @@
       "scene_dir": "native_case01_living_follow_full_physics_scene",
       "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
       "agent_start": [
-        7.43,
+        12.43,
         11.43
       ],
-      "agent_yaw": 23.0,
+      "agent_yaw": 107.2,
       "phases": [
         {
           "name": "pick_book",
@@ -223,10 +223,10 @@
       "scene_dir": "native_case03_living_push_full_physics_scene",
       "instruction": "Go to the sofa.",
       "agent_start": [
-        5.92,
-        4.42
+        8.92,
+        3.42
       ],
-      "agent_yaw": -6.3,
+      "agent_yaw": 135.6,
       "phases": [
         {
           "name": "nav_sofa",
@@ -473,10 +473,10 @@
       "scene_dir": "native_case05_dining_turn_left_full_physics_scene",
       "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
       "agent_start": [
-        2.45,
-        4.95
+        1.45,
+        7.45
       ],
-      "agent_yaw": 27.8,
+      "agent_yaw": -6.2,
       "phases": [
         {
           "name": "pick_book",
@@ -640,9 +640,9 @@
       "instruction": "Go to the dining table.",
       "agent_start": [
         1.94,
-        6.94
+        6.44
       ],
-      "agent_yaw": 25.8,
+      "agent_yaw": 34.1,
       "phases": [
         {
           "name": "nav_tabledining",
@@ -681,10 +681,10 @@
       "scene_dir": "native_case07_dining_zoom_full_physics_scene",
       "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
       "agent_start": [
-        2.94,
-        8.44
+        5.94,
+        7.44
       ],
-      "agent_yaw": 11.9,
+      "agent_yaw": 84.0,
       "phases": [
         {
           "name": "pick_book",
@@ -789,10 +789,10 @@
       "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
       "instruction": "Pick up the book from the floor and bring it to the TV stand.",
       "agent_start": [
-        10.43,
+        10.93,
         4.43
       ],
-      "agent_yaw": 116.8,
+      "agent_yaw": 120.6,
       "phases": [
         {
           "name": "pick_book",
@@ -893,10 +893,10 @@
       "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
       "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
       "agent_start": [
-        3.92,
-        3.92
+        4.42,
+        7.92
       ],
-      "agent_yaw": 28.0,
+      "agent_yaw": 0.1,
       "phases": [
         {
           "name": "pick_book",
