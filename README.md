@@ -177,3 +177,8 @@ the camera may visually "see through" the geometry due to the 0.3m near-clip dis
 Mitigated by increasing `_sweep_clear` wall buffer from 0.05→0.15m (2025-05-28), but
 grazing-angle approaches can still place the camera close to walls.
 
+---
+
+## References
+
+- [Spawn Validation & Wall-Clipping Fix (2025-05-28)](benchmark_zehao/docs/walkthrough_spawn_validation_0528.md) — wall buffer fix, spawn nudge, FOV gate, BFS reachability
