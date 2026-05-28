@@ -27,12 +27,7 @@ FLOOR_INSET   = 0.3   # metres inward from floor bbox edges (avoid wall-hugging)
 SWEEP_RADIUS  = 0.40  # PhysX sweep sphere radius (matches bench_runner)
 SWEEP_DIST    = 0.05  # sweep travel distance
 FOV_HALF_DEG  = 45.0  # ±45° FOV cone for visibility check
-# Prims that the sweep sphere may touch but are not real obstacles.
-# Room structure (wall, ceiling, exterior, skirting) is always near spawn
-# because rooms are small; we only care about furniture overlaps.
-WALKABLE      = ("floor", "ground", "rug", "blanket", "towel", "mat",
-                 "wall", "ceiling", "exterior", "skirtingboard",
-                 "skirting", "baseboard")
+WALKABLE      = ("floor", "ground", "rug", "blanket", "towel", "mat")
 
 # ── Search grid for auto-fix ──
 GRID_STEP     = 0.5   # metres between candidate points
@@ -185,23 +180,6 @@ def point_in_polygon_xy(px, py, poly):
                 inside = not inside
         j = i
     return inside
-
-def shrink_polygon(poly, margin):
-    """Approximate inward shrink by moving each vertex toward centroid."""
-    if len(poly) < 3 or margin <= 0:
-        return poly
-    cx = sum(p[0] for p in poly) / len(poly)
-    cy = sum(p[1] for p in poly) / len(poly)
-    result = []
-    for p in poly:
-        dx, dy = p[0] - cx, p[1] - cy
-        d = math.hypot(dx, dy)
-        if d < 1e-6:
-            result.append(p)
-        else:
-            shrink = min(margin / d, 0.9)  # don't collapse
-            result.append([p[0] - dx * shrink, p[1] - dy * shrink])
-    return result
 
 # ── Floor detection (replicates BEV pipeline room selection logic) ──
 
@@ -370,12 +348,11 @@ def _find_floor_bbox_fallback(stage):
                 return poly, bbox
     return None, None
 
-def check_in_floor(x, y, floor_poly, margin=FLOOR_INSET):
-    """Check if (x,y) is within the floor polygon (shrunk by margin)."""
+def check_in_floor(x, y, floor_poly):
+    """Check if (x,y) is within the floor polygon."""
     if floor_poly is None:
         return True  # can't check, assume OK
-    shrunk = shrink_polygon(floor_poly, margin)
-    return point_in_polygon_xy(x, y, shrunk)
+    return point_in_polygon_xy(x, y, floor_poly)
 
 def check_collision_clear(query_if, cx, cy):
     """PhysX sweep — returns True if spawn is clear."""
@@ -392,6 +369,23 @@ def check_collision_clear(query_if, cx, cy):
                 if d < 0.01:
                     return False, wp.split("/")[-1][:60]
     return True, ""
+
+def check_forward_clearance(query_if, sx, sy, yaw_deg, min_dist=1.2):
+    """Raycast forward to ensure the agent isn't staring point-blank at a wall."""
+    rad = math.radians(yaw_deg)
+    dx = math.cos(rad)
+    dy = math.sin(rad)
+    # Cast ray from approx camera height (z=1.0)
+    origin = carb.Float3(sx, sy, 1.0)
+    dir_vec = carb.Float3(dx, dy, 0.0)
+    h = query_if.raycast_closest(origin, dir_vec, min_dist)
+    if h["hit"]:
+        hit_path = h["rigidBody"] or h["collider"]
+        hit_name = hit_path.split("/")[-1].lower()
+        if any(w in hit_name for w in WALKABLE):
+            return True
+        return False
+    return True
 
 def check_fov(sx, sy, yaw_deg, target_xy, level):
     """
@@ -411,7 +405,7 @@ def check_fov(sx, sy, yaw_deg, target_xy, level):
     detail = f"rel_angle={rel:.1f}° in_fov={in_fov} want_visible={want_visible}"
     return ok, detail
 
-def fix_yaw_for_fov(sx, sy, target_xy, level):
+def fix_yaw_for_fov(query_if, sx, sy, target_xy, level):
     """Compute a yaw that satisfies the FOV constraint for the given level."""
     if target_xy is None:
         return 0.0
@@ -423,7 +417,11 @@ def fix_yaw_for_fov(sx, sy, target_xy, level):
         # face toward target
         return angle_to_target
     else:
-        # face AWAY from target (rotate 180°)
+        # face AWAY from target (try multiple angles outside FOV cone)
+        for offset in [180, 150, 210, 120, 240, 90, 270]:
+            test_yaw = ((angle_to_target + offset + 180) % 360) - 180
+            if check_forward_clearance(query_if, sx, sy, test_yaw, min_dist=1.2):
+                return test_yaw
         return ((angle_to_target + 180 + 180) % 360) - 180
 
 # ─────────────────────────────────────────────────────────────────
@@ -524,19 +522,28 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
             result["status"] = "FAIL"
             log(f"[VAL] ❌ {tid}: FOV constraint failed — {fov_detail}")
 
+        fwd_ok = check_forward_clearance(query_if, sx, sy, yaw, min_dist=1.2)
+        if not fwd_ok:
+            result["status"] = "FAIL"
+            log(f"[VAL] ❌ {tid}: Forward clearance failed (staring at a wall)")
+
         # ── Auto-fix ──
         if result["status"] == "FAIL" and FIX_MODE:
             fixed = False
             new_x, new_y, new_yaw = sx, sy, yaw
 
-            # Strategy 1: If only FOV is wrong, just fix yaw
-            if in_floor and coll_ok and not fov_ok:
-                new_yaw = fix_yaw_for_fov(sx, sy, first_target_xy, level)
-                result["fixes"].append(f"yaw: {yaw:.1f} → {new_yaw:.1f}")
-                log(f"[VAL] 🔧 {tid}: Fixed yaw {yaw:.1f} → {new_yaw:.1f}")
-                fixed = True
+            # Strategy 1: If only FOV/clearance is wrong, just fix yaw
+            if in_floor and coll_ok and (not fov_ok or not fwd_ok):
+                candidate_yaw = fix_yaw_for_fov(query_if, sx, sy, first_target_xy, level)
+                f_fov, _ = check_fov(sx, sy, candidate_yaw, first_target_xy, level)
+                f_fwd = check_forward_clearance(query_if, sx, sy, candidate_yaw, min_dist=1.2)
+                if f_fov and f_fwd:
+                    new_yaw = candidate_yaw
+                    result["fixes"].append(f"yaw: {yaw:.1f} → {new_yaw:.1f}")
+                    log(f"[VAL] 🔧 {tid}: Fixed yaw {yaw:.1f} → {new_yaw:.1f}")
+                    fixed = True
 
-            # Strategy 2: If position is bad, search within floor bbox
+            # Strategy 2: If position is bad or yaw couldn't be fixed, search within floor bbox
             if not fixed and floor_bbox:
                 xmin, ymin, xmax, ymax = floor_bbox
                 best_dist = float('inf')
@@ -551,9 +558,10 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                             continue
                         c_ok, _ = check_collision_clear(query_if, gx, gy)
                         if c_ok:
-                            candidate_yaw = fix_yaw_for_fov(gx, gy, first_target_xy, level)
+                            candidate_yaw = fix_yaw_for_fov(query_if, gx, gy, first_target_xy, level)
                             fov_c, _ = check_fov(gx, gy, candidate_yaw, first_target_xy, level)
-                            if fov_c:
+                            fwd_c = check_forward_clearance(query_if, gx, gy, candidate_yaw, min_dist=1.2)
+                            if fov_c and fwd_c:
                                 d = math.hypot(gx - sx, gy - sy)
                                 if d < best_dist:
                                     best_dist = d
