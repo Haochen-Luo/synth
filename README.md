@@ -205,6 +205,20 @@ Since `scene_objects` bounds are missing from all task specs, this fallback is a
 
 ---
 
+## Upcoming Fixes (Next Session)
+
+As of the end of the V4 validation run (2026-05-28), two newly discovered edge cases require immediate fixing in the next session:
+
+### 1. L1/L3 True Line of Sight (LOS) Failure (`case01-L3` Face-wall Bug)
+* **The Contradiction**: L1 and L3 tasks require the agent to visibly see the target upon spawning. In `case01-L3`, the agent mathematically faced the BookStack target and passed the 1.2m forward clearance check, but the target was located in an L-shaped alcove. The direct line of sight was blocked by the inner corner wall of the L-shaped room, causing the agent to stare at a blank wall.
+* **Proposed Method**: Overhaul `validate_all_spawns.py` to include a full **Line of Sight (LOS) Raycast** for L1 and L3 tasks. A ray must be cast from the agent directly to the target; if it hits *any* non-walkable geometry (like the corner wall) before reaching the target, the spawn coordinate is discarded and the agent is relocated to a spot with a truly unobstructed view.
+
+### 2. Bird's-Eye View "Red/Blue Sky" Bleed (`case06-L2`)
+* **The Contradiction**: Because we hide the ceiling to generate the Bird's-Eye View, the downward-facing camera looks through the empty void outside the room's walls and accidentally captures the bottom half of the Infinigen physical Sky Dome (which dynamically changes to red/blue/black depending on the time of day). As an indoor benchmark, projecting outdoor sky colors into the background is highly distracting.
+* **Proposed Method**: In `bench_runner.py`, dynamically generate a massive, completely black, unlit `UsdGeom.Mesh` plane at `Z = -1.0` (beneath the floor level). This will act as a solid dark backdrop, physically blocking the camera from seeing the sky dome through the void, guaranteeing a clean black background for all bird's-eye frames without altering indoor FPV lighting.
+
+---
+
 ## References
 
 - [Spawn Validation & Wall-Clipping Fix (2025-05-28)](benchmark_zehao/docs/walkthrough_spawn_validation_0528.md) — wall buffer fix, spawn nudge, FOV gate, BFS reachability
