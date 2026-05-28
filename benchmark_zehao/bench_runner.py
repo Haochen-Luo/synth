@@ -355,10 +355,26 @@ try:
             log(f"[BENCH] Dancer: scale={runner_scale}, Z={DANCER_MESH_GROUND_Z:.4f}")
             break
 
-    # ── Lighting — always add fill lights for PathTracing (required) ──
-    # PathTracing mode needs explicit lights; built-in scene lights may not emit enough.
-    light_intensity = 50000.0
+    # ── Scene geometry bounds (used by bird-eye camera placement) ──
     all_c = [o["center"][:2] for o in spec.get("scene_objects", [{}]) if isinstance(o.get("center"), list)]
+
+    # ── Tame built-in scene lights ──
+    # Some scenes (e.g. case02) ship with PointLampFactory lights at
+    # absurd intensities (~500M).  Cap them to a sane maximum so they
+    # don't blow out the whole image under PathTracing.
+    SCENE_LIGHT_CAP = 100000.0          # max intensity for any built-in light
+    for p in stage.Traverse():
+        ptype = p.GetTypeName()
+        if "Light" not in ptype:
+            continue
+        int_attr = p.GetAttribute("inputs:intensity")
+        if int_attr and int_attr.IsValid():
+            orig = int_attr.Get()
+            if orig is not None and orig > SCENE_LIGHT_CAP:
+                int_attr.Set(SCENE_LIGHT_CAP)
+                log(f"[BENCH] Capped scene light {p.GetPath()} from {orig:.0f} → {SCENE_LIGHT_CAP:.0f}")
+
+    # ── Fill lights — supplement built-in CeilingLightFactory lights ──
     if all_c:
         x_min, x_max = min(c[0] for c in all_c), max(c[0] for c in all_c)
         y_min, y_max = min(c[1] for c in all_c), max(c[1] for c in all_c)
@@ -369,18 +385,16 @@ try:
             (cx-dx, cy+dy, 2.3), (cx+dx, cy+dy, 2.3)
         ]
     else:
-        # Fallback
         lx, ly = agent_start_xy[0], agent_start_xy[1]
         light_positions = [(lx, ly, 2.3), (lx-2, ly, 2.3), (lx+2, ly, 2.3), (lx, ly-2, 2.3), (lx, ly+2, 2.3)]
-        
-    # ── Lighting — matching original benchmark ──
+
     for i, lp in enumerate(light_positions):
         lt = UsdLux.SphereLight.Define(stage, f"/World/Lights/BenchLight_{i}")
         lt.CreateIntensityAttr().Set(80000.0)
         lt.CreateRadiusAttr().Set(0.3)
         xf = UsdGeom.Xformable(lt); xf.ClearXformOpOrder()
         xf.AddTranslateOp().Set(Gf.Vec3d(*lp))
-    
+
     log("[BENCH] Added 5 fill lights at intensity=80000.0")
 
     # (Ceiling already hidden above — no duplicate needed)
