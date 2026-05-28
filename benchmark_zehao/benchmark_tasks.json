@@ -57,10 +57,10 @@
       "scene_dir": "native_case01_living_follow_full_physics_scene",
       "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
       "agent_start": [
-        12.43,
+        7.43,
         11.43
       ],
-      "agent_yaw": 107.2,
+      "agent_yaw": -58.5,
       "phases": [
         {
           "name": "pick_book",
@@ -268,7 +268,7 @@
         6.5,
         6.1
       ],
-      "agent_yaw": -76.2,
+      "agent_yaw": -23.0,
       "phases": [
         {
           "name": "pick_book",
@@ -474,9 +474,9 @@
       "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
       "agent_start": [
         1.45,
-        7.45
+        6.45
       ],
-      "agent_yaw": -6.2,
+      "agent_yaw": 11.3,
       "phases": [
         {
           "name": "pick_book",
@@ -580,7 +580,7 @@
         -0.07,
         10.93
       ],
-      "agent_yaw": -142.2,
+      "agent_yaw": -83.4,
       "phases": [
         {
           "name": "pick_book",
@@ -681,10 +681,10 @@
       "scene_dir": "native_case07_dining_zoom_full_physics_scene",
       "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
       "agent_start": [
-        5.94,
-        7.44
+        2.44,
+        7.94
       ],
-      "agent_yaw": 84.0,
+      "agent_yaw": -33.6,
       "phases": [
         {
           "name": "pick_book",
@@ -789,10 +789,10 @@
       "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
       "instruction": "Pick up the book from the floor and bring it to the TV stand.",
       "agent_start": [
-        10.93,
+        10.43,
         4.43
       ],
-      "agent_yaw": 120.6,
+      "agent_yaw": 116.8,
       "phases": [
         {
           "name": "pick_book",
@@ -893,10 +893,10 @@
       "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
       "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
       "agent_start": [
-        4.42,
-        7.92
+        3.92,
+        3.92
       ],
-      "agent_yaw": 0.1,
+      "agent_yaw": 28.0,
       "phases": [
         {
           "name": "pick_book",

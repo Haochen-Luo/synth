@@ -579,6 +579,14 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                 pp = find_prim_by_factory(stage, tobj)
                 if pp:
                     first_target_prim_path = pp
+                # Use place_at if present (L3 pick-up tasks relocate the
+                # object at runtime; validator must check the ACTUAL position)
+                pa = phases[0].get("place_at")
+                if pa and pa is not None:
+                    first_target_xy = (pa[0], pa[1])
+                    first_target_z = pa[2] if len(pa) > 2 else None
+                    log(f"[VAL]   Using place_at ({pa[0]:.1f},{pa[1]:.1f},{pa[2] if len(pa)>2 else '?'}) as target position")
+                elif pp:
                     c = get_prim_world_center(stage, pp)
                     if c:
                         first_target_xy = c[:2]
