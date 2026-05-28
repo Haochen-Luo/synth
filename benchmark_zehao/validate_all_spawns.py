@@ -387,17 +387,29 @@ def check_forward_clearance(query_if, sx, sy, yaw_deg, min_dist=1.2):
         return False
     return True
 
-def check_line_of_sight(query_if, sx, sy, target_xy, target_z=None):
+def check_line_of_sight(query_if, sx, sy, target_xy, target_z=None,
+                        target_prim_path=None, target_factory=None):
     """Multi-ray LOS: cast N rays from agent camera to a spread of points
     around the target. PASS if ANY ray reaches the target unblocked.
     This is an existential check (∃), not universal (∀) — reduces false kills
     from a single unlucky ray hitting shelf edges etc.
+
+    IMPORTANT: If a ray hits the target prim itself (or a prim belonging to the
+    same factory), that counts as "can see the target", NOT as an obstruction.
+    PhysX collider paths may differ from USD prim paths, so we match by both
+    full prim path containment and factory name prefix.
+
     Returns (pass, detail_string)."""
     if target_xy is None:
         return True, "no_target"
     tx, ty = target_xy
     tz = target_z if target_z is not None else 1.0
     origin_z = 1.0  # camera height
+
+    # Build matchers: prim path fragment + factory name for target identification
+    target_path_lower = target_prim_path.lower() if target_prim_path else ""
+    # Extract the key factory token e.g. "sofafactory" from "SofaFactory"
+    target_factory_lower = target_factory.lower() if target_factory else ""
 
     SPREAD = 0.3  # metres — covers visual extent of small objects
     sample_targets = [
@@ -425,6 +437,15 @@ def check_line_of_sight(query_if, sx, sy, target_xy, target_z=None):
         # Walkable surface hit → not blocking
         if any(w in hit_path for w in WALKABLE):
             return True, f"clear (walkable hit: {hit_path.split('/')[-1][:40]})"
+        # Hit is the TARGET ITSELF → can see target, not an obstruction!
+        # Match by: (a) prim path containment, or (b) same factory name
+        is_target_hit = False
+        if target_path_lower and target_path_lower in hit_path:
+            is_target_hit = True
+        elif target_factory_lower and target_factory_lower in hit_path:
+            is_target_hit = True
+        if is_target_hit:
+            return True, f"clear (hit target itself: {hit_path.split('/')[-1][:40]} @{hit_dist:.2f}m)"
         # Hit is beyond target → not blocking
         if hit_dist >= dist - 0.3:
             return True, f"clear (hit beyond target, hit_d={hit_dist:.2f} vs tgt_d={dist:.2f})"
@@ -550,9 +571,11 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
         first_target_xy = None
         first_target_z = None
         first_target_prim_path = None
+        first_target_factory = None
         if phases:
             tobj = phases[0]["target_object"]
             if not tobj.startswith("__human_"):
+                first_target_factory = tobj
                 pp = find_prim_by_factory(stage, tobj)
                 if pp:
                     first_target_prim_path = pp
@@ -603,7 +626,9 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
         los_ok = True
         if want_visible and first_target_xy:
             los_ok, los_detail = check_line_of_sight(
-                query_if, sx, sy, first_target_xy, first_target_z)
+                query_if, sx, sy, first_target_xy, first_target_z,
+                target_prim_path=first_target_prim_path,
+                target_factory=first_target_factory)
             result["checks"]["line_of_sight"] = {
                 "pass": los_ok,
                 "detail": los_detail
@@ -625,7 +650,10 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                 # For L1/L3, also check LOS at the candidate yaw (position unchanged)
                 f_los = True
                 if want_visible and first_target_xy:
-                    f_los, _ = check_line_of_sight(query_if, sx, sy, first_target_xy, first_target_z)
+                    f_los, _ = check_line_of_sight(
+                        query_if, sx, sy, first_target_xy, first_target_z,
+                        target_prim_path=first_target_prim_path,
+                        target_factory=first_target_factory)
                 if f_fov and f_fwd and f_los:
                     new_yaw = candidate_yaw
                     result["fixes"].append(f"yaw: {yaw:.1f} → {new_yaw:.1f}")
@@ -653,7 +681,10 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                             # For L1/L3, also require LOS from this candidate
                             los_c = True
                             if want_visible and first_target_xy:
-                                los_c, _ = check_line_of_sight(query_if, gx, gy, first_target_xy, first_target_z)
+                                los_c, _ = check_line_of_sight(
+                                    query_if, gx, gy, first_target_xy, first_target_z,
+                                    target_prim_path=first_target_prim_path,
+                                    target_factory=first_target_factory)
                             if fov_c and fwd_c and los_c:
                                 d = math.hypot(gx - sx, gy - sy)
                                 if d < best_dist:

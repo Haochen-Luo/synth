@@ -223,10 +223,10 @@
       "scene_dir": "native_case03_living_push_full_physics_scene",
       "instruction": "Go to the sofa.",
       "agent_start": [
-        8.92,
-        3.42
+        5.92,
+        4.42
       ],
-      "agent_yaw": 135.6,
+      "agent_yaw": -6.3,
       "phases": [
         {
           "name": "nav_sofa",
