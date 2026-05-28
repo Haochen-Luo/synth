@@ -642,12 +642,17 @@ try:
 
                 # ── Wall-slide push resolution ──
                 def _sweep_clear(ox, oy, dx, dy, dist):
-                    """Return max safe travel distance along (dx,dy)."""
+                    """Return max safe travel distance along (dx,dy).
+                    Buffer of 0.15m keeps agent center ≥0.55m from walls,
+                    so camera (0.1m forward offset) stays ≥0.45m clear —
+                    well beyond the 0.3m near-clip distance. This prevents
+                    visual clipping through thin geometry (window frames)
+                    when runner push moves the agent toward walls."""
                     try:
                         for sz in [0.5, 1.0]:
                             h = query_if.sweep_sphere_closest(
                                 0.40, carb.Float3(ox, oy, sz),
-                                carb.Float3(dx, dy, 0), dist + 0.05)
+                                carb.Float3(dx, dy, 0), dist + 0.15)
                             if h["hit"]:
                                 wp = (h.get("rigidBody") or
                                       h.get("collider") or "").lower()
@@ -655,7 +660,7 @@ try:
                                        ("floor","ground","rug","blanket",
                                         "towel","mat")):
                                     continue
-                                return max(float(h.get("distance", 0)) - 0.05, 0.0)
+                                return max(float(h.get("distance", 0)) - 0.15, 0.0)
                     except Exception:
                         pass
                     return dist
@@ -883,6 +888,88 @@ try:
     vlm_calls = 0   # episode counter (== step count in single-action mode)
 
     log(f"[BENCH] Starting nav loop: start=({ax},{ay}) yaw={ayaw}")
+
+    # ── Spawn nudge: ensure agent doesn't overlap static obstacles ──
+    # Uses PhysX sweep to detect immediate overlaps and spiral-searches
+    # for the nearest clear position. Saves adjustment details for review.
+    import omni.physx, carb
+    sim_app.update()
+    query_if = omni.physx.get_physx_scene_query_interface()
+
+    WALKABLE_SPAWN = ("floor", "ground", "rug", "blanket", "towel", "mat")
+    _8DIRS = [(1,0),(-1,0),(0,1),(0,-1),
+              (0.707,0.707),(-0.707,0.707),(0.707,-0.707),(-0.707,-0.707)]
+
+    def _check_spawn_clear(cx, cy):
+        """Return (is_clear, worst_hit_path, worst_dist) for a candidate spawn."""
+        for sz in [0.5, 1.0]:
+            for dx, dy in _8DIRS:
+                h = query_if.sweep_sphere_closest(
+                    0.40, carb.Float3(cx, cy, sz),
+                    carb.Float3(dx, dy, 0), 0.05)
+                if h["hit"]:
+                    wp = (h.get("rigidBody") or h.get("collider") or "").lower()
+                    if any(w in wp for w in WALKABLE_SPAWN):
+                        continue
+                    d = float(h.get("distance", 0))
+                    if d < 0.01:
+                        return False, wp.split("/")[-1][:60], d
+        return True, "", -1
+
+    spawn_adjustment = None
+    is_clear, hit_name, hit_dist = _check_spawn_clear(ax, ay)
+    if not is_clear:
+        log(f"[BENCH] ⚠ Spawn overlap detected at ({ax:.2f},{ay:.2f}): "
+            f"hit={hit_name} dist={hit_dist:.3f}m — searching for clear position")
+        original_ax, original_ay = ax, ay
+        found = False
+        # Spiral search: 0.25m steps, up to 2m radius
+        for radius_step in range(1, 9):  # 0.25m to 2.0m
+            r = radius_step * 0.25
+            n_points = max(8, int(2 * math.pi * r / 0.25))
+            for i in range(n_points):
+                angle = 2 * math.pi * i / n_points
+                cx = original_ax + r * math.cos(angle)
+                cy = original_ay + r * math.sin(angle)
+                ok, _, _ = _check_spawn_clear(cx, cy)
+                if ok:
+                    nudge_dist = math.hypot(cx - original_ax, cy - original_ay)
+                    ax, ay = cx, cy
+                    spawn_adjustment = {
+                        "task_id": tid,
+                        "original_start": [round(original_ax, 3), round(original_ay, 3)],
+                        "adjusted_start": [round(ax, 3), round(ay, 3)],
+                        "nudge_distance_m": round(nudge_dist, 3),
+                        "reason": f"overlap with {hit_name} at dist={hit_dist:.3f}m",
+                        "search_radius_m": round(r, 2),
+                    }
+                    log(f"[BENCH] ⚠ SPAWN AUTO-ADJUST: ({original_ax:.2f},{original_ay:.2f}) "
+                        f"→ ({ax:.2f},{ay:.2f}) nudge={nudge_dist:.2f}m "
+                        f"reason=overlap_{hit_name}")
+                    found = True
+                    break
+            if found:
+                break
+        if not found:
+            log(f"[BENCH] ❌ SPAWN CRITICALLY BAD — no clear position within 2m "
+                f"of ({original_ax:.2f},{original_ay:.2f})")
+            spawn_adjustment = {
+                "task_id": tid,
+                "original_start": [round(original_ax, 3), round(original_ay, 3)],
+                "adjusted_start": [round(ax, 3), round(ay, 3)],
+                "nudge_distance_m": 0,
+                "reason": f"FAILED: no clear position within 2m, hit={hit_name}",
+                "search_radius_m": 2.0,
+            }
+    else:
+        log(f"[BENCH] Spawn clear at ({ax:.2f},{ay:.2f})")
+
+    # Save spawn adjustment info for archival
+    if spawn_adjustment:
+        adj_path = os.path.join(RUN_DIR, "spawn_adjustment.json")
+        with open(adj_path, "w") as f:
+            json.dump(spawn_adjustment, f, indent=2)
+        log(f"[BENCH] Spawn adjustment saved to {adj_path}")
 
     # Prime the render pipeline: pose agent + camera + runners at the step-0
     # state and flush throwaway renders. The first orchestrator.step()
@@ -1304,7 +1391,10 @@ try:
     }
     results = {"task": task, "metrics": metrics, "nav_history": nav_hist,
                "resolved_targets": resolved_targets,
-               "agent_start": agent_start_xy, "agent_yaw": agent_start_yaw}
+               "agent_start": agent_start_xy, "agent_yaw": agent_start_yaw,
+               "spawn_adjusted": spawn_adjustment is not None,
+               "spawn_adjustment": spawn_adjustment,
+               "effective_start": [round(nav_hist[0]["x"], 3), round(nav_hist[0]["y"], 3)] if nav_hist else agent_start_xy}
     with open(os.path.join(RUN_DIR, "vlm_nav_history.json"), "w") as f:
         json.dump(results, f, indent=2)
     with open(os.path.join(RUN_DIR, "results.json"), "w") as f:

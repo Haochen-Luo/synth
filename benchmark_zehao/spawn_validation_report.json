@@ -1,0 +1,884 @@
+{
+  "validated": [
+    {
+      "task_id": "case01-L1",
+      "level": "L1",
+      "original_start": [
+        4.06,
+        12.27
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case01-L2",
+      "level": "L2",
+      "original_start": [
+        6.3,
+        11.5
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case01-L3",
+      "level": "L3",
+      "original_start": [
+        8.68,
+        11.2
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case01-L4",
+      "level": "L4",
+      "original_start": [
+        10.0,
+        8.6
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case02-L1",
+      "level": "L1",
+      "original_start": [
+        14.5,
+        2.0
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case02-L2",
+      "level": "L2",
+      "original_start": [
+        9.3,
+        3.6
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case02-L3",
+      "level": "L3",
+      "original_start": [
+        4.31,
+        5.03
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case02-L4",
+      "level": "L4",
+      "original_start": [
+        9.3,
+        2.4
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case03-L1",
+      "level": "L1",
+      "original_start": [
+        5.5,
+        4.5
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case03-L2",
+      "level": "L2",
+      "original_start": [
+        8.7,
+        7.4
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case03-L3",
+      "level": "L3",
+      "original_start": [
+        5.81,
+        6.07
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case03-L4",
+      "level": "L4",
+      "original_start": [
+        8.7,
+        7.3
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case04-L1",
+      "level": "L1",
+      "original_start": [
+        7.49,
+        8.96
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case04-L2",
+      "level": "L2",
+      "original_start": [
+        9.4,
+        4.1
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case04-L3",
+      "level": "L3",
+      "original_start": [
+        8.23,
+        0.99
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case04-L4",
+      "level": "L4",
+      "original_start": [
+        9.4,
+        7.7
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case05-L1",
+      "level": "L1",
+      "original_start": [
+        6.57,
+        8.77
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case05-L2",
+      "level": "L2",
+      "original_start": [
+        4.3,
+        6.4
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case05-L3",
+      "level": "L3",
+      "original_start": [
+        4.92,
+        1.49
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case05-L4",
+      "level": "L4",
+      "original_start": [
+        4.3,
+        6.3
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case06-L1",
+      "level": "L1",
+      "original_start": [
+        0.22,
+        8.49
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case06-L2",
+      "level": "L2",
+      "original_start": [
+        -0.2,
+        9.2
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case06-L3",
+      "level": "L3",
+      "original_start": [
+        -0.43,
+        10.76
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case06-L4",
+      "level": "L4",
+      "original_start": [
+        -0.2,
+        9.2
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case07-L1",
+      "level": "L1",
+      "original_start": [
+        2.36,
+        6.88
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case07-L2",
+      "level": "L2",
+      "original_start": [
+        4.2,
+        7.1
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case07-L3",
+      "level": "L3",
+      "original_start": [
+        3.78,
+        7.92
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case07-L4",
+      "level": "L4",
+      "original_start": [
+        2.4,
+        6.5
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case09-L1",
+      "level": "L1",
+      "original_start": [
+        6.5,
+        3.5
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case09-L2",
+      "level": "L2",
+      "original_start": [
+        5.0,
+        5.1
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case09-L3",
+      "level": "L3",
+      "original_start": [
+        9.72,
+        2.72
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case09-L4",
+      "level": "L4",
+      "original_start": [
+        5.0,
+        5.1
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case10-L1",
+      "level": "L1",
+      "original_start": [
+        2.66,
+        5.21
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case10-L2",
+      "level": "L2",
+      "original_start": [
+        3.3,
+        6.7
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case10-L3",
+      "level": "L3",
+      "original_start": [
+        9.12,
+        1.69
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case10-L4",
+      "level": "L4",
+      "original_start": [
+        3.3,
+        6.7
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case12-L1",
+      "level": "L1",
+      "original_start": [
+        8.36,
+        2.98
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    },
+    {
+      "task_id": "case12-L2",
+      "level": "L2",
+      "original_start": [
+        7.4,
+        3.0
+      ],
+      "validation": {
+        "overlap": {
+          "pass": true,
+          "hit": ""
+        },
+        "clearance": {
+          "pass": true,
+          "clear_dirs": 8
+        }
+      },
+      "passed": true,
+      "fixed": false
+    }
+  ],
+  "fixed": [],
+  "unreachable": [
+    {
+      "task_id": "case02-L3",
+      "phase": 1,
+      "target": "SimpleBookcase",
+      "candidates": [
+        [
+          17.7,
+          1.141
+        ],
+        [
+          17.7,
+          1.141
+        ]
+      ],
+      "spawn": [
+        4.31,
+        5.03
+      ],
+      "reachable_cells": 5000
+    },
+    {
+      "task_id": "case04-L2",
+      "phase": 0,
+      "target": "SimpleBookcase",
+      "candidates": [
+        [
+          1.845,
+          9.876
+        ],
+        [
+          1.845,
+          9.876
+        ]
+      ],
+      "spawn": [
+        9.4,
+        4.1
+      ],
+      "reachable_cells": 5000
+    },
+    {
+      "task_id": "case04-L3",
+      "phase": 1,
+      "target": "SimpleBookcase",
+      "candidates": [
+        [
+          1.845,
+          9.876
+        ],
+        [
+          1.845,
+          9.876
+        ]
+      ],
+      "spawn": [
+        8.23,
+        0.99
+      ],
+      "reachable_cells": 5000
+    }
+  ],
+  "fov_violations": [
+    {
+      "task_id": "case03-L4",
+      "target": "DeskLamp",
+      "target_pos": [
+        7.069,
+        10.465
+      ],
+      "old_yaw": 156.8,
+      "new_yaw": -62.7,
+      "rel_angle": -39.5
+    },
+    {
+      "task_id": "case04-L4",
+      "target": "DeskLamp",
+      "target_pos": [
+        2.721,
+        2.691
+      ],
+      "old_yaw": -111.6,
+      "new_yaw": 36.9,
+      "rel_angle": -31.5
+    },
+    {
+      "task_id": "case06-L2",
+      "target": "SimpleBookcase",
+      "target_pos": [
+        -1.083,
+        11.123
+      ],
+      "old_yaw": 129.7,
+      "new_yaw": -65.3,
+      "rel_angle": -15.0
+    },
+    {
+      "task_id": "case09-L2",
+      "target": "DeskLamp",
+      "target_pos": [
+        1.122,
+        4.479
+      ],
+      "old_yaw": -144.3,
+      "new_yaw": 9.1,
+      "rel_angle": -26.6
+    },
+    {
+      "task_id": "case09-L4",
+      "target": "DeskLamp",
+      "target_pos": [
+        1.122,
+        4.479
+      ],
+      "old_yaw": -144.3,
+      "new_yaw": 9.1,
+      "rel_angle": -26.6
+    }
+  ]
+}

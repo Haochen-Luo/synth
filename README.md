@@ -154,3 +154,26 @@ steps, `vlm_calls`, `actions_per_call`, timing breakdown. Aggregated into
 | `full_task_gen.py` | geometric task generator (shelved) |
 | `gen_media.sh` | builds MP4/GIF from rendered frames |
 | `benchmark_tasks.json` | the 40-task benchmark (use this) |
+| `validate_and_fix_spawns.py` | PhysX-based spawn validation + reachability check |
+
+---
+
+## Known Issues / Future Work
+
+### Frozen Runner Visual Mismatch (Low Priority)
+When a runner enters corner-deadlock freeze (`push_agent_if_overlap` Step 3), its
+**position** is frozen but **rotation and animation** continue to follow the baked
+trajectory. This results in the runner visually rotating and playing walk animations
+in-place ("moonwalking"). Ideally, the runner should freeze to an idle pose or loop
+the current frame.
+
+**Impact**: Visual only — collision detection and task logic are correct.
+**Fix**: Record the freeze timecode and freeze both `timeline.set_current_time()` and
+`r*_ops["o"].Set()` to that timecode. Requires non-trivial changes to `pose_runners_at()`.
+
+### Camera Near-Clip Through Thin Geometry
+When the agent is pushed very close to thin geometry (window frames, glass doors),
+the camera may visually "see through" the geometry due to the 0.3m near-clip distance.
+Mitigated by increasing `_sweep_clear` wall buffer from 0.05→0.15m (2025-05-28), but
+grazing-angle approaches can still place the camera close to walls.
+
