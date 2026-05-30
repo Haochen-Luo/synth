@@ -32,7 +32,7 @@ PAUSE_HARDCAP = 3
 # keeps evaluation fast and bounds the planning/reasoning budget.
 # Step cap (single-action mode: 1 VLM call per step, so this is also the VLM
 # budget). Set via env to override per-run.
-MAX_STEPS = int(os.environ.get("MAX_STEPS", "100"))
+MAX_STEPS = int(os.environ.get("MAX_STEPS", "200"))
 # Bird-view smooth video toggle. False (default, prototype speed): no bird
 # _smooth folder, no bird filler frames — the bird video is built from the
 # per-step decision frames in vlm_nav_frames_bird/. True: full bird _smooth
@@ -1265,6 +1265,7 @@ try:
                 if ca != "DONE": action = ca; break
 
         pre_x, pre_y = ax, ay
+        pre_yaw, pre_pitch = ayaw, apitch
         pre_phase = cur_phase
         pre_fb = action_fb
         nav_hist.append({"step":step,"x":round(ax,3),"y":round(ay,3),"yaw":round(ayaw,1),
@@ -1418,6 +1419,43 @@ try:
 
         ayaw = wrap_angle_deg(ayaw)
         did_move = abs(ax-pre_x) > 0.001 or abs(ay-pre_y) > 0.001
+
+        # ── Smooth Camera Transition ──
+        # Linearly interpolate the camera from the old pose to the new pose over a few frames
+        # so the resulting smooth video doesn't show instantaneous teleportation.
+        CAM_TRANSITION_FRAMES = 3
+        if did_move or abs(ayaw - pre_yaw) > 0.1 or abs(apitch - pre_pitch) > 0.1:
+            def short_angle(a0, a1):
+                da = (a1 - a0) % 360
+                return 2 * da % 360 - da
+            dyaw = short_angle(pre_yaw, ayaw)
+            dpitch = apitch - pre_pitch
+            dx_m = ax - pre_x
+            dy_m = ay - pre_y
+            
+            for t in range(1, CAM_TRANSITION_FRAMES + 1):
+                frac = t / CAM_TRANSITION_FRAMES
+                ix = pre_x + dx_m * frac
+                iy = pre_y + dy_m * frac
+                iyaw = pre_yaw + dyaw * frac
+                ipitch = pre_pitch + dpitch * frac
+                
+                sim_t += (1.0 / FILLER_FPS)
+                a_trans.Set(Gf.Vec3d(ix, iy, GROUND_Z))
+                if nav_cam and nav_cam.IsValid():
+                    cxf_f = UsdGeom.Xformable(nav_cam)
+                    try: cxf_f.ClearXformOpOrder()
+                    except: pass
+                    cam_x = ix + 0.01 * math.cos(math.radians(iyaw))
+                    cam_y = iy + 0.01 * math.sin(math.radians(iyaw))
+                    cxf_f.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, EYE_H))
+                    cxf_f.AddOrientOp().Set(cam_quat(iyaw, ipitch))
+                pose_runners_at(sim_t)
+                _t_fr = time.time()
+                render_frame(filler=True)
+                timing["render_filler"] += time.time() - _t_fr
+                timing["n_filler"] += 1
+
         nav_hist[-1]["moved"] = did_move
         # sim_t was already advanced this step by the filler loop (or by
         # RUNNER_TIME_PER_STEP if the runner was off-screen). Single-action
