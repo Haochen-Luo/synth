@@ -32,7 +32,7 @@ PAUSE_HARDCAP = 3
 # keeps evaluation fast and bounds the planning/reasoning budget.
 # Step cap (single-action mode: 1 VLM call per step, so this is also the VLM
 # budget). Set via env to override per-run.
-MAX_STEPS = int(os.environ.get("MAX_STEPS", "200"))
+MAX_STEPS = int(os.environ.get("MAX_STEPS", "150"))
 # Bird-view smooth video toggle. False (default, prototype speed): no bird
 # _smooth folder, no bird filler frames — the bird video is built from the
 # per-step decision frames in vlm_nav_frames_bird/. True: full bird _smooth
@@ -41,7 +41,7 @@ ENABLE_BIRD_SMOOTH = os.environ.get("ENABLE_BIRD_SMOOTH", "0") == "1"
 # Render resolution for FPV + bird render products. PathTracing cost scales
 # ~linearly with pixel count, so 960x540 renders ~4x faster than 1920x1080.
 # Lowered for prototype iteration speed; set RENDER_W/RENDER_H env to override.
-RENDER_W = int(os.environ.get("RENDER_W", "640"))
+RENDER_W = int(os.environ.get("RENDER_W", "540"))
 RENDER_H = int(os.environ.get("RENDER_H", "360"))
 
 # ── Load task config ──
