@@ -152,7 +152,6 @@ Rules:
 - If you see the target directly ahead and close, move toward it.
 - If the target is to your left or right, turn toward it first.
 - If a person is blocking your path, turn to find an alternate route.
-- If you are stuck (repeated BLOCKED), try turning significantly (multiple turns in the same direction) to find a completely new path.
 - When you are very close to the target (within arm's reach), output DONE.
 
 First, briefly explain your reasoning. Then, as the VERY LAST line, output ONLY:
@@ -180,7 +179,6 @@ Rules:
 - Think step by step: what sub-task should I do next?
 - Do NOT attempt PICK_UP/PUT_DOWN unless the object is within arm's reach.
 - Navigate RIGHT NEXT TO the target before interacting.
-- If you are stuck (repeated BLOCKED), try turning significantly (multiple turns in the same direction) to find a completely new path.
 - Only use DONE after ALL steps of the task are done.
 
 First, briefly explain your reasoning. Then, as the VERY LAST line, output ONLY:
