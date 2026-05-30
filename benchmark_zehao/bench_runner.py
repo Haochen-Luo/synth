@@ -16,7 +16,7 @@ from semantic_classes import semantic_class_of
 
 # ── Config ──
 VLLM_URL = os.environ.get("VLLM_URL", "http://localhost:8300/v1/chat/completions")
-MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen3-VL-30B-A3B-Instruct-FP8")
+MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen3-VL-30B-A3B-Thinking-FP8")
 TASKS_JSON = os.environ.get("TASKS_JSON", os.path.join(SCRIPT_DIR, "benchmark_tasks.json"))
 RESULTS_BASE = os.path.join(SCRIPT_DIR, "results")
 
@@ -101,23 +101,43 @@ ACTION_RE = re.compile(r"ACTION:\s*(" + "|".join(ALL_ACTIONS + list(_PARSE_ALIAS
 PLAN_RE = re.compile(r"PLAN:\s*(.+)", re.IGNORECASE)
 PLAN_LEN = 5  # max actions the VLM may queue per call
 
-def query_vlm(img_path, prompt, system_prompt, step=0):
-    with open(img_path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode()
-    payload = {"model": MODEL_NAME, "max_tokens": 4096, "temperature": 0.0,
+def strip_thinking(text):
+    """Strip <think>...</think> reasoning from thinking-model outputs.
+    Handles both '<think>content</think>answer' and 'content</think>answer'
+    (Qwen3-Thinking omits the opening tag). Returns the answer portion only.
+    If no </think> tag is found, returns text unchanged (non-thinking model)."""
+    idx = text.find("</think>")
+    if idx >= 0:
+        return text[idx + len("</think>"):].strip()
+    return text
+
+def query_vlm(img_paths, prompt, system_prompt, step=0):
+    """Query the VLM with one or more images (3-frame temporal context).
+    img_paths: a single path (str) or list of paths [oldest, ..., newest]."""
+    if isinstance(img_paths, str):
+        img_paths = [img_paths]
+    # Build image content entries
+    img_content = []
+    for ip in img_paths:
+        with open(ip, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode()
+        img_content.append({"type":"image_url","image_url":{"url":f"data:image/png;base64,{b64}"}})
+    payload = {"model": MODEL_NAME, "max_tokens": 4096, "temperature": 0.6,
                "messages": [{"role":"system","content":system_prompt},
-                            {"role":"user","content":[
-                                {"type":"image_url","image_url":{"url":f"data:image/png;base64,{b64}"}},
-                                {"type":"text","text":prompt}]}]}
+                            {"role":"user","content":
+                                img_content +
+                                [{"type":"text","text":prompt}]}]}
     req = urllib.request.Request(VLLM_URL, json.dumps(payload).encode(),
                                 {"Content-Type":"application/json"}, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            text = json.loads(resp.read())["choices"][0]["message"]["content"].strip()
-        # Log raw response
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            raw_text = json.loads(resp.read())["choices"][0]["message"]["content"].strip()
+        # Log raw response (including thinking, for debugging)
         resp_log = os.path.join(RUN_DIR, "vlm_responses.jsonl")
         with open(resp_log, "a") as f:
-            f.write(json.dumps({"step":step,"response":text}) + "\n")
+            f.write(json.dumps({"step":step,"response":raw_text}) + "\n")
+        # Strip thinking tags if present (thinking-model compatibility)
+        text = strip_thinking(raw_text)
         m = ACTION_RE.search(text.upper())
         if m:
             a = m.group(1).upper()
@@ -1166,13 +1186,24 @@ try:
         fq = check_frame_quality(frame_path)
         if fq.get('guidance'): prompt += fq['guidance']
 
+        # ── Build 3-frame temporal context (current + 2 previous) ──
+        # Gives the VLM visual history to reason about stuck situations.
+        # Fallback: fewer frames for step 0/1.
+        vlm_frames = []
+        for prev_step in [step - 2, step - 1]:
+            if prev_step >= 0:
+                prev_path = os.path.join(fpv_dir, f"rgb_{prev_step:04d}.png")
+                if os.path.exists(prev_path):
+                    vlm_frames.append(prev_path)
+        vlm_frames.append(frame_path)  # current frame is always last
+
         # ── Query VLM concurrently; render filler frames while it thinks ──
         # The agent holds its pose (it has not decided yet) but the runner keeps
         # moving, so the *_smooth video stays leap-free.
         import threading
         vlm_result = {}
         def _vlm_worker():
-            vlm_result["out"] = query_vlm(frame_path, prompt, sys_prompt, step)
+            vlm_result["out"] = query_vlm(vlm_frames, prompt, sys_prompt, step)
         _t_vlm = time.time()
         vlm_thread = threading.Thread(target=_vlm_worker)
         vlm_thread.start()

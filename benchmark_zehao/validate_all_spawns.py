@@ -26,7 +26,10 @@ FIX_MODE = "--fix" in sys.argv
 FLOOR_INSET   = 0.3   # metres inward from floor bbox edges (avoid wall-hugging)
 SWEEP_RADIUS  = 0.40  # PhysX sweep sphere radius (matches bench_runner)
 SWEEP_DIST    = 0.05  # sweep travel distance
-FOV_HALF_DEG  = 45.0  # ±45° FOV cone for visibility check
+FOV_HALF_DEG  = 45.0  # ±45° horizontal FOV cone for visibility check
+VFOV_HALF_DEG = 29.0  # ±29° vertical FOV half (960x540, focal 17mm / aperture 19.2mm)
+CAM_HEIGHT    = 1.58  # camera eye height in metres (matches bench_runner EYE_H)
+CAM_PITCH_DEG = -10.0 # initial camera pitch in degrees (negative = looking down)
 WALKABLE      = ("floor", "ground", "rug", "blanket", "towel", "mat")
 
 # ── Search grid for auto-fix ──
@@ -430,7 +433,7 @@ def check_line_of_sight(query_if, sx, sy, target_xy, target_z=None,
         return True, "no_target"
     tx, ty = target_xy
     tz = target_z if target_z is not None else 1.0
-    origin_z = 1.0  # camera height
+    origin_z = CAM_HEIGHT  # camera height (must match bench_runner EYE_H)
 
     # Build matchers: prim path fragment + factory name for target identification
     target_path_lower = target_prim_path.lower() if target_prim_path else ""
@@ -480,22 +483,47 @@ def check_line_of_sight(query_if, sx, sy, target_xy, target_z=None,
     # ALL rays blocked
     return False, f"ALL {len(sample_targets)} rays blocked: {'; '.join(blocked_details[:3])}"
 
-def check_fov(sx, sy, yaw_deg, target_xy, level):
+def check_fov(sx, sy, yaw_deg, target_xy, level, target_z=None):
     """
-    L1/L3 → target MUST be within ±FOV_HALF_DEG of yaw (visible)
-    L2/L4 → target must NOT be within ±FOV_HALF_DEG of yaw (hidden)
+    L1/L3 → target MUST be within horizontal AND vertical FOV (visible)
+    L2/L4 → target must NOT be within horizontal FOV (hidden)
+    Vertical FOV is only enforced for L1/L3 (visibility requirement).
     Returns (pass, detail_string).
     """
     if target_xy is None:
         return True, "no_target"
     tx, ty = target_xy
+    # ── Horizontal check ──
     angle_to_target = math.degrees(math.atan2(ty - sy, tx - sx))
     rel = ((angle_to_target - yaw_deg + 180) % 360) - 180
-    in_fov = abs(rel) <= FOV_HALF_DEG
+    in_hfov = abs(rel) <= FOV_HALF_DEG
     lnum = int(level.replace("L",""))
     want_visible = (lnum % 2 == 1)  # L1, L3 → odd → visible
-    ok = (in_fov == want_visible)
-    detail = f"rel_angle={rel:.1f}° in_fov={in_fov} want_visible={want_visible}"
+    if not want_visible:
+        # L2/L4: just check target is NOT in horizontal FOV
+        ok = not in_hfov
+        detail = f"rel_angle={rel:.1f}° in_hfov={in_hfov} want_visible=False"
+        return ok, detail
+    # ── L1/L3: target must be in BOTH horizontal and vertical FOV ──
+    if not in_hfov:
+        return False, f"HFOV fail: rel_angle={rel:.1f}° > ±{FOV_HALF_DEG}°"
+    # Vertical check: is target within the camera's vertical viewport?
+    tz = target_z if target_z is not None else 1.0  # default to mid-height
+    horiz_dist = math.hypot(tx - sx, ty - sy)
+    if horiz_dist < 0.1:
+        return True, "agent_at_target"
+    dz = tz - CAM_HEIGHT
+    pitch_to_target = math.degrees(math.atan2(dz, horiz_dist))
+    # The camera has initial pitch CAM_PITCH_DEG. The relative vertical angle
+    # from the camera center is: pitch_to_target - CAM_PITCH_DEG
+    rel_vpitch = pitch_to_target - CAM_PITCH_DEG
+    in_vfov = abs(rel_vpitch) <= VFOV_HALF_DEG
+    detail = (f"hfov_rel={rel:.1f}° vfov_pitch_to_tgt={pitch_to_target:.1f}° "
+              f"cam_pitch={CAM_PITCH_DEG}° rel_vpitch={rel_vpitch:.1f}° "
+              f"in_hfov={in_hfov} in_vfov={in_vfov}")
+    ok = in_hfov and in_vfov
+    if not ok:
+        detail = f"VFOV fail: {detail}"
     return ok, detail
 
 def fix_yaw_for_fov(query_if, sx, sy, target_xy, level):
@@ -623,7 +651,7 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                     log(f"[VAL]   Target half-extent={first_target_half_ext:.2f}m (edge-distance mode)")
 
         # ── Check 3: FOV ──
-        fov_ok, fov_detail = check_fov(sx, sy, yaw, first_target_xy, level)
+        fov_ok, fov_detail = check_fov(sx, sy, yaw, first_target_xy, level, target_z=first_target_z)
         result["checks"]["fov"] = {
             "pass": fov_ok,
             "target_xy": first_target_xy,
@@ -712,7 +740,7 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
             # Strategy 1: If only FOV/clearance/LOS is wrong AND not spawn_win, just fix yaw
             if in_floor and coll_ok and not spawn_win and (not fov_ok or not fwd_ok or not los_ok):
                 candidate_yaw = fix_yaw_for_fov(query_if, sx, sy, first_target_xy, level)
-                f_fov, _ = check_fov(sx, sy, candidate_yaw, first_target_xy, level)
+                f_fov, _ = check_fov(sx, sy, candidate_yaw, first_target_xy, level, target_z=first_target_z)
                 f_fwd = check_forward_clearance(query_if, sx, sy, candidate_yaw, min_dist=1.2)
                 # For L1/L3, also check LOS at the candidate yaw (position unchanged)
                 f_los = True
@@ -743,7 +771,7 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                         c_ok, _ = check_collision_clear(query_if, gx, gy)
                         if c_ok:
                             candidate_yaw = fix_yaw_for_fov(query_if, gx, gy, first_target_xy, level)
-                            fov_c, _ = check_fov(gx, gy, candidate_yaw, first_target_xy, level)
+                            fov_c, _ = check_fov(gx, gy, candidate_yaw, first_target_xy, level, target_z=first_target_z)
                             fwd_c = check_forward_clearance(query_if, gx, gy, candidate_yaw, min_dist=1.2)
                             # For L1/L3, also require LOS from this candidate
                             los_c = True

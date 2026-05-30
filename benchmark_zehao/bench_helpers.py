@@ -135,7 +135,9 @@ def get_prim_world_center(stage, prim_path):
 def make_nav_system_prompt(target_desc):
     return f"""You are a navigation robot inside an indoor room. Your goal is to reach the {target_desc}.
 
-You see the room from your first-person camera. There may be people moving — avoid colliding with them.
+You see the room from your first-person camera. You receive up to 3 images showing your recent viewpoints (oldest to newest) — use them to understand how the scene has changed and avoid repeating failed actions.
+
+There may be people moving — avoid colliding with them.
 
 You can ONLY output ONE of these actions:
 - MOVE_FORWARD (move 0.25 meters in your current facing direction)
@@ -150,6 +152,7 @@ Rules:
 - If you see the target directly ahead and close, move toward it.
 - If the target is to your left or right, turn toward it first.
 - If a person is blocking your path, turn to find an alternate route.
+- If you are stuck (repeated BLOCKED), try turning significantly (multiple turns in the same direction) to find a completely new path.
 - When you are very close to the target (within arm's reach), output DONE.
 
 First, briefly explain your reasoning. Then, as the VERY LAST line, output ONLY:
@@ -158,6 +161,8 @@ ACTION: <action_name>"""
 def make_multistep_system_prompt(instruction):
     return f"""You are a service robot inside an indoor room. Your task:
 {instruction}
+
+You receive up to 3 images showing your recent viewpoints (oldest to newest) — use them to understand how the scene has changed and avoid repeating failed actions.
 
 You can ONLY output ONE of these actions:
 - MOVE_FORWARD (move 0.25 meters in your current facing direction)
@@ -175,6 +180,7 @@ Rules:
 - Think step by step: what sub-task should I do next?
 - Do NOT attempt PICK_UP/PUT_DOWN unless the object is within arm's reach.
 - Navigate RIGHT NEXT TO the target before interacting.
+- If you are stuck (repeated BLOCKED), try turning significantly (multiple turns in the same direction) to find a completely new path.
 - Only use DONE after ALL steps of the task are done.
 
 First, briefly explain your reasoning. Then, as the VERY LAST line, output ONLY:
