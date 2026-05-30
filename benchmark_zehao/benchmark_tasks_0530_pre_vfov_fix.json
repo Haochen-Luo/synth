@@ -58,9 +58,9 @@
       "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
       "agent_start": [
         7.43,
-        12.43
+        11.93
       ],
-      "agent_yaw": -73.5,
+      "agent_yaw": -68.2,
       "phases": [
         {
           "name": "pick_book",
@@ -681,10 +681,10 @@
       "scene_dir": "native_case07_dining_zoom_full_physics_scene",
       "instruction": "Pick up the book from the floor and bring it to the bookshelf.",
       "agent_start": [
-        1.94,
-        7.44
+        2.44,
+        7.94
       ],
-      "agent_yaw": -10.9,
+      "agent_yaw": -33.6,
       "phases": [
         {
           "name": "pick_book",

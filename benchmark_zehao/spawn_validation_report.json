@@ -1,5 +1,11 @@
 {
-  "validated": [
+  "summary": {
+    "pass": 35,
+    "fail": 0,
+    "fixed": 3,
+    "error": 0
+  },
+  "results": [
     {
       "task_id": "case01-L1",
       "level": "L1",
@@ -7,18 +13,55 @@
         4.06,
         12.27
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -29.7,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            1.6279082298278809,
+            1.127908706665039,
+            14.372090816497803,
+            13.872111320495605
+          ],
+          "detail": "(4.06, 12.27) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            7.725694009039816,
+            10.1826118546086
+          ],
+          "detail": "hfov_rel=0.0\u00b0 vfov_pitch_to_tgt=-13.7\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-3.7\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            7.725694009039816,
+            10.1826118546086
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_652211_SofaFactory",
+          "agent_to_target_dist": 4.22,
+          "detail": "target at (7.73,10.18) inside floor polygon, dist=4.22m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=4.34m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 4.22,
+          "edge_dist": 3.21,
+          "half_extent": 1.01,
+          "required": 1.5,
+          "detail": "edge_dist=3.21m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case01-L2",
@@ -27,58 +70,168 @@
         6.3,
         11.5
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 136.8,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            1.6279082298278809,
+            1.127908706665039,
+            14.372090816497803,
+            13.872111320495605
+          ],
+          "detail": "(6.30, 11.50) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            11.875685822984499,
+            6.26364489536974
+          ],
+          "detail": "rel_angle=180.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            11.875685822984499,
+            6.26364489536974
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_174996_SimpleBookcaseFactory",
+          "agent_to_target_dist": 7.65,
+          "detail": "target at (11.88,6.26) inside floor polygon, dist=7.65m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 7.65,
+          "edge_dist": 7.32,
+          "half_extent": 0.33,
+          "required": 1.5,
+          "detail": "edge_dist=7.32m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case01-L3",
       "level": "L3",
       "original_start": [
-        8.68,
-        11.2
+        7.43,
+        11.93
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -68.2,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            1.6279082298278809,
+            1.127908706665039,
+            14.372090816497803,
+            13.872111320495605
+          ],
+          "detail": "(7.43, 11.93) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": false,
+          "target_xy": [
+            8.0,
+            10.5
+          ],
+          "detail": "VFOV fail: hfov_rel=-0.1\u00b0 vfov_pitch_to_tgt=-42.9\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-32.9\u00b0 in_hfov=True in_vfov=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            8.0,
+            10.5
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_320482_BookStackFactory",
+          "agent_to_target_dist": 1.54,
+          "detail": "target at (8.00,10.50) inside floor polygon, dist=1.54m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=2.10m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 1.54,
+          "edge_dist": 1.42,
+          "half_extent": 0.12,
+          "required": 1.0,
+          "detail": "edge_dist=1.42m > radius=1.0m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "FIXED",
+      "fixes": [
+        "pos: (7.43,11.93) \u2192 (7.43,12.43), yaw: -68.2 \u2192 -73.5, moved 0.50m"
+      ],
+      "fixed_start": [
+        7.43,
+        12.43
+      ],
+      "fixed_yaw": -73.5
     },
     {
       "task_id": "case01-L4",
       "level": "L4",
       "original_start": [
-        10.0,
-        8.6
+        8.43,
+        8.43
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -90.8,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            1.6279082298278809,
+            1.127908706665039,
+            14.372090816497803,
+            13.872111320495605
+          ],
+          "detail": "(8.43, 8.43) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            4.755158496900835,
+            10.619653632900555
+          ],
+          "detail": "rel_angle=-120.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            4.755158496900835,
+            10.619653632900555
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_486584_DeskLampFactory",
+          "agent_to_target_dist": 4.28,
+          "detail": "target at (4.76,10.62) inside floor polygon, dist=4.28m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 4.28,
+          "edge_dist": 4.16,
+          "half_extent": 0.12,
+          "required": 1.5,
+          "detail": "edge_dist=4.16m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case02-L1",
@@ -87,18 +240,55 @@
         14.5,
         2.0
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 43.4,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            6.101224899291992,
+            0.10122442245483398,
+            17.89879083633423,
+            7.898775577545166
+          ],
+          "detail": "(14.50, 2.00) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            17.608819939196117,
+            4.936520068527541
+          ],
+          "detail": "hfov_rel=-0.0\u00b0 vfov_pitch_to_tgt=-15.9\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-5.9\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            17.608819939196117,
+            4.936520068527541
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_800600_TVStandFactory",
+          "agent_to_target_dist": 4.28,
+          "detail": "target at (17.61,4.94) inside floor polygon, dist=4.28m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=4.45m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 4.28,
+          "edge_dist": 3.53,
+          "half_extent": 0.75,
+          "required": 1.5,
+          "detail": "edge_dist=3.53m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case02-L2",
@@ -107,38 +297,108 @@
         9.3,
         3.6
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 163.7,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            6.101224899291992,
+            0.10122442245483398,
+            17.89879083633423,
+            7.898775577545166
+          ],
+          "detail": "(9.30, 3.60) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            17.69993023201819,
+            1.1413141710492887
+          ],
+          "detail": "rel_angle=180.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            17.69993023201819,
+            1.1413141710492887
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_339859_SimpleBookcaseFactory",
+          "agent_to_target_dist": 8.75,
+          "detail": "target at (17.70,1.14) inside floor polygon, dist=8.75m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 8.75,
+          "edge_dist": 8.5,
+          "half_extent": 0.26,
+          "required": 1.5,
+          "detail": "edge_dist=8.50m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case02-L3",
       "level": "L3",
       "original_start": [
-        4.31,
-        5.03
+        9.3,
+        3.6
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -7.8,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            6.101224899291992,
+            0.10122442245483398,
+            17.89879083633423,
+            7.898775577545166
+          ],
+          "detail": "(9.30, 3.60) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            13.4,
+            3.2
+          ],
+          "detail": "hfov_rel=2.2\u00b0 vfov_pitch_to_tgt=-19.1\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-9.1\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            13.4,
+            3.2
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_226260_SupportBookStackFactory",
+          "agent_to_target_dist": 4.12,
+          "detail": "target at (13.40,3.20) inside floor polygon, dist=4.12m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=4.36m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 4.12,
+          "edge_dist": 3.9,
+          "half_extent": 0.22,
+          "required": 1.0,
+          "detail": "edge_dist=3.90m > radius=1.0m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case02-L4",
@@ -147,98 +407,271 @@
         9.3,
         2.4
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 62.6,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            6.101224899291992,
+            0.10122442245483398,
+            17.89879083633423,
+            7.898775577545166
+          ],
+          "detail": "(9.30, 2.40) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            14.665481952852915,
+            3.51560975083421
+          ],
+          "detail": "rel_angle=-50.9\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            14.665481952852915,
+            3.51560975083421
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_370525_DeskLampFactory",
+          "agent_to_target_dist": 5.48,
+          "detail": "target at (14.67,3.52) inside floor polygon, dist=5.48m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 5.48,
+          "edge_dist": 5.35,
+          "half_extent": 0.13,
+          "required": 1.5,
+          "detail": "edge_dist=5.35m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case03-L1",
       "level": "L1",
       "original_start": [
-        5.5,
-        4.5
+        6.42,
+        6.92
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -57.8,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            5.123857021331787,
+            2.123857021331787,
+            13.876143455505371,
+            10.876143455505371
+          ],
+          "detail": "(6.42, 6.92) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            8.152132795467233,
+            4.178560245841782
+          ],
+          "detail": "hfov_rel=0.1\u00b0 vfov_pitch_to_tgt=-14.6\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-4.6\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            8.152132795467233,
+            4.178560245841782
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_906687_SofaFactory",
+          "agent_to_target_dist": 3.24,
+          "detail": "target at (8.15,4.18) inside floor polygon, dist=3.24m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (hit target itself: sofafactory_2959476__spawn_asset_8416221 @2.17m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 3.24,
+          "edge_dist": 2.15,
+          "half_extent": 1.09,
+          "required": 1.5,
+          "detail": "edge_dist=2.15m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case03-L2",
       "level": "L2",
       "original_start": [
-        8.7,
-        7.4
+        8.0,
+        7.0
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 154.6,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            5.123857021331787,
+            2.123857021331787,
+            13.876143455505371,
+            10.876143455505371
+          ],
+          "detail": "(8.00, 7.00) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            13.64257481559791,
+            5.047950004534451
+          ],
+          "detail": "rel_angle=-173.7\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            13.64257481559791,
+            5.047950004534451
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_810934_SimpleBookcaseFactory",
+          "agent_to_target_dist": 5.97,
+          "detail": "target at (13.64,5.05) inside floor polygon, dist=5.97m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 5.97,
+          "edge_dist": 5.67,
+          "half_extent": 0.3,
+          "required": 1.5,
+          "detail": "edge_dist=5.67m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case03-L3",
       "level": "L3",
       "original_start": [
-        5.81,
-        6.07
+        6.5,
+        6.1
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -23.0,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            5.123857021331787,
+            2.123857021331787,
+            13.876143455505371,
+            10.876143455505371
+          ],
+          "detail": "(6.50, 6.10) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            9.8,
+            4.7
+          ],
+          "detail": "hfov_rel=0.0\u00b0 vfov_pitch_to_tgt=-21.7\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-11.7\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            9.8,
+            4.7
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_326209_BookStackFactory",
+          "agent_to_target_dist": 3.58,
+          "detail": "target at (9.80,4.70) inside floor polygon, dist=3.58m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=3.86m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 3.58,
+          "edge_dist": 3.49,
+          "half_extent": 0.1,
+          "required": 1.0,
+          "detail": "edge_dist=3.49m > radius=1.0m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case03-L4",
       "level": "L4",
       "original_start": [
-        8.7,
-        7.3
+        8.0,
+        7.0
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 156.8,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            5.123857021331787,
+            2.123857021331787,
+            13.876143455505371,
+            10.876143455505371
+          ],
+          "detail": "(8.00, 7.00) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            13.674384175903816,
+            5.167295162523585
+          ],
+          "detail": "rel_angle=-174.7\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            13.674384175903816,
+            5.167295162523585
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_29967_DeskLampFactory",
+          "agent_to_target_dist": 5.96,
+          "detail": "target at (13.67,5.17) inside floor polygon, dist=5.96m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 5.96,
+          "edge_dist": 5.82,
+          "half_extent": 0.15,
+          "required": 1.5,
+          "detail": "edge_dist=5.82m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case04-L1",
@@ -247,18 +680,55 @@
         7.49,
         8.96
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -112.9,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            -0.3582892417907715,
+            2.1417107582092285,
+            13.35828971862793,
+            10.85828971862793
+          ],
+          "detail": "(7.49, 8.96) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            4.996028185140424,
+            3.0531418511345705
+          ],
+          "detail": "hfov_rel=0.0\u00b0 vfov_pitch_to_tgt=-7.5\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=2.5\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            4.996028185140424,
+            3.0531418511345705
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_160487_SofaFactory",
+          "agent_to_target_dist": 6.41,
+          "detail": "target at (5.00,3.05) inside floor polygon, dist=6.41m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=6.47m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 6.41,
+          "edge_dist": 5.62,
+          "half_extent": 0.79,
+          "required": 1.5,
+          "detail": "edge_dist=5.62m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case04-L2",
@@ -267,38 +737,108 @@
         9.4,
         4.1
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -37.4,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            -0.3582892417907715,
+            2.1417107582092285,
+            13.35828971862793,
+            10.85828971862793
+          ],
+          "detail": "(9.40, 4.10) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            4.996028185140424,
+            3.0531418511345705
+          ],
+          "detail": "rel_angle=-129.2\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            4.996028185140424,
+            3.0531418511345705
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_160487_SofaFactory",
+          "agent_to_target_dist": 4.53,
+          "detail": "target at (5.00,3.05) inside floor polygon, dist=4.53m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 4.53,
+          "edge_dist": 3.74,
+          "half_extent": 0.79,
+          "required": 1.5,
+          "detail": "edge_dist=3.74m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case04-L3",
       "level": "L3",
       "original_start": [
-        8.23,
-        0.99
+        8.44,
+        2.94
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 58.2,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            -0.3582892417907715,
+            2.1417107582092285,
+            13.35828971862793,
+            10.85828971862793
+          ],
+          "detail": "(8.44, 2.94) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            7.6,
+            7.1
+          ],
+          "detail": "hfov_rel=43.2\u00b0 vfov_pitch_to_tgt=-18.6\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-8.6\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            7.6,
+            7.1
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_617793_SupportBookStackFactory",
+          "agent_to_target_dist": 4.24,
+          "detail": "target at (7.60,7.10) inside floor polygon, dist=4.24m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=4.48m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 4.24,
+          "edge_dist": 4.06,
+          "half_extent": 0.19,
+          "required": 1.0,
+          "detail": "edge_dist=4.06m > radius=1.0m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case04-L4",
@@ -307,278 +847,782 @@
         9.4,
         7.7
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 36.9,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            -0.3582892417907715,
+            2.1417107582092285,
+            13.35828971862793,
+            10.85828971862793
+          ],
+          "detail": "(9.40, 7.70) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            2.7206028685694097,
+            2.69118173963321
+          ],
+          "detail": "rel_angle=180.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            2.7206028685694097,
+            2.69118173963321
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_68408_DeskLampFactory",
+          "agent_to_target_dist": 8.35,
+          "detail": "target at (2.72,2.69) inside floor polygon, dist=8.35m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 8.35,
+          "edge_dist": 8.21,
+          "half_extent": 0.14,
+          "required": 1.5,
+          "detail": "edge_dist=8.21m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case05-L1",
       "level": "L1",
       "original_start": [
-        6.57,
-        8.77
+        6.45,
+        9.45
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -162.4,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.6471900939941406,
+            4.147189617156982,
+            7.352870941162109,
+            10.852832555770874
+          ],
+          "detail": "(6.45, 9.45) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            2.967408329248436,
+            8.346041649579915
+          ],
+          "detail": "hfov_rel=-0.0\u00b0 vfov_pitch_to_tgt=-15.5\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-5.5\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            2.967408329248436,
+            8.346041649579915
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_108014_TableDiningFactory",
+          "agent_to_target_dist": 3.65,
+          "detail": "target at (2.97,8.35) inside floor polygon, dist=3.65m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=4.07m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 3.65,
+          "edge_dist": 3.15,
+          "half_extent": 0.5,
+          "required": 1.5,
+          "detail": "edge_dist=3.15m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case05-L2",
       "level": "L2",
       "original_start": [
-        4.3,
-        6.4
+        2.95,
+        6.45
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -160.0,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.6471900939941406,
+            4.147189617156982,
+            7.352870941162109,
+            10.852832555770874
+          ],
+          "detail": "(2.95, 6.45) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            7.1413713730876935,
+            7.977502128026632
+          ],
+          "detail": "rel_angle=-180.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            7.1413713730876935,
+            7.977502128026632
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_997494_SimpleBookcaseFactory",
+          "agent_to_target_dist": 4.46,
+          "detail": "target at (7.14,7.98) inside floor polygon, dist=4.46m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 4.46,
+          "edge_dist": 4.21,
+          "half_extent": 0.25,
+          "required": 1.5,
+          "detail": "edge_dist=4.21m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case05-L3",
       "level": "L3",
       "original_start": [
-        4.92,
-        1.49
+        1.45,
+        6.45
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 11.3,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.6471900939941406,
+            4.147189617156982,
+            7.352870941162109,
+            10.852832555770874
+          ],
+          "detail": "(1.45, 6.45) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            4.7,
+            7.1
+          ],
+          "detail": "hfov_rel=0.0\u00b0 vfov_pitch_to_tgt=-23.3\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-13.3\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            4.7,
+            7.1
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_765586_BookStackFactory",
+          "agent_to_target_dist": 3.31,
+          "detail": "target at (4.70,7.10) inside floor polygon, dist=3.31m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=3.68m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 3.31,
+          "edge_dist": 3.22,
+          "half_extent": 0.1,
+          "required": 1.0,
+          "detail": "edge_dist=3.22m > radius=1.0m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case05-L4",
       "level": "L4",
       "original_start": [
-        4.3,
-        6.3
+        2.95,
+        6.45
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -144.9,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.6471900939941406,
+            4.147189617156982,
+            7.352870941162109,
+            10.852832555770874
+          ],
+          "detail": "(2.95, 6.45) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            7.11120942917734,
+            9.370137778776755
+          ],
+          "detail": "rel_angle=180.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            7.11120942917734,
+            9.370137778776755
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_962016_DeskLampFactory",
+          "agent_to_target_dist": 5.08,
+          "detail": "target at (7.11,9.37) inside floor polygon, dist=5.08m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 5.08,
+          "edge_dist": 4.93,
+          "half_extent": 0.15,
+          "required": 1.5,
+          "detail": "edge_dist=4.93m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case06-L1",
       "level": "L1",
       "original_start": [
-        0.22,
-        8.49
+        1.43,
+        10.93
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -131.5,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            -2.367495894432068,
+            6.632503986358643,
+            2.3674960136413574,
+            11.367496490478516
+          ],
+          "detail": "(1.43, 10.93) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            -0.17057657241815727,
+            9.119413167238314
+          ],
+          "detail": "hfov_rel=0.0\u00b0 vfov_pitch_to_tgt=-24.1\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-14.1\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            -0.17057657241815727,
+            9.119413167238314
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_388265_TableDiningFactory",
+          "agent_to_target_dist": 2.42,
+          "detail": "target at (-0.17,9.12) inside floor polygon, dist=2.42m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (hit target itself: tablediningfactory_7757413__spawn_asset_ @1.83m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 2.42,
+          "edge_dist": 1.58,
+          "half_extent": 0.84,
+          "required": 1.5,
+          "detail": "edge_dist=1.58m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case06-L2",
       "level": "L2",
       "original_start": [
-        -0.2,
-        9.2
+        0.93,
+        9.93
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 104.6,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            -2.367495894432068,
+            6.632503986358643,
+            2.3674960136413574,
+            11.367496490478516
+          ],
+          "detail": "(0.93, 9.93) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            1.7231346189893513,
+            6.8867266923188915
+          ],
+          "detail": "rel_angle=-180.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            1.7231346189893513,
+            6.8867266923188915
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_605441_SimpleBookcaseFactory",
+          "agent_to_target_dist": 3.14,
+          "detail": "target at (1.72,6.89) inside floor polygon, dist=3.14m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 3.14,
+          "edge_dist": 2.83,
+          "half_extent": 0.32,
+          "required": 1.5,
+          "detail": "edge_dist=2.83m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case06-L3",
       "level": "L3",
       "original_start": [
-        -0.43,
-        10.76
+        -0.07,
+        10.93
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -83.4,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            -2.367495894432068,
+            6.632503986358643,
+            2.3674960136413574,
+            11.367496490478516
+          ],
+          "detail": "(-0.07, 10.93) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            0.2,
+            8.6
+          ],
+          "detail": "hfov_rel=0.0\u00b0 vfov_pitch_to_tgt=-31.4\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-21.4\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            0.2,
+            8.6
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_182302_BookStackFactory",
+          "agent_to_target_dist": 2.35,
+          "detail": "target at (0.20,8.60) inside floor polygon, dist=2.35m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=2.75m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 2.35,
+          "edge_dist": 2.2,
+          "half_extent": 0.15,
+          "required": 1.0,
+          "detail": "edge_dist=2.20m > radius=1.0m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case06-L4",
       "level": "L4",
       "original_start": [
-        -0.2,
-        9.2
+        0.93,
+        9.93
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 89.8,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            -2.367495894432068,
+            6.632503986358643,
+            2.3674960136413574,
+            11.367496490478516
+          ],
+          "detail": "(0.93, 9.93) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            0.9207217940896064,
+            6.87081407868153
+          ],
+          "detail": "rel_angle=-180.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            0.9207217940896064,
+            6.87081407868153
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_638155_DeskLampFactory",
+          "agent_to_target_dist": 3.06,
+          "detail": "target at (0.92,6.87) inside floor polygon, dist=3.06m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 3.06,
+          "edge_dist": 2.93,
+          "half_extent": 0.13,
+          "required": 1.5,
+          "detail": "edge_dist=2.93m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case07-L1",
       "level": "L1",
       "original_start": [
-        2.36,
-        6.88
+        1.94,
+        6.44
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 34.1,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.13813209533691406,
+            4.638132095336914,
+            6.361867904663086,
+            9.861867904663086
+          ],
+          "detail": "(1.94, 6.44) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            4.5219211876393395,
+            8.188576310873042
+          ],
+          "detail": "hfov_rel=0.0\u00b0 vfov_pitch_to_tgt=-19.2\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-9.2\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            4.5219211876393395,
+            8.188576310873042
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_233460_TableDiningFactory",
+          "agent_to_target_dist": 3.12,
+          "detail": "target at (4.52,8.19) inside floor polygon, dist=3.12m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=3.30m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 3.12,
+          "edge_dist": 2.23,
+          "half_extent": 0.89,
+          "required": 1.5,
+          "detail": "edge_dist=2.23m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case07-L2",
       "level": "L2",
       "original_start": [
-        4.2,
-        7.1
+        2.94,
+        7.44
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 12.5,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.13813209533691406,
+            4.638132095336914,
+            6.361867904663086,
+            9.861867904663086
+          ],
+          "detail": "(2.94, 7.44) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            0.3904885798692703,
+            5.101797312498093
+          ],
+          "detail": "rel_angle=-150.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            0.3904885798692703,
+            5.101797312498093
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_787459_SimpleBookcaseFactory",
+          "agent_to_target_dist": 3.46,
+          "detail": "target at (0.39,5.10) inside floor polygon, dist=3.46m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 3.46,
+          "edge_dist": 3.17,
+          "half_extent": 0.29,
+          "required": 1.5,
+          "detail": "edge_dist=3.17m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case07-L3",
       "level": "L3",
       "original_start": [
-        3.78,
-        7.92
+        2.44,
+        7.94
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -33.6,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.13813209533691406,
+            4.638132095336914,
+            6.361867904663086,
+            9.861867904663086
+          ],
+          "detail": "(2.44, 7.94) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": false,
+          "target_xy": [
+            3.7,
+            7.1
+          ],
+          "detail": "VFOV fail: hfov_rel=-0.1\u00b0 vfov_pitch_to_tgt=-43.4\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-33.4\u00b0 in_hfov=True in_vfov=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            3.7,
+            7.1
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_329417_BookStackFactory",
+          "agent_to_target_dist": 1.51,
+          "detail": "target at (3.70,7.10) inside floor polygon, dist=1.51m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=2.08m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 1.51,
+          "edge_dist": 1.35,
+          "half_extent": 0.16,
+          "required": 1.0,
+          "detail": "edge_dist=1.35m > radius=1.0m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "FIXED",
+      "fixes": [
+        "pos: (2.44,7.94) \u2192 (1.94,7.44), yaw: -33.6 \u2192 -10.9, moved 0.71m"
+      ],
+      "fixed_start": [
+        1.94,
+        7.44
+      ],
+      "fixed_yaw": -10.9
     },
     {
       "task_id": "case07-L4",
       "level": "L4",
       "original_start": [
-        2.4,
-        6.5
+        1.94,
+        6.44
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -147.4,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.13813209533691406,
+            4.638132095336914,
+            6.361867904663086,
+            9.861867904663086
+          ],
+          "detail": "(1.94, 6.44) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            4.7,
+            6.1
+          ],
+          "detail": "rel_angle=140.4\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": false,
+          "target_xy": [
+            4.7,
+            6.1
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_329417_BookStackFactory",
+          "agent_to_target_dist": 2.78,
+          "detail": "target at (4.70,6.10) OUTSIDE floor polygon, dist=2.78m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 2.78,
+          "edge_dist": 2.62,
+          "half_extent": 0.16,
+          "required": 1.0,
+          "detail": "edge_dist=2.62m > radius=1.0m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case09-L1",
       "level": "L1",
       "original_start": [
-        6.5,
-        3.5
+        6.43,
+        4.43
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -166.2,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.6327462196350098,
+            2.6327459812164307,
+            13.867308616638184,
+            11.367280960083008
+          ],
+          "detail": "(6.43, 4.43) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            4.340845003724232,
+            3.9171521365644804
+          ],
+          "detail": "hfov_rel=-0.0\u00b0 vfov_pitch_to_tgt=-29.8\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-19.8\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            4.340845003724232,
+            3.9171521365644804
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_193832_CoffeeTableFactory",
+          "agent_to_target_dist": 2.15,
+          "detail": "target at (4.34,3.92) inside floor polygon, dist=2.15m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (hit target itself: coffeetablefactory_9971595__spawn_asset_ @2.15m)"
+        },
+        "min_dist": {
+          "pass": false,
+          "agent_to_center": 2.15,
+          "edge_dist": 1.5,
+          "half_extent": 0.65,
+          "required": 1.5,
+          "detail": "SPAWN_WIN: edge_dist=1.50m (center=2.15-half=0.65) <= radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "FIXED",
+      "fixes": [
+        "pos: (6.43,4.43) \u2192 (6.43,4.43), yaw: -166.2 \u2192 -166.2, moved 0.00m"
+      ],
+      "fixed_start": [
+        6.43,
+        4.43
+      ],
+      "fixed_yaw": -166.2
     },
     {
       "task_id": "case09-L2",
@@ -587,38 +1631,108 @@
         5.0,
         5.1
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -144.3,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.6327462196350098,
+            2.6327459812164307,
+            13.867308616638184,
+            11.367280960083008
+          ],
+          "detail": "(5.00, 5.10) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            13.528537433868678,
+            11.224938609985614
+          ],
+          "detail": "rel_angle=180.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            13.528537433868678,
+            11.224938609985614
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_268789_DeskLampFactory",
+          "agent_to_target_dist": 10.5,
+          "detail": "target at (13.53,11.22) inside floor polygon, dist=10.50m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 10.5,
+          "edge_dist": 10.4,
+          "half_extent": 0.1,
+          "required": 1.5,
+          "detail": "edge_dist=10.40m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case09-L3",
       "level": "L3",
       "original_start": [
-        9.72,
-        2.72
+        10.43,
+        4.43
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 116.8,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.6327462196350098,
+            2.6327459812164307,
+            13.867308616638184,
+            11.367280960083008
+          ],
+          "detail": "(10.43, 4.43) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            8.0,
+            6.1
+          ],
+          "detail": "hfov_rel=28.7\u00b0 vfov_pitch_to_tgt=-25.9\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-15.9\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": false,
+          "target_xy": [
+            8.0,
+            6.1
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_103870_SupportBookStackFactory",
+          "agent_to_target_dist": 2.95,
+          "detail": "target at (8.00,6.10) OUTSIDE floor polygon, dist=2.95m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=3.13m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 2.95,
+          "edge_dist": 2.77,
+          "half_extent": 0.18,
+          "required": 1.0,
+          "detail": "edge_dist=2.77m > radius=1.0m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case09-L4",
@@ -627,38 +1741,108 @@
         5.0,
         5.1
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -144.3,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.6327462196350098,
+            2.6327459812164307,
+            13.867308616638184,
+            11.367280960083008
+          ],
+          "detail": "(5.00, 5.10) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            13.528537433868678,
+            11.224938609985614
+          ],
+          "detail": "rel_angle=180.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            13.528537433868678,
+            11.224938609985614
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_268789_DeskLampFactory",
+          "agent_to_target_dist": 10.5,
+          "detail": "target at (13.53,11.22) inside floor polygon, dist=10.50m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 10.5,
+          "edge_dist": 10.4,
+          "half_extent": 0.1,
+          "required": 1.5,
+          "detail": "edge_dist=10.40m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case10-L1",
       "level": "L1",
       "original_start": [
-        2.66,
-        5.21
+        4.42,
+        5.42
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 123.7,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.6189165115356445,
+            3.118941307067871,
+            11.881058692932129,
+            12.381058692932129
+          ],
+          "detail": "(4.42, 5.42) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            2.727192246954732,
+            7.955837088228039
+          ],
+          "detail": "hfov_rel=0.0\u00b0 vfov_pitch_to_tgt=-17.2\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-7.2\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            2.727192246954732,
+            7.955837088228039
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_783102_TableDiningFactory",
+          "agent_to_target_dist": 3.05,
+          "detail": "target at (2.73,7.96) inside floor polygon, dist=3.05m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=3.19m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 3.05,
+          "edge_dist": 2.45,
+          "half_extent": 0.59,
+          "required": 1.5,
+          "detail": "edge_dist=2.45m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case10-L2",
@@ -667,38 +1851,108 @@
         3.3,
         6.7
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -171.9,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.6189165115356445,
+            3.118941307067871,
+            11.881058692932129,
+            12.381058692932129
+          ],
+          "detail": "(3.30, 6.70) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            11.41002936594648,
+            7.852981749592438
+          ],
+          "detail": "rel_angle=180.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            11.41002936594648,
+            7.852981749592438
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_391903_SimpleBookcaseFactory",
+          "agent_to_target_dist": 8.19,
+          "detail": "target at (11.41,7.85) inside floor polygon, dist=8.19m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 8.19,
+          "edge_dist": 7.89,
+          "half_extent": 0.3,
+          "required": 1.5,
+          "detail": "edge_dist=7.89m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case10-L3",
       "level": "L3",
       "original_start": [
-        9.12,
-        1.69
+        3.92,
+        3.92
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 28.0,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.6189165115356445,
+            3.118941307067871,
+            11.881058692932129,
+            12.381058692932129
+          ],
+          "detail": "(3.92, 3.92) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            5.6,
+            7.4
+          ],
+          "detail": "hfov_rel=36.2\u00b0 vfov_pitch_to_tgt=-20.3\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-10.3\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": false,
+          "target_xy": [
+            5.6,
+            7.4
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_139732_BookStackFactory",
+          "agent_to_target_dist": 3.86,
+          "detail": "target at (5.60,7.40) OUTSIDE floor polygon, dist=3.86m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=4.01m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 3.86,
+          "edge_dist": 3.73,
+          "half_extent": 0.13,
+          "required": 1.0,
+          "detail": "edge_dist=3.73m > radius=1.0m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case10-L4",
@@ -707,18 +1961,51 @@
         3.3,
         6.7
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": -171.4,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            0.6189165115356445,
+            3.118941307067871,
+            11.881058692932129,
+            12.381058692932129
+          ],
+          "detail": "(3.30, 6.70) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            6.6,
+            6.4
+          ],
+          "detail": "rel_angle=166.2\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": false,
+          "target_xy": [
+            6.6,
+            6.4
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_139732_BookStackFactory",
+          "agent_to_target_dist": 3.31,
+          "detail": "target at (6.60,6.40) OUTSIDE floor polygon, dist=3.31m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 3.31,
+          "edge_dist": 3.18,
+          "half_extent": 0.13,
+          "required": 1.0,
+          "detail": "edge_dist=3.18m > radius=1.0m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case12-L1",
@@ -727,18 +2014,55 @@
         8.36,
         2.98
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 160.8,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            2.606952667236328,
+            -1.393047571182251,
+            9.393047332763672,
+            5.393047332763672
+          ],
+          "detail": "(8.36, 2.98) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            4.116783842210237,
+            4.4565440719150535
+          ],
+          "detail": "hfov_rel=0.0\u00b0 vfov_pitch_to_tgt=-12.6\u00b0 cam_pitch=-10.0\u00b0 rel_vpitch=-2.6\u00b0 in_hfov=True in_vfov=True"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            4.116783842210237,
+            4.4565440719150535
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_321476_SofaFactory",
+          "agent_to_target_dist": 4.49,
+          "detail": "target at (4.12,4.46) inside floor polygon, dist=4.49m"
+        },
+        "line_of_sight": {
+          "pass": true,
+          "detail": "clear (no hit, dist=4.60m)"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 4.49,
+          "edge_dist": 3.45,
+          "half_extent": 1.05,
+          "required": 1.5,
+          "detail": "edge_dist=3.45m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
+      "status": "PASS",
+      "fixes": []
     },
     {
       "task_id": "case12-L2",
@@ -747,138 +2071,51 @@
         7.4,
         3.0
       ],
-      "validation": {
-        "overlap": {
+      "original_yaw": 42.9,
+      "checks": {
+        "floor_bbox": {
           "pass": true,
-          "hit": ""
+          "floor_bbox": [
+            2.606952667236328,
+            -1.393047571182251,
+            9.393047332763672,
+            5.393047332763672
+          ],
+          "detail": "(7.40, 3.00) inside floor polygon"
         },
-        "clearance": {
+        "collision": {
           "pass": true,
-          "clear_dirs": 8
+          "detail": "clear"
+        },
+        "fov": {
+          "pass": true,
+          "target_xy": [
+            2.9078738028838926,
+            -1.1736037768488203
+          ],
+          "detail": "rel_angle=180.0\u00b0 in_hfov=False want_visible=False"
+        },
+        "target_in_room": {
+          "pass": true,
+          "target_xy": [
+            2.9078738028838926,
+            -1.1736037768488203
+          ],
+          "target_prim": "/World/InteractiveProps/Obj_944698_SimpleBookcaseFactory",
+          "agent_to_target_dist": 6.13,
+          "detail": "target at (2.91,-1.17) inside floor polygon, dist=6.13m"
+        },
+        "min_dist": {
+          "pass": true,
+          "agent_to_center": 6.13,
+          "edge_dist": 5.85,
+          "half_extent": 0.28,
+          "required": 1.5,
+          "detail": "edge_dist=5.85m > radius=1.5m"
         }
       },
-      "passed": true,
-      "fixed": false
-    }
-  ],
-  "fixed": [],
-  "unreachable": [
-    {
-      "task_id": "case02-L3",
-      "phase": 1,
-      "target": "SimpleBookcase",
-      "candidates": [
-        [
-          17.7,
-          1.141
-        ],
-        [
-          17.7,
-          1.141
-        ]
-      ],
-      "spawn": [
-        4.31,
-        5.03
-      ],
-      "reachable_cells": 5000
-    },
-    {
-      "task_id": "case04-L2",
-      "phase": 0,
-      "target": "SimpleBookcase",
-      "candidates": [
-        [
-          1.845,
-          9.876
-        ],
-        [
-          1.845,
-          9.876
-        ]
-      ],
-      "spawn": [
-        9.4,
-        4.1
-      ],
-      "reachable_cells": 5000
-    },
-    {
-      "task_id": "case04-L3",
-      "phase": 1,
-      "target": "SimpleBookcase",
-      "candidates": [
-        [
-          1.845,
-          9.876
-        ],
-        [
-          1.845,
-          9.876
-        ]
-      ],
-      "spawn": [
-        8.23,
-        0.99
-      ],
-      "reachable_cells": 5000
-    }
-  ],
-  "fov_violations": [
-    {
-      "task_id": "case03-L4",
-      "target": "DeskLamp",
-      "target_pos": [
-        7.069,
-        10.465
-      ],
-      "old_yaw": 156.8,
-      "new_yaw": -62.7,
-      "rel_angle": -39.5
-    },
-    {
-      "task_id": "case04-L4",
-      "target": "DeskLamp",
-      "target_pos": [
-        2.721,
-        2.691
-      ],
-      "old_yaw": -111.6,
-      "new_yaw": 36.9,
-      "rel_angle": -31.5
-    },
-    {
-      "task_id": "case06-L2",
-      "target": "SimpleBookcase",
-      "target_pos": [
-        -1.083,
-        11.123
-      ],
-      "old_yaw": 129.7,
-      "new_yaw": -65.3,
-      "rel_angle": -15.0
-    },
-    {
-      "task_id": "case09-L2",
-      "target": "DeskLamp",
-      "target_pos": [
-        1.122,
-        4.479
-      ],
-      "old_yaw": -144.3,
-      "new_yaw": 9.1,
-      "rel_angle": -26.6
-    },
-    {
-      "task_id": "case09-L4",
-      "target": "DeskLamp",
-      "target_pos": [
-        1.122,
-        4.479
-      ],
-      "old_yaw": -144.3,
-      "new_yaw": 9.1,
-      "rel_angle": -26.6
+      "status": "PASS",
+      "fixes": []
     }
   ]
 }
