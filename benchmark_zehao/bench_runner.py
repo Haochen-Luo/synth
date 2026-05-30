@@ -495,6 +495,7 @@ try:
     fpv_cam = UsdGeom.Camera.Define(stage, "/World/NavCamera")
     fpv_cam.CreateFocalLengthAttr().Set(17.0)
     fpv_cam.CreateHorizontalApertureAttr().Set(34.0)
+    fpv_cam.CreateClippingRangeAttr().Set(Gf.Vec2f(0.01, 10000.0))
     rp_fpv = rep.create.render_product("/World/NavCamera", (RENDER_W, RENDER_H))
     wr_fpv = rep.WriterRegistry.get("BasicWriter")
     wr_fpv.initialize(output_dir=fpv_scratch, rgb=True); wr_fpv.attach([rp_fpv])
