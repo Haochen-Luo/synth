@@ -1032,8 +1032,8 @@ try:
         cxf0 = UsdGeom.Xformable(nav_cam)
         try: cxf0.ClearXformOpOrder()
         except: pass
-        cam_x0 = ax + 0.1 * math.cos(math.radians(ayaw))
-        cam_y0 = ay + 0.1 * math.sin(math.radians(ayaw))
+        cam_x0 = ax + 0.01 * math.cos(math.radians(ayaw))
+        cam_y0 = ay + 0.01 * math.sin(math.radians(ayaw))
         cxf0.AddTranslateOp().Set(Gf.Vec3d(cam_x0, cam_y0, EYE_H))
         cxf0.AddOrientOp().Set(cam_quat(ayaw, apitch))
     pose_runners_at(sim_t)
@@ -1055,13 +1055,16 @@ try:
         myaw = math.radians(ayaw + MESH_YAW_OFF)
         a_orient.Set(Gf.Quatf(math.cos(myaw/2), 0, 0, math.sin(myaw/2)))
 
-        # Update camera (offset forward to avoid clipping inside agent mesh)
+        # Update camera — minimal forward offset (0.01m) to stay inside the
+        # agent's collision capsule (r=0.40m). The old 0.1m offset pushed the
+        # camera to the capsule edge, causing it to enter runner head mesh
+        # during close encounters (e.g. deadlock freeze at SAFE_RADIUS).
         if nav_cam and nav_cam.IsValid():
             cxf = UsdGeom.Xformable(nav_cam)
             try: cxf.ClearXformOpOrder()
             except: pass
-            cam_x = ax + 0.1 * math.cos(math.radians(ayaw))
-            cam_y = ay + 0.1 * math.sin(math.radians(ayaw))
+            cam_x = ax + 0.01 * math.cos(math.radians(ayaw))
+            cam_y = ay + 0.01 * math.sin(math.radians(ayaw))
             # DO NOT ADD GROUND_Z: EYE_H is absolute height from floor.
             # Adding GROUND_Z pushed the camera into the ceiling (2.25m).
             cxf.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, EYE_H))
@@ -1200,8 +1203,8 @@ try:
                     cxf_f = UsdGeom.Xformable(nav_cam)
                     try: cxf_f.ClearXformOpOrder()
                     except: pass
-                    cam_x = ax + 0.1 * math.cos(math.radians(ayaw))
-                    cam_y = ay + 0.1 * math.sin(math.radians(ayaw))
+                    cam_x = ax + 0.01 * math.cos(math.radians(ayaw))
+                    cam_y = ay + 0.01 * math.sin(math.radians(ayaw))
                     cxf_f.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, EYE_H))
                     cxf_f.AddOrientOp().Set(cam_quat(ayaw, apitch))
                 pose_runners_at(filler_t)
