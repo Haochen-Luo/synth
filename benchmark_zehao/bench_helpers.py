@@ -139,7 +139,7 @@ You see the room from your first-person camera. You receive up to 3 images showi
 
 There may be people moving — avoid colliding with them.
 
-You can ONLY output ONE of these actions:
+You can use these actions:
 - MOVE_FORWARD (move 0.25 meters in your current facing direction)
 - TURN_LEFT (rotate 15 degrees to the left)
 - TURN_RIGHT (rotate 15 degrees to the right)
@@ -148,14 +148,25 @@ You can ONLY output ONE of these actions:
 - PAUSE (stand still for one step — your position and facing don't change, but time passes and other agents keep moving)
 - DONE (you believe you have reached the target — this is your final answer for this navigation)
 
-Rules:
-- If you see the target directly ahead and close, move toward it.
-- If the target is to your left or right, turn toward it first.
-- If a person is blocking your path, turn to find an alternate route.
-- When you are very close to the target (within arm's reach), output DONE.
+Each action is SMALL. Plan a SEQUENCE of up to 5 actions you are confident about
+from the current view (e.g. several MOVE_FORWARD in a row, or a few turns then
+moves). The robot executes your plan one action at a time and STOPS the plan
+early if it hits an obstacle or reaches the target — so plan boldly but sensibly.
 
-First, briefly explain your reasoning. Then, as the VERY LAST line, output ONLY:
-ACTION: <action_name>"""
+You will be shown your recent plans, which actions actually executed, and why
+each plan ended (e.g. "BLOCKED at action 1"). Use this: if a plan was BLOCKED,
+the route ahead is obstructed — do NOT plan the same direction again, turn away.
+
+Rules:
+- If the target is directly ahead, queue multiple MOVE_FORWARD.
+- If the target is to your left or right, queue turns first, then moves.
+- If a person is in your path, plan a route around them.
+- If your last plan was BLOCKED, queue several turns to face a clear direction.
+- When you expect to be within arm's reach, end the plan with DONE.
+
+First, briefly explain your reasoning. Then, as the VERY LAST line, output ONLY
+a comma-separated plan of 1-5 actions:
+PLAN: <action_1>, <action_2>, ..., <action_n>"""
 
 def make_multistep_system_prompt(instruction):
     return f"""You are a service robot inside an indoor room. Your task:
@@ -163,7 +174,7 @@ def make_multistep_system_prompt(instruction):
 
 You receive up to 3 images showing your recent viewpoints (oldest to newest) — use them to understand how the scene has changed and avoid repeating failed actions.
 
-You can ONLY output ONE of these actions:
+You can use these actions:
 - MOVE_FORWARD (move 0.25 meters in your current facing direction)
 - TURN_LEFT (rotate 15 degrees to the left)
 - TURN_RIGHT (rotate 15 degrees to the right)
@@ -175,14 +186,27 @@ You can ONLY output ONE of these actions:
 - TURN_ON (turn on a device near you — only works when very close)
 - DONE (you have completed the final step of the task)
 
+Each action is SMALL. Plan a SEQUENCE of up to 5 actions you are confident about
+from the current view (e.g. several MOVE_FORWARD, or turns then moves). The robot
+executes your plan one action at a time and STOPS the plan early if it hits an
+obstacle or completes a sub-task — so plan boldly but sensibly.
+
+You will be shown your recent plans, which actions actually executed, and why
+each plan ended (e.g. "BLOCKED at action 1"). Use this: if a plan was BLOCKED,
+the route ahead is obstructed — do NOT plan the same direction again, turn away.
+
 Rules:
 - Think step by step: what sub-task should I do next?
-- Do NOT attempt PICK_UP/PUT_DOWN unless the object is within arm's reach.
-- Navigate RIGHT NEXT TO the target before interacting.
+- Queue navigation moves to approach the current target.
+- If your last plan was BLOCKED, queue several turns to face a clear direction.
+- Put an interaction action (PICK_UP / PUT_DOWN / TURN_ON / DONE) as the LAST
+  action of a plan only when you expect to be within arm's reach by then.
+- Do NOT attempt PICK_UP/PUT_DOWN unless you expect the object within reach.
 - Only use DONE after ALL steps of the task are done.
 
-First, briefly explain your reasoning. Then, as the VERY LAST line, output ONLY:
-ACTION: <action_name>"""
+First, briefly explain your reasoning. Then, as the VERY LAST line, output ONLY
+a comma-separated plan of 1-5 actions:
+PLAN: <action_1>, <action_2>, ..., <action_n>"""
 
 # ── Metrics computation ──
 def compute_metrics(nav_history, task_config, completed_phases, total_phases):
