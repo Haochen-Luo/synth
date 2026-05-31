@@ -1417,9 +1417,10 @@ try:
         did_move = abs(ax-pre_x) > 0.001 or abs(ay-pre_y) > 0.001
 
         # ── Smooth Camera Transition ──
-        # Linearly interpolate the camera from the old pose to the new pose over a few frames
-        # so the resulting smooth video doesn't show instantaneous teleportation.
-        CAM_TRANSITION_FRAMES = 3
+        # Camera transition interpolation: set to 0 to skip runtime PathTracing
+        # of intermediate frames (~1.5s/frame savings). Use ffmpeg minterpolate
+        # in post-processing for smooth video instead (pure CPU, zero render cost).
+        CAM_TRANSITION_FRAMES = 0
         if did_move or abs(ayaw - pre_yaw) > 0.1 or abs(apitch - pre_pitch) > 0.1:
             def short_angle(a0, a1):
                 da = (a1 - a0) % 360
