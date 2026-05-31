@@ -356,26 +356,78 @@ try:
                 resolved_half_extents.append(0.0)
                 log(f"[BENCH] WARNING: no prim found for {tobj}")
 
-    # ── Auto-spawn: compute agent start from first target position ──
+    # ── Auto-spawn: compute agent start from scene geometry ──
+    # Strategy: collect all prop centers as "room interior" samples, then
+    # pick a point 3-6m from the first target that is still within the
+    # bounding box of the scene interior (padded inward by 1m).
+    # Actual ground-hit verification happens later via spawn_nudge.
     if auto_spawn and resolved_targets:
         import math, random as _rng
         _rng.seed(hash(tid) & 0xFFFFFFFF)  # deterministic per task
         tgt0 = resolved_targets[0]
-        # Spawn 5-8m away from first target
-        spawn_dist = 5.0 + _rng.random() * 3.0
-        # Random angle
-        angle = _rng.uniform(0, 2 * math.pi)
-        sx = tgt0[0] + spawn_dist * math.cos(angle)
-        sy = tgt0[1] + spawn_dist * math.sin(angle)
-        # Yaw: face vs back
+
+        # Collect all known interior points (prop centers + resolved targets)
+        interior_pts = list(resolved_targets)
+        # Also add prop centers from the stage traverse we already did
+        for p in stage.Traverse():
+            if p.GetTypeName() in ("Mesh", "Xform") and "/World/Env/" in p.GetPath().pathString:
+                try:
+                    imageable = UsdGeom.Imageable(p)
+                    bound = imageable.ComputeWorldBound(Usd.TimeCode.Default(), "default")
+                    box = bound.GetBox()
+                    cn = box.GetMidpoint()
+                    if abs(cn[0]) < 100 and abs(cn[1]) < 100:  # sanity
+                        interior_pts.append([cn[0], cn[1]])
+                except:
+                    pass
+
+        if len(interior_pts) >= 2:
+            xs = [p[0] for p in interior_pts]
+            ys = [p[1] for p in interior_pts]
+            # Scene bounding box with 1m inward padding
+            x_min, x_max = min(xs) + 1.0, max(xs) - 1.0
+            y_min, y_max = min(ys) + 1.0, max(ys) - 1.0
+            if x_min >= x_max: x_min, x_max = min(xs), max(xs)
+            if y_min >= y_max: y_min, y_max = min(ys), max(ys)
+            scene_cx = (x_min + x_max) / 2
+            scene_cy = (y_min + y_max) / 2
+        else:
+            x_min, x_max = tgt0[0] - 6, tgt0[0] + 6
+            y_min, y_max = tgt0[1] - 6, tgt0[1] + 6
+            scene_cx, scene_cy = tgt0[0], tgt0[1]
+
+        # Try up to 20 random spawn candidates within scene bounds
+        best_spawn = None
+        for attempt in range(20):
+            spawn_dist = 3.0 + _rng.random() * 4.0  # 3-7m from target
+            angle = _rng.uniform(0, 2 * math.pi)
+            sx = tgt0[0] + spawn_dist * math.cos(angle)
+            sy = tgt0[1] + spawn_dist * math.sin(angle)
+            # Clamp to scene bounds
+            sx = max(x_min, min(x_max, sx))
+            sy = max(y_min, min(y_max, sy))
+            # Check distance from target after clamping
+            actual_dist = math.sqrt((sx - tgt0[0])**2 + (sy - tgt0[1])**2)
+            if actual_dist >= 2.0:  # at least 2m from target
+                best_spawn = (sx, sy, actual_dist)
+                break
+        
+        if not best_spawn:
+            # Fallback: spawn at scene centroid (guaranteed to be in room)
+            sx, sy = scene_cx, scene_cy
+            actual_dist = math.sqrt((sx - tgt0[0])**2 + (sy - tgt0[1])**2)
+            best_spawn = (sx, sy, actual_dist)
+
+        sx, sy, actual_dist = best_spawn
         face_yaw = math.degrees(math.atan2(tgt0[1] - sy, tgt0[0] - sx))
         if spawn_facing == 'back':
-            agent_start_yaw = face_yaw + 180  # back to target
+            agent_start_yaw = face_yaw + 180
         else:
-            agent_start_yaw = face_yaw  # face target
+            agent_start_yaw = face_yaw
         agent_start_xy = [sx, sy]
         log(f"[BENCH] Auto-spawn: ({sx:.2f},{sy:.2f}) yaw={agent_start_yaw:.0f} "
-            f"(dist={spawn_dist:.1f}m from target, facing={spawn_facing})")
+            f"(dist={actual_dist:.1f}m from target, facing={spawn_facing}, "
+            f"scene_bounds=[{x_min:.1f},{x_max:.1f}]x[{y_min:.1f},{y_max:.1f}])")
 
     # ── Place objects that need repositioning ──
     pickup_prim = None
