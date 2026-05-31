@@ -249,24 +249,22 @@ try:
             try: UsdGeom.Imageable(p).MakeInvisible()
             except: pass
 
-    # ── Neutralize scene DomeLights to prevent colored sky bleed ──
+    # ── Strip DomeLight sky textures to prevent colored sky bleed ──
     # The DomeLight at /World/Env/env_light may have an HDR sky texture
     # that bleeds red/blue/green through the ceiling void in bird-eye view.
-    # Instead of hiding it (which kills illumination in some scenes), force
-    # it to neutral white and strip the sky texture.
+    # We strip only the texture (the sky image); the DomeLight's original
+    # color and intensity are preserved to keep scene-authentic illumination.
+    # (Do NOT force color=white — that changes material appearance, e.g.
+    # case03 door turns from black to red under uniform white lighting.)
     for p in stage.Traverse():
         if p.GetTypeName() == "DomeLight":
             pp = p.GetPath().pathString
             if pp.startswith("/World/Env/"):
                 dl = UsdLux.DomeLight(p)
-                # Clear HDR sky texture to prevent colored bleed
                 tex_attr = dl.GetTextureFileAttr()
                 if tex_attr and tex_attr.Get():
                     tex_attr.Clear()
-                    log(f"[BENCH] Cleared sky texture on DomeLight {pp}")
-                # Force neutral white color
-                dl.GetColorAttr().Set(Gf.Vec3f(1.0, 1.0, 1.0))
-                log(f"[BENCH] Neutralized DomeLight {pp} to white (sky bleed prevention)")
+                    log(f"[BENCH] Cleared sky texture on DomeLight {pp} (preserving original color)")
 
     # ── Get runner scale from spec ──
     runner_scale = [0.53, 0.53, 0.53]
