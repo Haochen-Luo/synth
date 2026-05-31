@@ -1293,7 +1293,8 @@ try:
             if ph["action"] == "PICK_UP" and dist < tgt_radius:
                 inventory.append("object")
                 if pickup_prim and pickup_prim.IsValid():
-                    UsdGeom.Imageable(pickup_prim).MakeInvisible()
+                    pickup_prim.SetActive(False)  # remove visual + physics collider
+                    log(f"[BENCH] Deactivated picked-up prim: {pickup_prim.GetPath()}")
                 cur_phase += 1
                 log(f"[BENCH] PICK_UP success, advancing to phase {cur_phase+1}")
                 if cur_phase < len(phases):
