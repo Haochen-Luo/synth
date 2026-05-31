@@ -243,3 +243,124 @@ V1–V4 history documented below. **V5** adds:
 ## References
 
 - [Spawn Validation & Wall-Clipping Fix (2025-05-28)](benchmark_zehao/docs/walkthrough_spawn_validation_0528.md) — wall buffer fix, spawn nudge, FOV gate, BFS reachability
+
+---
+
+## Session 2026-05-31: Full Dataset Scale-Up & Overnight Pipeline
+
+### Scale-Up: 9 → 122 Scenes, 366 Tasks
+
+Expanded from 9 pilot scenes to **122 physics scenes** from `full_scenarios_extracted/`.
+Difficulty levels redesigned:
+
+| Level | Phases | Spawn Facing | Description |
+|-------|--------|-------------|-------------|
+| ~~L1~~ | ~~1~~ | ~~face~~ | **Dropped** — 90%+ SR with 30B, no discrimination |
+| L2 | 1 (navigate) | back | Pure navigation, target behind agent |
+| L3 | 2 (pick+place / turn_on) | face | Multi-step interaction |
+| L4 | 2 (pick+place / turn_on) | back | L3 + blind start |
+| L5 (TODO) | 3 (pick → deliver → turn_on) | back | Multi-target sequential |
+
+Total: **122 × 3 = 366 tasks** (L5 adds ~103 more when implemented).
+
+### Task Diversity
+
+| Dimension | Distribution |
+|-----------|-------------|
+| Task types | 64.5% pick_place, 34.4% navigate, 1.1% turn_on |
+| Room types | 35% living, 30% kitchen, 24% bedroom, 7% dining, 4% bathroom |
+| Objects | 18 categories (book, cup, pillow, towel, pot, vase, etc.) |
+| Destinations | 13 types (shelf, desk, bed, kitchen island, sink, etc.) |
+| Motion types | 62% solo_run, 33% two_runners, 3% run_dance, 3% run_jump |
+| L3 instructions | 103/122 unique |
+
+### DomeLight Fix (Regression & Revert)
+
+- **Bug**: Commit `0e1a102` forced DomeLight color to white (`dl.GetColorAttr().Set(Gf.Vec3f(1,1,1))`), causing material appearance changes (e.g., case03 door turned red under uniform white GI).
+- **Fix**: Only clear the HDR sky texture (prevents bird-view sky bleed) while preserving the original DomeLight color and intensity. Commit `ab2d177`.
+
+### Shelf Deactivation Physics Bug (Open)
+
+When `deactivate_same_semantic_class` removes shelves, dynamic objects attached to them
+(lamps, books) lose support and fall in the first frame. Needs anchoring or removal of
+children before deactivation. Visible in case02-L3 (lamp falls).
+
+### Floodfill-Validated Spawn Pipeline
+
+Auto-spawn without validation is unreliable (spawn outside room / behind walls).
+Built a 3-phase overnight pipeline:
+
+```
+Phase 1: validate_full_spawns.py (~30-40min, Isaac Sim)
+  - Loads each of 122 scenes
+  - BFS floodfill at 0.25m resolution via PhysX sphere sweep
+  - Identifies reachable/unreachable props per scene
+  - Finds valid spawn candidates (walkable, 3-7m from target)
+  - Caches to spawn_cache/{scene}.json (skip on re-run)
+  - Auto-fix: swaps unreachable targets for reachable same-factory prims
+
+Phase 2: generate_validated_benchmark.py (~5s, plain Python)
+  - Reads spawn cache
+  - Only uses reachable targets
+  - Generates benchmark_tasks_full_runner.json with verified agent_start/yaw
+
+Phase 3: 30B batch (~48h)
+  - Sequential scene-grouped execution
+  - Results in results/fullrun_30B_validated_L2L4/
+```
+
+**Launch command** (one-shot, nohup-safe):
+```bash
+ssh GPU-843 'nohup bash /home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/run_full_benchmark_overnight.sh \
+    > /home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/overnight_pipeline.log 2>&1 &'
+```
+
+### Qwen3-VL-235B-A22B Comparison
+
+Tested `Qwen3-VL-235B-A22B-Thinking-FP8` on port 8301 (4×H100 TP4).
+
+| Metric | 30B-A3B | 235B-A22B |
+|--------|---------|-----------|
+| VLM call speed | ~8s/call | ~45s/call (5-6×) |
+| PLAN parsing | 95%+ | 96% (22/23) |
+| Full-run feasibility | 48h for 366 tasks | Not feasible (~200h) |
+| Thinking | No `<think>` tags | Has `</think>` but no `<think>` start tag |
+
+235B suitable for subset comparison only (~30-50 tasks).
+
+### Backward Compatibility
+
+All `bench_runner.py` changes use `.get()` with defaults:
+- `task.get("agent_start")` — existing tasks have this → works as before
+- `task.get("spawn_facing", "face")` — existing tasks lack this → defaults to face
+- `ph.get("target_prim", "")` — existing tasks lack this → falls back to factory search
+- Original `benchmark_tasks.json` (40 tasks, 9 scenes) remains fully compatible
+
+### Key New Files
+
+| File | Role |
+|---|---|
+| `validate_full_spawns.py` | PhysX floodfill spawn validation for 122 scenes |
+| `generate_validated_benchmark.py` | Reads spawn cache, generates verified runner tasks |
+| `generate_full_benchmark.py` | Initial task generation (pre-validation draft) |
+| `run_full_benchmark_overnight.sh` | One-shot overnight pipeline script |
+| `benchmark_tasks_full_runner.json` | 366 validated tasks for full benchmark |
+| `spawn_cache/*.json` | Cached floodfill results per scene |
+
+### Timing Reference (30B, H100 GPU 4)
+
+| Level | Avg Duration | Steps |
+|-------|-------------|-------|
+| L1 | 3.5 min | ~30 |
+| L2 | 9.1 min | ~80 |
+| L3 | 10.1 min | ~100 |
+| L4 | 9.0 min | ~100 |
+| Overall | 8.0 min/task | — |
+| 12h overnight | ~89 tasks | — |
+| Full 366 | ~48h (2 days) | — |
+
+### Active Runs (as of 2026-05-31 16:15 UTC)
+
+1. **multiaction_v1_full** (30B, 38 tasks L1-L4 pilot) — ~34/38 done, finishing
+2. **qwen235b_L3L4_test** (235B, 18 tasks L3-L4 pilot) — running
+3. **overnight pipeline** (floodfill validate → 366-task batch) — Phase 1 running
