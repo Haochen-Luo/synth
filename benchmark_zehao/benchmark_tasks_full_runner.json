@@ -3,7 +3,7 @@
     {
       "id": "case003_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case003_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case003_official_solo_run_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -27,7 +27,7 @@
     {
       "id": "case003_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case003_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case003_official_solo_run_full_physics_scene",
       "instruction": "Pick up the bottle and bring it to the kitchen cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -60,7 +60,7 @@
     {
       "id": "case003_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case003_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case003_official_solo_run_full_physics_scene",
       "instruction": "Pick up the bottle and bring it to the kitchen cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -93,7 +93,7 @@
     {
       "id": "case004_official_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case004_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case004_official_two_runners_full_physics_scene",
       "instruction": "Go to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -117,7 +117,7 @@
     {
       "id": "case004_official_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case004_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case004_official_two_runners_full_physics_scene",
       "instruction": "Grab the pot and place it on the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -150,7 +150,7 @@
     {
       "id": "case004_official_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case004_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case004_official_two_runners_full_physics_scene",
       "instruction": "Grab the pot and place it on the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -183,7 +183,7 @@
     {
       "id": "case005_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case005_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case005_official_solo_run_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -207,7 +207,7 @@
     {
       "id": "case005_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case005_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case005_official_solo_run_full_physics_scene",
       "instruction": "Grab the book stack and place it on the side table.",
       "agent_start": null,
       "agent_yaw": null,
@@ -240,7 +240,7 @@
     {
       "id": "case005_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case005_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case005_official_solo_run_full_physics_scene",
       "instruction": "Grab the book stack and place it on the side table.",
       "agent_start": null,
       "agent_yaw": null,
@@ -273,7 +273,7 @@
     {
       "id": "case006_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case006_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case006_official_solo_run_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -297,7 +297,7 @@
     {
       "id": "case006_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case006_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case006_official_solo_run_full_physics_scene",
       "instruction": "Pick up the pillow and bring it to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -330,7 +330,7 @@
     {
       "id": "case006_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case006_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case006_official_solo_run_full_physics_scene",
       "instruction": "Pick up the pillow and bring it to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -363,7 +363,7 @@
     {
       "id": "case007_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case007_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case007_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -387,7 +387,7 @@
     {
       "id": "case007_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case007_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case007_official_solo_run_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -420,7 +420,7 @@
     {
       "id": "case007_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case007_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case007_official_solo_run_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -453,7 +453,7 @@
     {
       "id": "case008_official_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case008_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case008_official_two_runners_full_physics_scene",
       "instruction": "Find and approach the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -477,7 +477,7 @@
     {
       "id": "case008_official_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case008_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case008_official_two_runners_full_physics_scene",
       "instruction": "Pick up the wine glass and bring it to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -510,7 +510,7 @@
     {
       "id": "case008_official_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case008_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case008_official_two_runners_full_physics_scene",
       "instruction": "Pick up the wine glass and bring it to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -543,7 +543,7 @@
     {
       "id": "case010_official_run_dance-L2",
       "level": "L2",
-      "scene_dir": "native_case010_official_run_dance_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case010_official_run_dance_full_physics_scene",
       "instruction": "Go to the monitor.",
       "agent_start": null,
       "agent_yaw": null,
@@ -567,7 +567,7 @@
     {
       "id": "case010_official_run_dance-L3",
       "level": "L3",
-      "scene_dir": "native_case010_official_run_dance_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case010_official_run_dance_full_physics_scene",
       "instruction": "Grab the book column and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -600,7 +600,7 @@
     {
       "id": "case010_official_run_dance-L4",
       "level": "L4",
-      "scene_dir": "native_case010_official_run_dance_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case010_official_run_dance_full_physics_scene",
       "instruction": "Grab the book column and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -633,7 +633,7 @@
     {
       "id": "case011_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case011_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case011_official_solo_run_full_physics_scene",
       "instruction": "Navigate to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -657,7 +657,7 @@
     {
       "id": "case011_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case011_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case011_official_solo_run_full_physics_scene",
       "instruction": "Grab the bottle and place it on the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -690,7 +690,7 @@
     {
       "id": "case011_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case011_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case011_official_solo_run_full_physics_scene",
       "instruction": "Grab the bottle and place it on the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -723,7 +723,7 @@
     {
       "id": "case012_official_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case012_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case012_official_two_runners_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -747,7 +747,7 @@
     {
       "id": "case012_official_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case012_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case012_official_two_runners_full_physics_scene",
       "instruction": "Grab the book stack and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -780,7 +780,7 @@
     {
       "id": "case012_official_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case012_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case012_official_two_runners_full_physics_scene",
       "instruction": "Grab the book stack and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -813,7 +813,7 @@
     {
       "id": "case013_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case013_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case013_official_solo_run_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -837,7 +837,7 @@
     {
       "id": "case013_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case013_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case013_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the kitchen counter.",
       "agent_start": null,
       "agent_yaw": null,
@@ -870,7 +870,7 @@
     {
       "id": "case013_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case013_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case013_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the kitchen counter.",
       "agent_start": null,
       "agent_yaw": null,
@@ -903,7 +903,7 @@
     {
       "id": "case014_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case014_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case014_official_solo_run_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -927,7 +927,7 @@
     {
       "id": "case014_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case014_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case014_official_solo_run_full_physics_scene",
       "instruction": "Grab the wine glass and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -960,7 +960,7 @@
     {
       "id": "case014_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case014_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case014_official_solo_run_full_physics_scene",
       "instruction": "Grab the wine glass and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -993,7 +993,7 @@
     {
       "id": "case015_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case015_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case015_official_solo_run_full_physics_scene",
       "instruction": "Navigate to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1017,7 +1017,7 @@
     {
       "id": "case015_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case015_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case015_official_solo_run_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1050,7 +1050,7 @@
     {
       "id": "case015_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case015_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case015_official_solo_run_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1083,7 +1083,7 @@
     {
       "id": "case018_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case018_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case018_official_solo_run_full_physics_scene",
       "instruction": "Go to the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1107,7 +1107,7 @@
     {
       "id": "case018_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case018_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case018_official_solo_run_full_physics_scene",
       "instruction": "Take the book stack to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1140,7 +1140,7 @@
     {
       "id": "case018_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case018_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case018_official_solo_run_full_physics_scene",
       "instruction": "Take the book stack to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1173,7 +1173,7 @@
     {
       "id": "case019_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case019_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case019_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1197,7 +1197,7 @@
     {
       "id": "case019_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case019_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case019_official_solo_run_full_physics_scene",
       "instruction": "Pick up the book stack and bring it to the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1230,7 +1230,7 @@
     {
       "id": "case019_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case019_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case019_official_solo_run_full_physics_scene",
       "instruction": "Pick up the book stack and bring it to the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1263,7 +1263,7 @@
     {
       "id": "case01_living_follow-L2",
       "level": "L2",
-      "scene_dir": "native_case01_living_follow_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case01_living_follow_full_physics_scene",
       "instruction": "Navigate to the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1287,7 +1287,7 @@
     {
       "id": "case01_living_follow-L3",
       "level": "L3",
-      "scene_dir": "native_case01_living_follow_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case01_living_follow_full_physics_scene",
       "instruction": "Take the book stack to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1320,7 +1320,7 @@
     {
       "id": "case01_living_follow-L4",
       "level": "L4",
-      "scene_dir": "native_case01_living_follow_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case01_living_follow_full_physics_scene",
       "instruction": "Take the book stack to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1353,7 +1353,7 @@
     {
       "id": "case01_scene_gen_v5_test_input_case0-L2",
       "level": "L2",
-      "scene_dir": "native_case01_scene_gen_v5_test_input_case0_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case01_scene_gen_v5_test_input_case0_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1377,7 +1377,7 @@
     {
       "id": "case01_scene_gen_v5_test_input_case0-L3",
       "level": "L3",
-      "scene_dir": "native_case01_scene_gen_v5_test_input_case0_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case01_scene_gen_v5_test_input_case0_full_physics_scene",
       "instruction": "Pick up the cup and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1410,7 +1410,7 @@
     {
       "id": "case01_scene_gen_v5_test_input_case0-L4",
       "level": "L4",
-      "scene_dir": "native_case01_scene_gen_v5_test_input_case0_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case01_scene_gen_v5_test_input_case0_full_physics_scene",
       "instruction": "Pick up the cup and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1443,7 +1443,7 @@
     {
       "id": "case01_text_living_01_media_reading_lounge-L2",
       "level": "L2",
-      "scene_dir": "native_case01_text_living_01_media_reading_lounge_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case01_text_living_01_media_reading_lounge_full_physics_scene",
       "instruction": "Navigate to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1467,7 +1467,7 @@
     {
       "id": "case01_text_living_01_media_reading_lounge-L3",
       "level": "L3",
-      "scene_dir": "native_case01_text_living_01_media_reading_lounge_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case01_text_living_01_media_reading_lounge_full_physics_scene",
       "instruction": "Take the fruit basket to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1500,7 +1500,7 @@
     {
       "id": "case01_text_living_01_media_reading_lounge-L4",
       "level": "L4",
-      "scene_dir": "native_case01_text_living_01_media_reading_lounge_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case01_text_living_01_media_reading_lounge_full_physics_scene",
       "instruction": "Take the fruit basket to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1533,7 +1533,7 @@
     {
       "id": "case021_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case021_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case021_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1557,7 +1557,7 @@
     {
       "id": "case021_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case021_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case021_official_solo_run_full_physics_scene",
       "instruction": "Take the book column to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1590,7 +1590,7 @@
     {
       "id": "case021_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case021_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case021_official_solo_run_full_physics_scene",
       "instruction": "Take the book column to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1623,7 +1623,7 @@
     {
       "id": "case022_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case022_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case022_official_solo_run_full_physics_scene",
       "instruction": "Go to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1647,7 +1647,7 @@
     {
       "id": "case022_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case022_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case022_official_solo_run_full_physics_scene",
       "instruction": "Pick up the bottle and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1680,7 +1680,7 @@
     {
       "id": "case022_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case022_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case022_official_solo_run_full_physics_scene",
       "instruction": "Pick up the bottle and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1713,7 +1713,7 @@
     {
       "id": "case023_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case023_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case023_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the monitor.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1737,7 +1737,7 @@
     {
       "id": "case023_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case023_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case023_official_solo_run_full_physics_scene",
       "instruction": "Grab the book stack and place it on the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1770,7 +1770,7 @@
     {
       "id": "case023_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case023_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case023_official_solo_run_full_physics_scene",
       "instruction": "Grab the book stack and place it on the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1803,7 +1803,7 @@
     {
       "id": "case024_official_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case024_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case024_official_two_runners_full_physics_scene",
       "instruction": "Go to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1827,7 +1827,7 @@
     {
       "id": "case024_official_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case024_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case024_official_two_runners_full_physics_scene",
       "instruction": "Grab the wine glass and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1860,7 +1860,7 @@
     {
       "id": "case024_official_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case024_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case024_official_two_runners_full_physics_scene",
       "instruction": "Grab the wine glass and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1893,7 +1893,7 @@
     {
       "id": "case025_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case025_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case025_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1917,7 +1917,7 @@
     {
       "id": "case025_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case025_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case025_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1950,7 +1950,7 @@
     {
       "id": "case025_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case025_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case025_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -1983,7 +1983,7 @@
     {
       "id": "case026_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case026_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case026_official_solo_run_full_physics_scene",
       "instruction": "Navigate to the monitor.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2007,7 +2007,7 @@
     {
       "id": "case026_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case026_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case026_official_solo_run_full_physics_scene",
       "instruction": "Grab the book stack and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2040,7 +2040,7 @@
     {
       "id": "case026_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case026_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case026_official_solo_run_full_physics_scene",
       "instruction": "Grab the book stack and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2073,7 +2073,7 @@
     {
       "id": "case027_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case027_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case027_official_solo_run_full_physics_scene",
       "instruction": "Navigate to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2097,7 +2097,7 @@
     {
       "id": "case027_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case027_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case027_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2130,7 +2130,7 @@
     {
       "id": "case027_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case027_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case027_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2163,7 +2163,7 @@
     {
       "id": "case028_official_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case028_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case028_official_two_runners_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2187,7 +2187,7 @@
     {
       "id": "case028_official_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case028_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case028_official_two_runners_full_physics_scene",
       "instruction": "Take the bowl to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2220,7 +2220,7 @@
     {
       "id": "case028_official_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case028_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case028_official_two_runners_full_physics_scene",
       "instruction": "Take the bowl to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2253,7 +2253,7 @@
     {
       "id": "case029_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case029_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case029_official_solo_run_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2277,7 +2277,7 @@
     {
       "id": "case029_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case029_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case029_official_solo_run_full_physics_scene",
       "instruction": "Take the pillow to the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2310,7 +2310,7 @@
     {
       "id": "case029_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case029_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case029_official_solo_run_full_physics_scene",
       "instruction": "Take the pillow to the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2343,7 +2343,7 @@
     {
       "id": "case02_living_two_people-L2",
       "level": "L2",
-      "scene_dir": "native_case02_living_two_people_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case02_living_two_people_full_physics_scene",
       "instruction": "Go to the monitor.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2367,7 +2367,7 @@
     {
       "id": "case02_living_two_people-L3",
       "level": "L3",
-      "scene_dir": "native_case02_living_two_people_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case02_living_two_people_full_physics_scene",
       "instruction": "Pick up the book stack and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2400,7 +2400,7 @@
     {
       "id": "case02_living_two_people-L4",
       "level": "L4",
-      "scene_dir": "native_case02_living_two_people_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case02_living_two_people_full_physics_scene",
       "instruction": "Pick up the book stack and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2433,7 +2433,7 @@
     {
       "id": "case02_scene_gen_v5_test_input_case1-L2",
       "level": "L2",
-      "scene_dir": "native_case02_scene_gen_v5_test_input_case1_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case02_scene_gen_v5_test_input_case1_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2457,7 +2457,7 @@
     {
       "id": "case02_scene_gen_v5_test_input_case1-L3",
       "level": "L3",
-      "scene_dir": "native_case02_scene_gen_v5_test_input_case1_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case02_scene_gen_v5_test_input_case1_full_physics_scene",
       "instruction": "Take the vase to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2490,7 +2490,7 @@
     {
       "id": "case02_scene_gen_v5_test_input_case1-L4",
       "level": "L4",
-      "scene_dir": "native_case02_scene_gen_v5_test_input_case1_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case02_scene_gen_v5_test_input_case1_full_physics_scene",
       "instruction": "Take the vase to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2523,7 +2523,7 @@
     {
       "id": "case02_text_living_02_gallery_storage-L2",
       "level": "L2",
-      "scene_dir": "native_case02_text_living_02_gallery_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case02_text_living_02_gallery_storage_full_physics_scene",
       "instruction": "Navigate to the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2547,7 +2547,7 @@
     {
       "id": "case02_text_living_02_gallery_storage-L3",
       "level": "L3",
-      "scene_dir": "native_case02_text_living_02_gallery_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case02_text_living_02_gallery_storage_full_physics_scene",
       "instruction": "Pick up the fruit basket and bring it to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2580,7 +2580,7 @@
     {
       "id": "case02_text_living_02_gallery_storage-L4",
       "level": "L4",
-      "scene_dir": "native_case02_text_living_02_gallery_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case02_text_living_02_gallery_storage_full_physics_scene",
       "instruction": "Pick up the fruit basket and bring it to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2613,7 +2613,7 @@
     {
       "id": "case032_official_run_jump-L2",
       "level": "L2",
-      "scene_dir": "native_case032_official_run_jump_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case032_official_run_jump_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2637,7 +2637,7 @@
     {
       "id": "case032_official_run_jump-L3",
       "level": "L3",
-      "scene_dir": "native_case032_official_run_jump_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case032_official_run_jump_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2670,7 +2670,7 @@
     {
       "id": "case032_official_run_jump-L4",
       "level": "L4",
-      "scene_dir": "native_case032_official_run_jump_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case032_official_run_jump_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2703,7 +2703,7 @@
     {
       "id": "case033_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case033_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case033_official_solo_run_full_physics_scene",
       "instruction": "Go to the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2727,7 +2727,7 @@
     {
       "id": "case033_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case033_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case033_official_solo_run_full_physics_scene",
       "instruction": "Take the book column to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2760,7 +2760,7 @@
     {
       "id": "case033_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case033_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case033_official_solo_run_full_physics_scene",
       "instruction": "Take the book column to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2793,7 +2793,7 @@
     {
       "id": "case034_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case034_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case034_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2817,7 +2817,7 @@
     {
       "id": "case034_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case034_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case034_official_solo_run_full_physics_scene",
       "instruction": "Grab the spoon and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2850,7 +2850,7 @@
     {
       "id": "case034_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case034_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case034_official_solo_run_full_physics_scene",
       "instruction": "Grab the spoon and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2883,7 +2883,7 @@
     {
       "id": "case035_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case035_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case035_official_solo_run_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2907,7 +2907,7 @@
     {
       "id": "case035_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case035_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case035_official_solo_run_full_physics_scene",
       "instruction": "Grab the bowl and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2940,7 +2940,7 @@
     {
       "id": "case035_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case035_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case035_official_solo_run_full_physics_scene",
       "instruction": "Grab the bowl and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2973,7 +2973,7 @@
     {
       "id": "case036_official_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case036_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case036_official_two_runners_full_physics_scene",
       "instruction": "Navigate to the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -2997,7 +2997,7 @@
     {
       "id": "case036_official_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case036_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case036_official_two_runners_full_physics_scene",
       "instruction": "Pick up the decorative trinket and bring it to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3030,7 +3030,7 @@
     {
       "id": "case036_official_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case036_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case036_official_two_runners_full_physics_scene",
       "instruction": "Pick up the decorative trinket and bring it to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3063,7 +3063,7 @@
     {
       "id": "case037_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case037_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case037_official_solo_run_full_physics_scene",
       "instruction": "Navigate to the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3087,7 +3087,7 @@
     {
       "id": "case037_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case037_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case037_official_solo_run_full_physics_scene",
       "instruction": "Grab the book stack and place it on the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3120,7 +3120,7 @@
     {
       "id": "case037_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case037_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case037_official_solo_run_full_physics_scene",
       "instruction": "Grab the book stack and place it on the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3153,7 +3153,7 @@
     {
       "id": "case038_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case038_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case038_official_solo_run_full_physics_scene",
       "instruction": "Go to the monitor.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3177,7 +3177,7 @@
     {
       "id": "case038_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case038_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case038_official_solo_run_full_physics_scene",
       "instruction": "Take the book stack to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3210,7 +3210,7 @@
     {
       "id": "case038_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case038_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case038_official_solo_run_full_physics_scene",
       "instruction": "Take the book stack to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3243,7 +3243,7 @@
     {
       "id": "case039_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case039_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case039_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the monitor.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3267,7 +3267,7 @@
     {
       "id": "case039_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case039_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case039_official_solo_run_full_physics_scene",
       "instruction": "Take the stack of books to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3300,7 +3300,7 @@
     {
       "id": "case039_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case039_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case039_official_solo_run_full_physics_scene",
       "instruction": "Take the stack of books to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3333,7 +3333,7 @@
     {
       "id": "case03_living_push-L2",
       "level": "L2",
-      "scene_dir": "native_case03_living_push_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case03_living_push_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3357,7 +3357,7 @@
     {
       "id": "case03_living_push-L3",
       "level": "L3",
-      "scene_dir": "native_case03_living_push_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case03_living_push_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3390,7 +3390,7 @@
     {
       "id": "case03_living_push-L4",
       "level": "L4",
-      "scene_dir": "native_case03_living_push_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case03_living_push_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3423,7 +3423,7 @@
     {
       "id": "case03_scene_gen_v5_test_input_case2-L2",
       "level": "L2",
-      "scene_dir": "native_case03_scene_gen_v5_test_input_case2_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case03_scene_gen_v5_test_input_case2_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3447,7 +3447,7 @@
     {
       "id": "case03_scene_gen_v5_test_input_case2-L3",
       "level": "L3",
-      "scene_dir": "native_case03_scene_gen_v5_test_input_case2_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case03_scene_gen_v5_test_input_case2_full_physics_scene",
       "instruction": "Take the pillow to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3480,7 +3480,7 @@
     {
       "id": "case03_scene_gen_v5_test_input_case2-L4",
       "level": "L4",
-      "scene_dir": "native_case03_scene_gen_v5_test_input_case2_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case03_scene_gen_v5_test_input_case2_full_physics_scene",
       "instruction": "Take the pillow to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3513,7 +3513,7 @@
     {
       "id": "case040_official_run_dance-L2",
       "level": "L2",
-      "scene_dir": "native_case040_official_run_dance_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case040_official_run_dance_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3537,7 +3537,7 @@
     {
       "id": "case040_official_run_dance-L3",
       "level": "L3",
-      "scene_dir": "native_case040_official_run_dance_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case040_official_run_dance_full_physics_scene",
       "instruction": "Pick up the book column and bring it to the kitchen cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3570,7 +3570,7 @@
     {
       "id": "case040_official_run_dance-L4",
       "level": "L4",
-      "scene_dir": "native_case040_official_run_dance_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case040_official_run_dance_full_physics_scene",
       "instruction": "Pick up the book column and bring it to the kitchen cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3603,7 +3603,7 @@
     {
       "id": "case042_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case042_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case042_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3627,7 +3627,7 @@
     {
       "id": "case042_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case042_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case042_official_solo_run_full_physics_scene",
       "instruction": "Take the decorative trinket to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3660,7 +3660,7 @@
     {
       "id": "case042_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case042_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case042_official_solo_run_full_physics_scene",
       "instruction": "Take the decorative trinket to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3693,7 +3693,7 @@
     {
       "id": "case043_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case043_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case043_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3717,7 +3717,7 @@
     {
       "id": "case043_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case043_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case043_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3750,7 +3750,7 @@
     {
       "id": "case043_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case043_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case043_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3783,7 +3783,7 @@
     {
       "id": "case045_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case045_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case045_official_solo_run_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3807,7 +3807,7 @@
     {
       "id": "case045_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case045_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case045_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3840,7 +3840,7 @@
     {
       "id": "case045_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case045_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case045_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3873,7 +3873,7 @@
     {
       "id": "case048_official_run_jump-L2",
       "level": "L2",
-      "scene_dir": "native_case048_official_run_jump_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case048_official_run_jump_full_physics_scene",
       "instruction": "Go to the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3897,7 +3897,7 @@
     {
       "id": "case048_official_run_jump-L3",
       "level": "L3",
-      "scene_dir": "native_case048_official_run_jump_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case048_official_run_jump_full_physics_scene",
       "instruction": "Take the pot to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3930,7 +3930,7 @@
     {
       "id": "case048_official_run_jump-L4",
       "level": "L4",
-      "scene_dir": "native_case048_official_run_jump_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case048_official_run_jump_full_physics_scene",
       "instruction": "Take the pot to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3963,7 +3963,7 @@
     {
       "id": "case049_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case049_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case049_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the oven.",
       "agent_start": null,
       "agent_yaw": null,
@@ -3987,7 +3987,7 @@
     {
       "id": "case049_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case049_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case049_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4020,7 +4020,7 @@
     {
       "id": "case049_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case049_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case049_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4053,7 +4053,7 @@
     {
       "id": "case04_living_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case04_living_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case04_living_two_runners_full_physics_scene",
       "instruction": "Navigate to the monitor.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4077,7 +4077,7 @@
     {
       "id": "case04_living_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case04_living_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case04_living_two_runners_full_physics_scene",
       "instruction": "Pick up the book column and bring it to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4110,7 +4110,7 @@
     {
       "id": "case04_living_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case04_living_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case04_living_two_runners_full_physics_scene",
       "instruction": "Pick up the book column and bring it to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4143,7 +4143,7 @@
     {
       "id": "case04_scene_gen_v5_test_input_case3-L2",
       "level": "L2",
-      "scene_dir": "native_case04_scene_gen_v5_test_input_case3_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case04_scene_gen_v5_test_input_case3_full_physics_scene",
       "instruction": "Navigate to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4167,7 +4167,7 @@
     {
       "id": "case04_scene_gen_v5_test_input_case3-L3",
       "level": "L3",
-      "scene_dir": "native_case04_scene_gen_v5_test_input_case3_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case04_scene_gen_v5_test_input_case3_full_physics_scene",
       "instruction": "Pick up the stack of books and bring it to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4200,7 +4200,7 @@
     {
       "id": "case04_scene_gen_v5_test_input_case3-L4",
       "level": "L4",
-      "scene_dir": "native_case04_scene_gen_v5_test_input_case3_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case04_scene_gen_v5_test_input_case3_full_physics_scene",
       "instruction": "Pick up the stack of books and bring it to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4233,7 +4233,7 @@
     {
       "id": "case051_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case051_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case051_official_solo_run_full_physics_scene",
       "instruction": "Go to the oven.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4257,7 +4257,7 @@
     {
       "id": "case051_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case051_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case051_official_solo_run_full_physics_scene",
       "instruction": "Pick up the decorative trinket and bring it to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4290,7 +4290,7 @@
     {
       "id": "case051_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case051_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case051_official_solo_run_full_physics_scene",
       "instruction": "Pick up the decorative trinket and bring it to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4323,7 +4323,7 @@
     {
       "id": "case052_official_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case052_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case052_official_two_runners_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4347,7 +4347,7 @@
     {
       "id": "case052_official_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case052_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case052_official_two_runners_full_physics_scene",
       "instruction": "Take the decorative trinket to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4380,7 +4380,7 @@
     {
       "id": "case052_official_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case052_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case052_official_two_runners_full_physics_scene",
       "instruction": "Take the decorative trinket to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4413,7 +4413,7 @@
     {
       "id": "case053_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case053_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case053_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4437,7 +4437,7 @@
     {
       "id": "case053_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case053_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case053_official_solo_run_full_physics_scene",
       "instruction": "Take the book column to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4470,7 +4470,7 @@
     {
       "id": "case053_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case053_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case053_official_solo_run_full_physics_scene",
       "instruction": "Take the book column to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4503,7 +4503,7 @@
     {
       "id": "case055_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case055_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case055_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4527,7 +4527,7 @@
     {
       "id": "case055_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case055_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case055_official_solo_run_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4560,7 +4560,7 @@
     {
       "id": "case055_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case055_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case055_official_solo_run_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4593,7 +4593,7 @@
     {
       "id": "case057_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case057_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case057_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4617,7 +4617,7 @@
     {
       "id": "case057_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case057_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case057_official_solo_run_full_physics_scene",
       "instruction": "Take the pillow to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4650,7 +4650,7 @@
     {
       "id": "case057_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case057_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case057_official_solo_run_full_physics_scene",
       "instruction": "Take the pillow to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4683,7 +4683,7 @@
     {
       "id": "case058_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case058_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case058_official_solo_run_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4707,7 +4707,7 @@
     {
       "id": "case058_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case058_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case058_official_solo_run_full_physics_scene",
       "instruction": "Grab the book stack and place it on the kitchen cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4740,7 +4740,7 @@
     {
       "id": "case058_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case058_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case058_official_solo_run_full_physics_scene",
       "instruction": "Grab the book stack and place it on the kitchen cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4773,7 +4773,7 @@
     {
       "id": "case059_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case059_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case059_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4797,7 +4797,7 @@
     {
       "id": "case059_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case059_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case059_official_solo_run_full_physics_scene",
       "instruction": "Pick up the decorative trinket and bring it to the side table.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4830,7 +4830,7 @@
     {
       "id": "case059_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case059_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case059_official_solo_run_full_physics_scene",
       "instruction": "Pick up the decorative trinket and bring it to the side table.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4863,7 +4863,7 @@
     {
       "id": "case05_scene_gen_v5_test_input_case4-L2",
       "level": "L2",
-      "scene_dir": "native_case05_scene_gen_v5_test_input_case4_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case05_scene_gen_v5_test_input_case4_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4887,7 +4887,7 @@
     {
       "id": "case05_scene_gen_v5_test_input_case4-L3",
       "level": "L3",
-      "scene_dir": "native_case05_scene_gen_v5_test_input_case4_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case05_scene_gen_v5_test_input_case4_full_physics_scene",
       "instruction": "Take the stack of books to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4920,7 +4920,7 @@
     {
       "id": "case05_scene_gen_v5_test_input_case4-L4",
       "level": "L4",
-      "scene_dir": "native_case05_scene_gen_v5_test_input_case4_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case05_scene_gen_v5_test_input_case4_full_physics_scene",
       "instruction": "Take the stack of books to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4953,7 +4953,7 @@
     {
       "id": "case05_text_living_05_green_media_room-L2",
       "level": "L2",
-      "scene_dir": "native_case05_text_living_05_green_media_room_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case05_text_living_05_green_media_room_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -4977,7 +4977,7 @@
     {
       "id": "case05_text_living_05_green_media_room-L3",
       "level": "L3",
-      "scene_dir": "native_case05_text_living_05_green_media_room_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case05_text_living_05_green_media_room_full_physics_scene",
       "instruction": "Pick up the decorative trinket and bring it to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5010,7 +5010,7 @@
     {
       "id": "case05_text_living_05_green_media_room-L4",
       "level": "L4",
-      "scene_dir": "native_case05_text_living_05_green_media_room_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case05_text_living_05_green_media_room_full_physics_scene",
       "instruction": "Pick up the decorative trinket and bring it to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5043,7 +5043,7 @@
     {
       "id": "case060_official_run_dance-L2",
       "level": "L2",
-      "scene_dir": "native_case060_official_run_dance_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case060_official_run_dance_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5067,7 +5067,7 @@
     {
       "id": "case060_official_run_dance-L3",
       "level": "L3",
-      "scene_dir": "native_case060_official_run_dance_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case060_official_run_dance_full_physics_scene",
       "instruction": "Take the stack of books to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5100,7 +5100,7 @@
     {
       "id": "case060_official_run_dance-L4",
       "level": "L4",
-      "scene_dir": "native_case060_official_run_dance_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case060_official_run_dance_full_physics_scene",
       "instruction": "Take the stack of books to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5133,7 +5133,7 @@
     {
       "id": "case061_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case061_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case061_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5157,7 +5157,7 @@
     {
       "id": "case061_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case061_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case061_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5190,7 +5190,7 @@
     {
       "id": "case061_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case061_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case061_official_solo_run_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5223,7 +5223,7 @@
     {
       "id": "case062_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case062_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case062_official_solo_run_full_physics_scene",
       "instruction": "Go to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5247,7 +5247,7 @@
     {
       "id": "case062_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case062_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case062_official_solo_run_full_physics_scene",
       "instruction": "Pick up the cup and bring it to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5280,7 +5280,7 @@
     {
       "id": "case062_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case062_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case062_official_solo_run_full_physics_scene",
       "instruction": "Pick up the cup and bring it to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5313,7 +5313,7 @@
     {
       "id": "case064_official_run_jump-L2",
       "level": "L2",
-      "scene_dir": "native_case064_official_run_jump_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case064_official_run_jump_full_physics_scene",
       "instruction": "Go to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5337,7 +5337,7 @@
     {
       "id": "case064_official_run_jump-L3",
       "level": "L3",
-      "scene_dir": "native_case064_official_run_jump_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case064_official_run_jump_full_physics_scene",
       "instruction": "Pick up the pillow and bring it to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5370,7 +5370,7 @@
     {
       "id": "case064_official_run_jump-L4",
       "level": "L4",
-      "scene_dir": "native_case064_official_run_jump_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case064_official_run_jump_full_physics_scene",
       "instruction": "Pick up the pillow and bring it to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5403,7 +5403,7 @@
     {
       "id": "case065_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case065_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case065_official_solo_run_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5427,7 +5427,7 @@
     {
       "id": "case065_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case065_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case065_official_solo_run_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5460,7 +5460,7 @@
     {
       "id": "case065_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case065_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case065_official_solo_run_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5493,7 +5493,7 @@
     {
       "id": "case066_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case066_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case066_official_solo_run_full_physics_scene",
       "instruction": "Go to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5517,7 +5517,7 @@
     {
       "id": "case066_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case066_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case066_official_solo_run_full_physics_scene",
       "instruction": "Take the book column to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5550,7 +5550,7 @@
     {
       "id": "case066_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case066_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case066_official_solo_run_full_physics_scene",
       "instruction": "Take the book column to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5583,7 +5583,7 @@
     {
       "id": "case067_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case067_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case067_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5607,7 +5607,7 @@
     {
       "id": "case067_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case067_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case067_official_solo_run_full_physics_scene",
       "instruction": "Pick up the pillow and bring it to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5640,7 +5640,7 @@
     {
       "id": "case067_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case067_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case067_official_solo_run_full_physics_scene",
       "instruction": "Pick up the pillow and bring it to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5673,7 +5673,7 @@
     {
       "id": "case068_official_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case068_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case068_official_two_runners_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5697,7 +5697,7 @@
     {
       "id": "case068_official_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case068_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case068_official_two_runners_full_physics_scene",
       "instruction": "Take the book column to the side table.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5730,7 +5730,7 @@
     {
       "id": "case068_official_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case068_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case068_official_two_runners_full_physics_scene",
       "instruction": "Take the book column to the side table.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5763,7 +5763,7 @@
     {
       "id": "case069_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case069_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case069_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5787,7 +5787,7 @@
     {
       "id": "case069_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case069_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case069_official_solo_run_full_physics_scene",
       "instruction": "Pick up the decorative trinket and bring it to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5820,7 +5820,7 @@
     {
       "id": "case069_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case069_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case069_official_solo_run_full_physics_scene",
       "instruction": "Pick up the decorative trinket and bring it to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5853,7 +5853,7 @@
     {
       "id": "case06_dining_two_people-L2",
       "level": "L2",
-      "scene_dir": "native_case06_dining_two_people_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case06_dining_two_people_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5877,7 +5877,7 @@
     {
       "id": "case06_dining_two_people-L3",
       "level": "L3",
-      "scene_dir": "native_case06_dining_two_people_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case06_dining_two_people_full_physics_scene",
       "instruction": "Grab the wine glass and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5910,7 +5910,7 @@
     {
       "id": "case06_dining_two_people-L4",
       "level": "L4",
-      "scene_dir": "native_case06_dining_two_people_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case06_dining_two_people_full_physics_scene",
       "instruction": "Grab the wine glass and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5943,7 +5943,7 @@
     {
       "id": "case06_scene_gen_v5_test_input_case5-L2",
       "level": "L2",
-      "scene_dir": "native_case06_scene_gen_v5_test_input_case5_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case06_scene_gen_v5_test_input_case5_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -5967,7 +5967,7 @@
     {
       "id": "case06_scene_gen_v5_test_input_case5-L3",
       "level": "L3",
-      "scene_dir": "native_case06_scene_gen_v5_test_input_case5_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case06_scene_gen_v5_test_input_case5_full_physics_scene",
       "instruction": "Grab the towel and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6000,7 +6000,7 @@
     {
       "id": "case06_scene_gen_v5_test_input_case5-L4",
       "level": "L4",
-      "scene_dir": "native_case06_scene_gen_v5_test_input_case5_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case06_scene_gen_v5_test_input_case5_full_physics_scene",
       "instruction": "Grab the towel and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6033,7 +6033,7 @@
     {
       "id": "case06_text_living_06_compact_bar_corner-L2",
       "level": "L2",
-      "scene_dir": "native_case06_text_living_06_compact_bar_corner_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case06_text_living_06_compact_bar_corner_full_physics_scene",
       "instruction": "Go to the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6057,7 +6057,7 @@
     {
       "id": "case06_text_living_06_compact_bar_corner-L3",
       "level": "L3",
-      "scene_dir": "native_case06_text_living_06_compact_bar_corner_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case06_text_living_06_compact_bar_corner_full_physics_scene",
       "instruction": "Pick up the pot and bring it to the bar stool.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6090,7 +6090,7 @@
     {
       "id": "case06_text_living_06_compact_bar_corner-L4",
       "level": "L4",
-      "scene_dir": "native_case06_text_living_06_compact_bar_corner_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case06_text_living_06_compact_bar_corner_full_physics_scene",
       "instruction": "Pick up the pot and bring it to the bar stool.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6123,7 +6123,7 @@
     {
       "id": "case070_official_run_dance-L2",
       "level": "L2",
-      "scene_dir": "native_case070_official_run_dance_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case070_official_run_dance_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6147,7 +6147,7 @@
     {
       "id": "case070_official_run_dance-L3",
       "level": "L3",
-      "scene_dir": "native_case070_official_run_dance_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case070_official_run_dance_full_physics_scene",
       "instruction": "Grab the cup and place it on the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6180,7 +6180,7 @@
     {
       "id": "case070_official_run_dance-L4",
       "level": "L4",
-      "scene_dir": "native_case070_official_run_dance_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case070_official_run_dance_full_physics_scene",
       "instruction": "Grab the cup and place it on the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6213,7 +6213,7 @@
     {
       "id": "case071_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case071_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case071_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6237,7 +6237,7 @@
     {
       "id": "case071_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case071_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case071_official_solo_run_full_physics_scene",
       "instruction": "Take the decorative trinket to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6270,7 +6270,7 @@
     {
       "id": "case071_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case071_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case071_official_solo_run_full_physics_scene",
       "instruction": "Take the decorative trinket to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6303,7 +6303,7 @@
     {
       "id": "case072_official_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case072_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case072_official_two_runners_full_physics_scene",
       "instruction": "Navigate to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6327,7 +6327,7 @@
     {
       "id": "case072_official_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case072_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case072_official_two_runners_full_physics_scene",
       "instruction": "Pick up the stack of books and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6360,7 +6360,7 @@
     {
       "id": "case072_official_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case072_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case072_official_two_runners_full_physics_scene",
       "instruction": "Pick up the stack of books and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6393,7 +6393,7 @@
     {
       "id": "case074_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case074_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case074_official_solo_run_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6417,7 +6417,7 @@
     {
       "id": "case074_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case074_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case074_official_solo_run_full_physics_scene",
       "instruction": "Pick up the towel and bring it to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6450,7 +6450,7 @@
     {
       "id": "case074_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case074_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case074_official_solo_run_full_physics_scene",
       "instruction": "Pick up the towel and bring it to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6483,7 +6483,7 @@
     {
       "id": "case075_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case075_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case075_official_solo_run_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6507,7 +6507,7 @@
     {
       "id": "case075_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case075_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case075_official_solo_run_full_physics_scene",
       "instruction": "Take the cup to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6540,7 +6540,7 @@
     {
       "id": "case075_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case075_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case075_official_solo_run_full_physics_scene",
       "instruction": "Take the cup to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6573,7 +6573,7 @@
     {
       "id": "case076_official_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case076_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case076_official_two_runners_full_physics_scene",
       "instruction": "Find and approach the oven.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6597,7 +6597,7 @@
     {
       "id": "case076_official_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case076_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case076_official_two_runners_full_physics_scene",
       "instruction": "Grab the can and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6630,7 +6630,7 @@
     {
       "id": "case076_official_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case076_official_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case076_official_two_runners_full_physics_scene",
       "instruction": "Grab the can and place it on the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6663,7 +6663,7 @@
     {
       "id": "case077_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case077_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case077_official_solo_run_full_physics_scene",
       "instruction": "Go to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6687,7 +6687,7 @@
     {
       "id": "case077_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case077_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case077_official_solo_run_full_physics_scene",
       "instruction": "Grab the book stack and place it on the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6720,7 +6720,7 @@
     {
       "id": "case077_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case077_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case077_official_solo_run_full_physics_scene",
       "instruction": "Grab the book stack and place it on the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6753,7 +6753,7 @@
     {
       "id": "case079_official_solo_run-L2",
       "level": "L2",
-      "scene_dir": "native_case079_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case079_official_solo_run_full_physics_scene",
       "instruction": "Go to the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6777,7 +6777,7 @@
     {
       "id": "case079_official_solo_run-L3",
       "level": "L3",
-      "scene_dir": "native_case079_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case079_official_solo_run_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the kitchen cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6810,7 +6810,7 @@
     {
       "id": "case079_official_solo_run-L4",
       "level": "L4",
-      "scene_dir": "native_case079_official_solo_run_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case079_official_solo_run_full_physics_scene",
       "instruction": "Grab the stack of books and place it on the kitchen cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6843,7 +6843,7 @@
     {
       "id": "case07_dining_zoom-L2",
       "level": "L2",
-      "scene_dir": "native_case07_dining_zoom_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case07_dining_zoom_full_physics_scene",
       "instruction": "Find and approach the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6867,7 +6867,7 @@
     {
       "id": "case07_dining_zoom-L3",
       "level": "L3",
-      "scene_dir": "native_case07_dining_zoom_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case07_dining_zoom_full_physics_scene",
       "instruction": "Take the wine glass to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6900,7 +6900,7 @@
     {
       "id": "case07_dining_zoom-L4",
       "level": "L4",
-      "scene_dir": "native_case07_dining_zoom_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case07_dining_zoom_full_physics_scene",
       "instruction": "Take the wine glass to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6933,7 +6933,7 @@
     {
       "id": "case07_scene_gen_v5_stable_image_001-L2",
       "level": "L2",
-      "scene_dir": "native_case07_scene_gen_v5_stable_image_001_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case07_scene_gen_v5_stable_image_001_full_physics_scene",
       "instruction": "Navigate to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6957,7 +6957,7 @@
     {
       "id": "case07_scene_gen_v5_stable_image_001-L3",
       "level": "L3",
-      "scene_dir": "native_case07_scene_gen_v5_stable_image_001_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case07_scene_gen_v5_stable_image_001_full_physics_scene",
       "instruction": "Take the fruit basket to the side table.",
       "agent_start": null,
       "agent_yaw": null,
@@ -6990,7 +6990,7 @@
     {
       "id": "case07_scene_gen_v5_stable_image_001-L4",
       "level": "L4",
-      "scene_dir": "native_case07_scene_gen_v5_stable_image_001_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case07_scene_gen_v5_stable_image_001_full_physics_scene",
       "instruction": "Take the fruit basket to the side table.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7023,7 +7023,7 @@
     {
       "id": "case08_dining_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case08_dining_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case08_dining_two_runners_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7047,7 +7047,7 @@
     {
       "id": "case08_dining_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case08_dining_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case08_dining_two_runners_full_physics_scene",
       "instruction": "Grab the wine glass and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7080,7 +7080,7 @@
     {
       "id": "case08_dining_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case08_dining_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case08_dining_two_runners_full_physics_scene",
       "instruction": "Grab the wine glass and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7113,7 +7113,7 @@
     {
       "id": "case08_scene_gen_v5_stable_image_002-L2",
       "level": "L2",
-      "scene_dir": "native_case08_scene_gen_v5_stable_image_002_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case08_scene_gen_v5_stable_image_002_full_physics_scene",
       "instruction": "Navigate to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7137,7 +7137,7 @@
     {
       "id": "case08_scene_gen_v5_stable_image_002-L3",
       "level": "L3",
-      "scene_dir": "native_case08_scene_gen_v5_stable_image_002_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case08_scene_gen_v5_stable_image_002_full_physics_scene",
       "instruction": "Take the cup to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7170,7 +7170,7 @@
     {
       "id": "case08_scene_gen_v5_stable_image_002-L4",
       "level": "L4",
-      "scene_dir": "native_case08_scene_gen_v5_stable_image_002_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case08_scene_gen_v5_stable_image_002_full_physics_scene",
       "instruction": "Take the cup to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7203,7 +7203,7 @@
     {
       "id": "case09_living_follow_behind-L2",
       "level": "L2",
-      "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case09_living_follow_behind_full_physics_scene",
       "instruction": "Find and approach the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7227,7 +7227,7 @@
     {
       "id": "case09_living_follow_behind-L3",
       "level": "L3",
-      "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case09_living_follow_behind_full_physics_scene",
       "instruction": "Pick up the bowl and bring it to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7260,7 +7260,7 @@
     {
       "id": "case09_living_follow_behind-L4",
       "level": "L4",
-      "scene_dir": "native_case09_living_follow_behind_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case09_living_follow_behind_full_physics_scene",
       "instruction": "Pick up the bowl and bring it to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7293,7 +7293,7 @@
     {
       "id": "case09_scene_gen_v5_stable_image_003-L2",
       "level": "L2",
-      "scene_dir": "native_case09_scene_gen_v5_stable_image_003_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case09_scene_gen_v5_stable_image_003_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7317,7 +7317,7 @@
     {
       "id": "case09_scene_gen_v5_stable_image_003-L3",
       "level": "L3",
-      "scene_dir": "native_case09_scene_gen_v5_stable_image_003_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case09_scene_gen_v5_stable_image_003_full_physics_scene",
       "instruction": "Grab the book stack and place it on the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7350,7 +7350,7 @@
     {
       "id": "case09_scene_gen_v5_stable_image_003-L4",
       "level": "L4",
-      "scene_dir": "native_case09_scene_gen_v5_stable_image_003_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case09_scene_gen_v5_stable_image_003_full_physics_scene",
       "instruction": "Grab the book stack and place it on the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7383,7 +7383,7 @@
     {
       "id": "case10_dining_two_people_pan-L2",
       "level": "L2",
-      "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case10_dining_two_people_pan_full_physics_scene",
       "instruction": "Go to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7407,7 +7407,7 @@
     {
       "id": "case10_dining_two_people_pan-L3",
       "level": "L3",
-      "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case10_dining_two_people_pan_full_physics_scene",
       "instruction": "Grab the book stack and place it on the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7440,7 +7440,7 @@
     {
       "id": "case10_dining_two_people_pan-L4",
       "level": "L4",
-      "scene_dir": "native_case10_dining_two_people_pan_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case10_dining_two_people_pan_full_physics_scene",
       "instruction": "Grab the book stack and place it on the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7473,7 +7473,7 @@
     {
       "id": "case10_scene_gen_v5_stable_image_004-L2",
       "level": "L2",
-      "scene_dir": "native_case10_scene_gen_v5_stable_image_004_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case10_scene_gen_v5_stable_image_004_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7497,7 +7497,7 @@
     {
       "id": "case10_scene_gen_v5_stable_image_004-L3",
       "level": "L3",
-      "scene_dir": "native_case10_scene_gen_v5_stable_image_004_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case10_scene_gen_v5_stable_image_004_full_physics_scene",
       "instruction": "Pick up the pillow and bring it to the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7530,7 +7530,7 @@
     {
       "id": "case10_scene_gen_v5_stable_image_004-L4",
       "level": "L4",
-      "scene_dir": "native_case10_scene_gen_v5_stable_image_004_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case10_scene_gen_v5_stable_image_004_full_physics_scene",
       "instruction": "Pick up the pillow and bring it to the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7563,7 +7563,7 @@
     {
       "id": "case11_bedroom_lift-L2",
       "level": "L2",
-      "scene_dir": "native_case11_bedroom_lift_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case11_bedroom_lift_full_physics_scene",
       "instruction": "Go to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7587,7 +7587,7 @@
     {
       "id": "case11_bedroom_lift-L3",
       "level": "L3",
-      "scene_dir": "native_case11_bedroom_lift_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case11_bedroom_lift_full_physics_scene",
       "instruction": "Pick up the towel and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7620,7 +7620,7 @@
     {
       "id": "case11_bedroom_lift-L4",
       "level": "L4",
-      "scene_dir": "native_case11_bedroom_lift_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case11_bedroom_lift_full_physics_scene",
       "instruction": "Pick up the towel and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7653,7 +7653,7 @@
     {
       "id": "case11_scene_gen_v5_stable_image_005-L2",
       "level": "L2",
-      "scene_dir": "native_case11_scene_gen_v5_stable_image_005_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case11_scene_gen_v5_stable_image_005_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7677,7 +7677,7 @@
     {
       "id": "case11_scene_gen_v5_stable_image_005-L3",
       "level": "L3",
-      "scene_dir": "native_case11_scene_gen_v5_stable_image_005_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case11_scene_gen_v5_stable_image_005_full_physics_scene",
       "instruction": "Pick up the vase and bring it to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7710,7 +7710,7 @@
     {
       "id": "case11_scene_gen_v5_stable_image_005-L4",
       "level": "L4",
-      "scene_dir": "native_case11_scene_gen_v5_stable_image_005_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case11_scene_gen_v5_stable_image_005_full_physics_scene",
       "instruction": "Pick up the vase and bring it to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7743,7 +7743,7 @@
     {
       "id": "case11_text_bedroom_03_guest_room-L2",
       "level": "L2",
-      "scene_dir": "native_case11_text_bedroom_03_guest_room_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case11_text_bedroom_03_guest_room_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7767,7 +7767,7 @@
     {
       "id": "case11_text_bedroom_03_guest_room-L3",
       "level": "L3",
-      "scene_dir": "native_case11_text_bedroom_03_guest_room_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case11_text_bedroom_03_guest_room_full_physics_scene",
       "instruction": "Grab the cup and place it on the side table.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7800,7 +7800,7 @@
     {
       "id": "case11_text_bedroom_03_guest_room-L4",
       "level": "L4",
-      "scene_dir": "native_case11_text_bedroom_03_guest_room_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case11_text_bedroom_03_guest_room_full_physics_scene",
       "instruction": "Grab the cup and place it on the side table.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7833,7 +7833,7 @@
     {
       "id": "case12_living_two_runners_push-L2",
       "level": "L2",
-      "scene_dir": "native_case12_living_two_runners_push_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case12_living_two_runners_push_full_physics_scene",
       "instruction": "Find and approach the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7857,7 +7857,7 @@
     {
       "id": "case12_living_two_runners_push-L3",
       "level": "L3",
-      "scene_dir": "native_case12_living_two_runners_push_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case12_living_two_runners_push_full_physics_scene",
       "instruction": "Go to the TV and switch it on.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7890,7 +7890,7 @@
     {
       "id": "case12_living_two_runners_push-L4",
       "level": "L4",
-      "scene_dir": "native_case12_living_two_runners_push_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case12_living_two_runners_push_full_physics_scene",
       "instruction": "Go to the TV and switch it on.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7923,7 +7923,7 @@
     {
       "id": "case12_scene_gen_v5_stable_image_006-L2",
       "level": "L2",
-      "scene_dir": "native_case12_scene_gen_v5_stable_image_006_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case12_scene_gen_v5_stable_image_006_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7947,7 +7947,7 @@
     {
       "id": "case12_scene_gen_v5_stable_image_006-L3",
       "level": "L3",
-      "scene_dir": "native_case12_scene_gen_v5_stable_image_006_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case12_scene_gen_v5_stable_image_006_full_physics_scene",
       "instruction": "Pick up the stack of books and bring it to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -7980,7 +7980,7 @@
     {
       "id": "case12_scene_gen_v5_stable_image_006-L4",
       "level": "L4",
-      "scene_dir": "native_case12_scene_gen_v5_stable_image_006_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case12_scene_gen_v5_stable_image_006_full_physics_scene",
       "instruction": "Pick up the stack of books and bring it to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8013,7 +8013,7 @@
     {
       "id": "case12_text_bedroom_04_minimal_study-L2",
       "level": "L2",
-      "scene_dir": "native_case12_text_bedroom_04_minimal_study_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case12_text_bedroom_04_minimal_study_full_physics_scene",
       "instruction": "Go to the monitor.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8037,7 +8037,7 @@
     {
       "id": "case12_text_bedroom_04_minimal_study-L3",
       "level": "L3",
-      "scene_dir": "native_case12_text_bedroom_04_minimal_study_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case12_text_bedroom_04_minimal_study_full_physics_scene",
       "instruction": "Grab the towel and place it on the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8070,7 +8070,7 @@
     {
       "id": "case12_text_bedroom_04_minimal_study-L4",
       "level": "L4",
-      "scene_dir": "native_case12_text_bedroom_04_minimal_study_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case12_text_bedroom_04_minimal_study_full_physics_scene",
       "instruction": "Grab the towel and place it on the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8103,7 +8103,7 @@
     {
       "id": "case13_bedroom_follow-L2",
       "level": "L2",
-      "scene_dir": "native_case13_bedroom_follow_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case13_bedroom_follow_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8127,7 +8127,7 @@
     {
       "id": "case13_bedroom_follow-L3",
       "level": "L3",
-      "scene_dir": "native_case13_bedroom_follow_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case13_bedroom_follow_full_physics_scene",
       "instruction": "Grab the towel and place it on the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8160,7 +8160,7 @@
     {
       "id": "case13_bedroom_follow-L4",
       "level": "L4",
-      "scene_dir": "native_case13_bedroom_follow_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case13_bedroom_follow_full_physics_scene",
       "instruction": "Grab the towel and place it on the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8193,7 +8193,7 @@
     {
       "id": "case13_scene_gen_v5_stable_image_007-L2",
       "level": "L2",
-      "scene_dir": "native_case13_scene_gen_v5_stable_image_007_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case13_scene_gen_v5_stable_image_007_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8217,7 +8217,7 @@
     {
       "id": "case13_scene_gen_v5_stable_image_007-L3",
       "level": "L3",
-      "scene_dir": "native_case13_scene_gen_v5_stable_image_007_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case13_scene_gen_v5_stable_image_007_full_physics_scene",
       "instruction": "Pick up the stack of books and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8250,7 +8250,7 @@
     {
       "id": "case13_scene_gen_v5_stable_image_007-L4",
       "level": "L4",
-      "scene_dir": "native_case13_scene_gen_v5_stable_image_007_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case13_scene_gen_v5_stable_image_007_full_physics_scene",
       "instruction": "Pick up the stack of books and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8283,7 +8283,7 @@
     {
       "id": "case13_text_kitchen_01_island_workflow-L2",
       "level": "L2",
-      "scene_dir": "native_case13_text_kitchen_01_island_workflow_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case13_text_kitchen_01_island_workflow_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8307,7 +8307,7 @@
     {
       "id": "case13_text_kitchen_01_island_workflow-L3",
       "level": "L3",
-      "scene_dir": "native_case13_text_kitchen_01_island_workflow_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case13_text_kitchen_01_island_workflow_full_physics_scene",
       "instruction": "Pick up the stack of books and bring it to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8340,7 +8340,7 @@
     {
       "id": "case13_text_kitchen_01_island_workflow-L4",
       "level": "L4",
-      "scene_dir": "native_case13_text_kitchen_01_island_workflow_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case13_text_kitchen_01_island_workflow_full_physics_scene",
       "instruction": "Pick up the stack of books and bring it to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8373,7 +8373,7 @@
     {
       "id": "case14_bedroom_two_people-L2",
       "level": "L2",
-      "scene_dir": "native_case14_bedroom_two_people_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case14_bedroom_two_people_full_physics_scene",
       "instruction": "Navigate to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8397,7 +8397,7 @@
     {
       "id": "case14_bedroom_two_people-L3",
       "level": "L3",
-      "scene_dir": "native_case14_bedroom_two_people_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case14_bedroom_two_people_full_physics_scene",
       "instruction": "Grab the towel and place it on the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8430,7 +8430,7 @@
     {
       "id": "case14_bedroom_two_people-L4",
       "level": "L4",
-      "scene_dir": "native_case14_bedroom_two_people_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case14_bedroom_two_people_full_physics_scene",
       "instruction": "Grab the towel and place it on the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8463,7 +8463,7 @@
     {
       "id": "case14_scene_gen_v5_stable_image_008-L2",
       "level": "L2",
-      "scene_dir": "native_case14_scene_gen_v5_stable_image_008_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case14_scene_gen_v5_stable_image_008_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8487,7 +8487,7 @@
     {
       "id": "case14_scene_gen_v5_stable_image_008-L3",
       "level": "L3",
-      "scene_dir": "native_case14_scene_gen_v5_stable_image_008_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case14_scene_gen_v5_stable_image_008_full_physics_scene",
       "instruction": "Grab the pillow and place it on the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8520,7 +8520,7 @@
     {
       "id": "case14_scene_gen_v5_stable_image_008-L4",
       "level": "L4",
-      "scene_dir": "native_case14_scene_gen_v5_stable_image_008_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case14_scene_gen_v5_stable_image_008_full_physics_scene",
       "instruction": "Grab the pillow and place it on the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8553,7 +8553,7 @@
     {
       "id": "case15_bedroom_orbit-L2",
       "level": "L2",
-      "scene_dir": "native_case15_bedroom_orbit_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case15_bedroom_orbit_full_physics_scene",
       "instruction": "Navigate to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8577,7 +8577,7 @@
     {
       "id": "case15_bedroom_orbit-L3",
       "level": "L3",
-      "scene_dir": "native_case15_bedroom_orbit_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case15_bedroom_orbit_full_physics_scene",
       "instruction": "Grab the pillow and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8610,7 +8610,7 @@
     {
       "id": "case15_bedroom_orbit-L4",
       "level": "L4",
-      "scene_dir": "native_case15_bedroom_orbit_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case15_bedroom_orbit_full_physics_scene",
       "instruction": "Grab the pillow and place it on the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8643,7 +8643,7 @@
     {
       "id": "case15_scene_gen_v5_stable_image_009-L2",
       "level": "L2",
-      "scene_dir": "native_case15_scene_gen_v5_stable_image_009_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case15_scene_gen_v5_stable_image_009_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8667,7 +8667,7 @@
     {
       "id": "case15_scene_gen_v5_stable_image_009-L3",
       "level": "L3",
-      "scene_dir": "native_case15_scene_gen_v5_stable_image_009_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case15_scene_gen_v5_stable_image_009_full_physics_scene",
       "instruction": "Take the pillow to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8700,7 +8700,7 @@
     {
       "id": "case15_scene_gen_v5_stable_image_009-L4",
       "level": "L4",
-      "scene_dir": "native_case15_scene_gen_v5_stable_image_009_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case15_scene_gen_v5_stable_image_009_full_physics_scene",
       "instruction": "Take the pillow to the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8733,7 +8733,7 @@
     {
       "id": "case15_text_kitchen_03_cooking_storage-L2",
       "level": "L2",
-      "scene_dir": "native_case15_text_kitchen_03_cooking_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case15_text_kitchen_03_cooking_storage_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8757,7 +8757,7 @@
     {
       "id": "case15_text_kitchen_03_cooking_storage-L3",
       "level": "L3",
-      "scene_dir": "native_case15_text_kitchen_03_cooking_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case15_text_kitchen_03_cooking_storage_full_physics_scene",
       "instruction": "Grab the book and place it on the sink.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8790,7 +8790,7 @@
     {
       "id": "case15_text_kitchen_03_cooking_storage-L4",
       "level": "L4",
-      "scene_dir": "native_case15_text_kitchen_03_cooking_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case15_text_kitchen_03_cooking_storage_full_physics_scene",
       "instruction": "Grab the book and place it on the sink.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8823,7 +8823,7 @@
     {
       "id": "case16_bedroom_two_runners-L2",
       "level": "L2",
-      "scene_dir": "native_case16_bedroom_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case16_bedroom_two_runners_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8847,7 +8847,7 @@
     {
       "id": "case16_bedroom_two_runners-L3",
       "level": "L3",
-      "scene_dir": "native_case16_bedroom_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case16_bedroom_two_runners_full_physics_scene",
       "instruction": "Take the pillow to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8880,7 +8880,7 @@
     {
       "id": "case16_bedroom_two_runners-L4",
       "level": "L4",
-      "scene_dir": "native_case16_bedroom_two_runners_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case16_bedroom_two_runners_full_physics_scene",
       "instruction": "Take the pillow to the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8913,7 +8913,7 @@
     {
       "id": "case17_living_pull_lift-L2",
       "level": "L2",
-      "scene_dir": "native_case17_living_pull_lift_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case17_living_pull_lift_full_physics_scene",
       "instruction": "Go to the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8937,7 +8937,7 @@
     {
       "id": "case17_living_pull_lift-L3",
       "level": "L3",
-      "scene_dir": "native_case17_living_pull_lift_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case17_living_pull_lift_full_physics_scene",
       "instruction": "Find and turn on the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -8970,7 +8970,7 @@
     {
       "id": "case17_living_pull_lift-L4",
       "level": "L4",
-      "scene_dir": "native_case17_living_pull_lift_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case17_living_pull_lift_full_physics_scene",
       "instruction": "Find and turn on the TV.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9003,7 +9003,7 @@
     {
       "id": "case17_text_dining_02_breakfast_display-L2",
       "level": "L2",
-      "scene_dir": "native_case17_text_dining_02_breakfast_display_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case17_text_dining_02_breakfast_display_full_physics_scene",
       "instruction": "Go to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9027,7 +9027,7 @@
     {
       "id": "case17_text_dining_02_breakfast_display-L3",
       "level": "L3",
-      "scene_dir": "native_case17_text_dining_02_breakfast_display_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case17_text_dining_02_breakfast_display_full_physics_scene",
       "instruction": "Take the book column to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9060,7 +9060,7 @@
     {
       "id": "case17_text_dining_02_breakfast_display-L4",
       "level": "L4",
-      "scene_dir": "native_case17_text_dining_02_breakfast_display_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case17_text_dining_02_breakfast_display_full_physics_scene",
       "instruction": "Take the book column to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9093,7 +9093,7 @@
     {
       "id": "case18_dining_push_lift-L2",
       "level": "L2",
-      "scene_dir": "native_case18_dining_push_lift_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case18_dining_push_lift_full_physics_scene",
       "instruction": "Go to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9117,7 +9117,7 @@
     {
       "id": "case18_dining_push_lift-L3",
       "level": "L3",
-      "scene_dir": "native_case18_dining_push_lift_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case18_dining_push_lift_full_physics_scene",
       "instruction": "Find and approach the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9141,7 +9141,7 @@
     {
       "id": "case18_dining_push_lift-L4",
       "level": "L4",
-      "scene_dir": "native_case18_dining_push_lift_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case18_dining_push_lift_full_physics_scene",
       "instruction": "Find and approach the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9165,7 +9165,7 @@
     {
       "id": "case18_text_bathroom_01_vanity_tub-L2",
       "level": "L2",
-      "scene_dir": "native_case18_text_bathroom_01_vanity_tub_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case18_text_bathroom_01_vanity_tub_full_physics_scene",
       "instruction": "Navigate to the monitor.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9189,7 +9189,7 @@
     {
       "id": "case18_text_bathroom_01_vanity_tub-L3",
       "level": "L3",
-      "scene_dir": "native_case18_text_bathroom_01_vanity_tub_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case18_text_bathroom_01_vanity_tub_full_physics_scene",
       "instruction": "Take the plate to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9222,7 +9222,7 @@
     {
       "id": "case18_text_bathroom_01_vanity_tub-L4",
       "level": "L4",
-      "scene_dir": "native_case18_text_bathroom_01_vanity_tub_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case18_text_bathroom_01_vanity_tub_full_physics_scene",
       "instruction": "Take the plate to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9255,7 +9255,7 @@
     {
       "id": "case19_dining_orbit-L2",
       "level": "L2",
-      "scene_dir": "native_case19_dining_orbit_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case19_dining_orbit_full_physics_scene",
       "instruction": "Navigate to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9279,7 +9279,7 @@
     {
       "id": "case19_dining_orbit-L3",
       "level": "L3",
-      "scene_dir": "native_case19_dining_orbit_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case19_dining_orbit_full_physics_scene",
       "instruction": "Find and approach the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9303,7 +9303,7 @@
     {
       "id": "case19_dining_orbit-L4",
       "level": "L4",
-      "scene_dir": "native_case19_dining_orbit_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case19_dining_orbit_full_physics_scene",
       "instruction": "Find and approach the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9327,7 +9327,7 @@
     {
       "id": "case19_text_kitchen_04_compact_counter-L2",
       "level": "L2",
-      "scene_dir": "native_case19_text_kitchen_04_compact_counter_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case19_text_kitchen_04_compact_counter_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9351,7 +9351,7 @@
     {
       "id": "case19_text_kitchen_04_compact_counter-L3",
       "level": "L3",
-      "scene_dir": "native_case19_text_kitchen_04_compact_counter_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case19_text_kitchen_04_compact_counter_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the kitchen island.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9384,7 +9384,7 @@
     {
       "id": "case19_text_kitchen_04_compact_counter-L4",
       "level": "L4",
-      "scene_dir": "native_case19_text_kitchen_04_compact_counter_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case19_text_kitchen_04_compact_counter_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the kitchen island.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9417,7 +9417,7 @@
     {
       "id": "case20_bedroom_two_people_pull-L2",
       "level": "L2",
-      "scene_dir": "native_case20_bedroom_two_people_pull_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case20_bedroom_two_people_pull_full_physics_scene",
       "instruction": "Go to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9441,7 +9441,7 @@
     {
       "id": "case20_bedroom_two_people_pull-L3",
       "level": "L3",
-      "scene_dir": "native_case20_bedroom_two_people_pull_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case20_bedroom_two_people_pull_full_physics_scene",
       "instruction": "Grab the towel and place it on the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9474,7 +9474,7 @@
     {
       "id": "case20_bedroom_two_people_pull-L4",
       "level": "L4",
-      "scene_dir": "native_case20_bedroom_two_people_pull_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case20_bedroom_two_people_pull_full_physics_scene",
       "instruction": "Grab the towel and place it on the desk.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9507,7 +9507,7 @@
     {
       "id": "case20_text_bedroom_05_decor_storage-L2",
       "level": "L2",
-      "scene_dir": "native_case20_text_bedroom_05_decor_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case20_text_bedroom_05_decor_storage_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9531,7 +9531,7 @@
     {
       "id": "case20_text_bedroom_05_decor_storage-L3",
       "level": "L3",
-      "scene_dir": "native_case20_text_bedroom_05_decor_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case20_text_bedroom_05_decor_storage_full_physics_scene",
       "instruction": "Pick up the decorative trinket and bring it to the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9564,7 +9564,7 @@
     {
       "id": "case20_text_bedroom_05_decor_storage-L4",
       "level": "L4",
-      "scene_dir": "native_case20_text_bedroom_05_decor_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case20_text_bedroom_05_decor_storage_full_physics_scene",
       "instruction": "Pick up the decorative trinket and bring it to the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9597,7 +9597,7 @@
     {
       "id": "case21_mask_living_01_media_storage-L2",
       "level": "L2",
-      "scene_dir": "native_case21_mask_living_01_media_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case21_mask_living_01_media_storage_full_physics_scene",
       "instruction": "Navigate to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9621,7 +9621,7 @@
     {
       "id": "case21_mask_living_01_media_storage-L3",
       "level": "L3",
-      "scene_dir": "native_case21_mask_living_01_media_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case21_mask_living_01_media_storage_full_physics_scene",
       "instruction": "Grab the book stack and place it on the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9654,7 +9654,7 @@
     {
       "id": "case21_mask_living_01_media_storage-L4",
       "level": "L4",
-      "scene_dir": "native_case21_mask_living_01_media_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case21_mask_living_01_media_storage_full_physics_scene",
       "instruction": "Grab the book stack and place it on the bookshelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9687,7 +9687,7 @@
     {
       "id": "case22_mask_living_02_reading_corner-L2",
       "level": "L2",
-      "scene_dir": "native_case22_mask_living_02_reading_corner_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case22_mask_living_02_reading_corner_full_physics_scene",
       "instruction": "Find and approach the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9711,7 +9711,7 @@
     {
       "id": "case22_mask_living_02_reading_corner-L3",
       "level": "L3",
-      "scene_dir": "native_case22_mask_living_02_reading_corner_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case22_mask_living_02_reading_corner_full_physics_scene",
       "instruction": "Take the pot to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9744,7 +9744,7 @@
     {
       "id": "case22_mask_living_02_reading_corner-L4",
       "level": "L4",
-      "scene_dir": "native_case22_mask_living_02_reading_corner_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case22_mask_living_02_reading_corner_full_physics_scene",
       "instruction": "Take the pot to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9777,7 +9777,7 @@
     {
       "id": "case23_mask_living_03_social_cross-L2",
       "level": "L2",
-      "scene_dir": "native_case23_mask_living_03_social_cross_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case23_mask_living_03_social_cross_full_physics_scene",
       "instruction": "Go to the monitor.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9801,7 +9801,7 @@
     {
       "id": "case23_mask_living_03_social_cross-L3",
       "level": "L3",
-      "scene_dir": "native_case23_mask_living_03_social_cross_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case23_mask_living_03_social_cross_full_physics_scene",
       "instruction": "Pick up the wine glass and bring it to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9834,7 +9834,7 @@
     {
       "id": "case23_mask_living_03_social_cross-L4",
       "level": "L4",
-      "scene_dir": "native_case23_mask_living_03_social_cross_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case23_mask_living_03_social_cross_full_physics_scene",
       "instruction": "Pick up the wine glass and bring it to the shelf.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9867,7 +9867,7 @@
     {
       "id": "case27_mask_bedroom_02_reading_storage-L2",
       "level": "L2",
-      "scene_dir": "native_case27_mask_bedroom_02_reading_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case27_mask_bedroom_02_reading_storage_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9891,7 +9891,7 @@
     {
       "id": "case27_mask_bedroom_02_reading_storage-L3",
       "level": "L3",
-      "scene_dir": "native_case27_mask_bedroom_02_reading_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case27_mask_bedroom_02_reading_storage_full_physics_scene",
       "instruction": "Grab the towel and place it on the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9924,7 +9924,7 @@
     {
       "id": "case27_mask_bedroom_02_reading_storage-L4",
       "level": "L4",
-      "scene_dir": "native_case27_mask_bedroom_02_reading_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case27_mask_bedroom_02_reading_storage_full_physics_scene",
       "instruction": "Grab the towel and place it on the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9957,7 +9957,7 @@
     {
       "id": "case28_mask_bedroom_03_balanced_decor-L2",
       "level": "L2",
-      "scene_dir": "native_case28_mask_bedroom_03_balanced_decor_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case28_mask_bedroom_03_balanced_decor_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -9981,7 +9981,7 @@
     {
       "id": "case28_mask_bedroom_03_balanced_decor-L3",
       "level": "L3",
-      "scene_dir": "native_case28_mask_bedroom_03_balanced_decor_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case28_mask_bedroom_03_balanced_decor_full_physics_scene",
       "instruction": "Pick up the stack of books and bring it to the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10014,7 +10014,7 @@
     {
       "id": "case28_mask_bedroom_03_balanced_decor-L4",
       "level": "L4",
-      "scene_dir": "native_case28_mask_bedroom_03_balanced_decor_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case28_mask_bedroom_03_balanced_decor_full_physics_scene",
       "instruction": "Pick up the stack of books and bring it to the bed.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10047,7 +10047,7 @@
     {
       "id": "case29_mask_bedroom_04_guest_room-L2",
       "level": "L2",
-      "scene_dir": "native_case29_mask_bedroom_04_guest_room_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case29_mask_bedroom_04_guest_room_full_physics_scene",
       "instruction": "Navigate to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10071,7 +10071,7 @@
     {
       "id": "case29_mask_bedroom_04_guest_room-L3",
       "level": "L3",
-      "scene_dir": "native_case29_mask_bedroom_04_guest_room_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case29_mask_bedroom_04_guest_room_full_physics_scene",
       "instruction": "Pick up the plate and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10104,7 +10104,7 @@
     {
       "id": "case29_mask_bedroom_04_guest_room-L4",
       "level": "L4",
-      "scene_dir": "native_case29_mask_bedroom_04_guest_room_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case29_mask_bedroom_04_guest_room_full_physics_scene",
       "instruction": "Pick up the plate and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10137,7 +10137,7 @@
     {
       "id": "case30_mask_kitchen_01_island_appliances-L2",
       "level": "L2",
-      "scene_dir": "native_case30_mask_kitchen_01_island_appliances_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case30_mask_kitchen_01_island_appliances_full_physics_scene",
       "instruction": "Find and approach the oven.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10161,7 +10161,7 @@
     {
       "id": "case30_mask_kitchen_01_island_appliances-L3",
       "level": "L3",
-      "scene_dir": "native_case30_mask_kitchen_01_island_appliances_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case30_mask_kitchen_01_island_appliances_full_physics_scene",
       "instruction": "Pick up the book stack and bring it to the sink.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10194,7 +10194,7 @@
     {
       "id": "case30_mask_kitchen_01_island_appliances-L4",
       "level": "L4",
-      "scene_dir": "native_case30_mask_kitchen_01_island_appliances_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case30_mask_kitchen_01_island_appliances_full_physics_scene",
       "instruction": "Pick up the book stack and bring it to the sink.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10227,7 +10227,7 @@
     {
       "id": "case31_mask_kitchen_02_sink_storage-L2",
       "level": "L2",
-      "scene_dir": "native_case31_mask_kitchen_02_sink_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case31_mask_kitchen_02_sink_storage_full_physics_scene",
       "instruction": "Go to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10251,7 +10251,7 @@
     {
       "id": "case31_mask_kitchen_02_sink_storage-L3",
       "level": "L3",
-      "scene_dir": "native_case31_mask_kitchen_02_sink_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case31_mask_kitchen_02_sink_storage_full_physics_scene",
       "instruction": "Take the can to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10284,7 +10284,7 @@
     {
       "id": "case31_mask_kitchen_02_sink_storage-L4",
       "level": "L4",
-      "scene_dir": "native_case31_mask_kitchen_02_sink_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case31_mask_kitchen_02_sink_storage_full_physics_scene",
       "instruction": "Take the can to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10317,7 +10317,7 @@
     {
       "id": "case32_mask_kitchen_03_compact_counter-L2",
       "level": "L2",
-      "scene_dir": "native_case32_mask_kitchen_03_compact_counter_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case32_mask_kitchen_03_compact_counter_full_physics_scene",
       "instruction": "Find and approach the monitor.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10341,7 +10341,7 @@
     {
       "id": "case32_mask_kitchen_03_compact_counter-L3",
       "level": "L3",
-      "scene_dir": "native_case32_mask_kitchen_03_compact_counter_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case32_mask_kitchen_03_compact_counter_full_physics_scene",
       "instruction": "Take the food bag to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10374,7 +10374,7 @@
     {
       "id": "case32_mask_kitchen_03_compact_counter-L4",
       "level": "L4",
-      "scene_dir": "native_case32_mask_kitchen_03_compact_counter_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case32_mask_kitchen_03_compact_counter_full_physics_scene",
       "instruction": "Take the food bag to the cabinet.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10407,7 +10407,7 @@
     {
       "id": "case33_mask_kitchen_04_bar_breakfast-L2",
       "level": "L2",
-      "scene_dir": "native_case33_mask_kitchen_04_bar_breakfast_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case33_mask_kitchen_04_bar_breakfast_full_physics_scene",
       "instruction": "Navigate to the oven.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10431,7 +10431,7 @@
     {
       "id": "case33_mask_kitchen_04_bar_breakfast-L3",
       "level": "L3",
-      "scene_dir": "native_case33_mask_kitchen_04_bar_breakfast_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case33_mask_kitchen_04_bar_breakfast_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the kitchen island.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10464,7 +10464,7 @@
     {
       "id": "case33_mask_kitchen_04_bar_breakfast-L4",
       "level": "L4",
-      "scene_dir": "native_case33_mask_kitchen_04_bar_breakfast_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case33_mask_kitchen_04_bar_breakfast_full_physics_scene",
       "instruction": "Grab the decorative trinket and place it on the kitchen island.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10497,7 +10497,7 @@
     {
       "id": "case34_mask_dining_01_formal_center-L2",
       "level": "L2",
-      "scene_dir": "native_case34_mask_dining_01_formal_center_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case34_mask_dining_01_formal_center_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10521,7 +10521,7 @@
     {
       "id": "case34_mask_dining_01_formal_center-L3",
       "level": "L3",
-      "scene_dir": "native_case34_mask_dining_01_formal_center_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case34_mask_dining_01_formal_center_full_physics_scene",
       "instruction": "Pick up the fruit basket and bring it to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10554,7 +10554,7 @@
     {
       "id": "case34_mask_dining_01_formal_center-L4",
       "level": "L4",
-      "scene_dir": "native_case34_mask_dining_01_formal_center_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case34_mask_dining_01_formal_center_full_physics_scene",
       "instruction": "Pick up the fruit basket and bring it to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10587,7 +10587,7 @@
     {
       "id": "case35_mask_dining_02_storage_display-L2",
       "level": "L2",
-      "scene_dir": "native_case35_mask_dining_02_storage_display_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case35_mask_dining_02_storage_display_full_physics_scene",
       "instruction": "Go to the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10611,7 +10611,7 @@
     {
       "id": "case35_mask_dining_02_storage_display-L3",
       "level": "L3",
-      "scene_dir": "native_case35_mask_dining_02_storage_display_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case35_mask_dining_02_storage_display_full_physics_scene",
       "instruction": "Take the fruit basket to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10644,7 +10644,7 @@
     {
       "id": "case35_mask_dining_02_storage_display-L4",
       "level": "L4",
-      "scene_dir": "native_case35_mask_dining_02_storage_display_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case35_mask_dining_02_storage_display_full_physics_scene",
       "instruction": "Take the fruit basket to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10677,7 +10677,7 @@
     {
       "id": "case36_mask_dining_03_breakfast_corner-L2",
       "level": "L2",
-      "scene_dir": "native_case36_mask_dining_03_breakfast_corner_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case36_mask_dining_03_breakfast_corner_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10701,7 +10701,7 @@
     {
       "id": "case36_mask_dining_03_breakfast_corner-L3",
       "level": "L3",
-      "scene_dir": "native_case36_mask_dining_03_breakfast_corner_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case36_mask_dining_03_breakfast_corner_full_physics_scene",
       "instruction": "Pick up the bowl and bring it to the side table.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10734,7 +10734,7 @@
     {
       "id": "case36_mask_dining_03_breakfast_corner-L4",
       "level": "L4",
-      "scene_dir": "native_case36_mask_dining_03_breakfast_corner_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case36_mask_dining_03_breakfast_corner_full_physics_scene",
       "instruction": "Pick up the bowl and bring it to the side table.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10767,7 +10767,7 @@
     {
       "id": "case37_mask_dining_04_gallery_table-L2",
       "level": "L2",
-      "scene_dir": "native_case37_mask_dining_04_gallery_table_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case37_mask_dining_04_gallery_table_full_physics_scene",
       "instruction": "Find and approach the floor lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10791,7 +10791,7 @@
     {
       "id": "case37_mask_dining_04_gallery_table-L3",
       "level": "L3",
-      "scene_dir": "native_case37_mask_dining_04_gallery_table_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case37_mask_dining_04_gallery_table_full_physics_scene",
       "instruction": "Take the vase to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10824,7 +10824,7 @@
     {
       "id": "case37_mask_dining_04_gallery_table-L4",
       "level": "L4",
-      "scene_dir": "native_case37_mask_dining_04_gallery_table_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case37_mask_dining_04_gallery_table_full_physics_scene",
       "instruction": "Take the vase to the chair.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10857,7 +10857,7 @@
     {
       "id": "case39_mask_bathroom_02_compact_storage-L2",
       "level": "L2",
-      "scene_dir": "native_case39_mask_bathroom_02_compact_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case39_mask_bathroom_02_compact_storage_full_physics_scene",
       "instruction": "Navigate to the desk lamp.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10881,7 +10881,7 @@
     {
       "id": "case39_mask_bathroom_02_compact_storage-L3",
       "level": "L3",
-      "scene_dir": "native_case39_mask_bathroom_02_compact_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case39_mask_bathroom_02_compact_storage_full_physics_scene",
       "instruction": "Pick up the book stack and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
@@ -10914,7 +10914,7 @@
     {
       "id": "case39_mask_bathroom_02_compact_storage-L4",
       "level": "L4",
-      "scene_dir": "native_case39_mask_bathroom_02_compact_storage_full_physics_scene",
+      "scene_dir": "full_scenarios_extracted/native_case39_mask_bathroom_02_compact_storage_full_physics_scene",
       "instruction": "Pick up the book stack and bring it to the large plant.",
       "agent_start": null,
       "agent_yaw": null,
