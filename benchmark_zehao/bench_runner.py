@@ -114,40 +114,15 @@ def strip_thinking(text):
     return text
 
 def query_vlm(img_paths, prompt, system_prompt, step=0):
-    """Query the VLM with one or more images (3-frame temporal context).
-    img_paths: a single path (str) or list of paths [oldest, ..., newest]."""
-    if isinstance(img_paths, str):
-        img_paths = [img_paths]
-    # Build image content entries
-    img_content = []
-    for ip in img_paths:
-        with open(ip, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode()
-        img_content.append({"type":"image_url","image_url":{"url":f"data:image/png;base64,{b64}"}})
-    payload = {"model": MODEL_NAME, "max_tokens": 4096, "temperature": 0.6,
-               "messages": [{"role":"system","content":system_prompt},
-                            {"role":"user","content":
-                                img_content +
-                                [{"type":"text","text":prompt}]}]}
-    headers = {"Content-Type":"application/json"}
-    if VLM_API_KEY:
-        headers["Authorization"] = f"Bearer {VLM_API_KEY}"
-    req = urllib.request.Request(VLLM_URL, json.dumps(payload).encode(),
-                                headers, method="POST")
+    """Query the VLM with one or more images. Uses _vlm_request for
+    retry + single-image fallback (defined after this function)."""
     try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            raw_text = json.loads(resp.read())["choices"][0]["message"]["content"].strip()
-        # Log raw response (including thinking, for debugging)
-        resp_log = os.path.join(RUN_DIR, "vlm_responses.jsonl")
-        with open(resp_log, "a") as f:
-            f.write(json.dumps({"step":step,"response":raw_text}) + "\n")
-        # Strip thinking tags if present (thinking-model compatibility)
+        raw_text = _vlm_request(img_paths, prompt, system_prompt, step)
         text = strip_thinking(raw_text)
         m = ACTION_RE.search(text.upper())
         if m:
             a = m.group(1).upper()
             return _PARSE_ALIASES.get(a, a), False
-        # Fallback: last mentioned action (including aliases — STOP -> DONE)
         best, bi = "MOVE_FORWARD", -1
         for a in ALL_ACTIONS + list(_PARSE_ALIASES):
             i = text.upper().rfind(a)
@@ -157,35 +132,65 @@ def query_vlm(img_paths, prompt, system_prompt, step=0):
         log(f"[VLM] Error: {e}"); return "MOVE_FORWARD", True
 
 
-def query_vlm_plan(img_paths, prompt, system_prompt, step=0):
-    """Query the VLM for a SEQUENCE of up to PLAN_LEN actions. Returns
-    (actions_list, fallback_bool). Supports 3-frame temporal context."""
+MAX_VLM_RETRIES = int(os.environ.get("MAX_VLM_RETRIES", "8"))  # retry budget for 429s
+
+def _vlm_request(img_paths, prompt, system_prompt, step=0):
+    """Low-level VLM HTTP request with retry + single-image fallback.
+    Returns raw response text or raises on exhausted retries."""
     if isinstance(img_paths, str):
         img_paths = [img_paths]
+
     img_content = []
     for ip in img_paths:
         with open(ip, "rb") as f:
             b64 = base64.b64encode(f.read()).decode()
         img_content.append({"type":"image_url","image_url":{"url":f"data:image/png;base64,{b64}"}})
-    payload = {"model": MODEL_NAME, "max_tokens": 4096, "temperature": 0.6,
-               "messages": [{"role":"system","content":system_prompt},
-                            {"role":"user","content":
-                                img_content +
-                                [{"type":"text","text":prompt}]}]}
+
     headers = {"Content-Type":"application/json"}
     if VLM_API_KEY:
         headers["Authorization"] = f"Bearer {VLM_API_KEY}"
-    req = urllib.request.Request(VLLM_URL, json.dumps(payload).encode(),
-                                headers, method="POST")
+
+    for attempt in range(MAX_VLM_RETRIES):
+        payload = {"model": MODEL_NAME, "max_tokens": 4096, "temperature": 0.6,
+                   "messages": [{"role":"system","content":system_prompt},
+                                {"role":"user","content":
+                                    img_content +
+                                    [{"type":"text","text":prompt}]}]}
+        req = urllib.request.Request(VLLM_URL, json.dumps(payload).encode(),
+                                    headers, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                raw_text = json.loads(resp.read())["choices"][0]["message"]["content"].strip()
+            resp_log = os.path.join(RUN_DIR, "vlm_responses.jsonl")
+            with open(resp_log, "a") as f:
+                f.write(json.dumps({"step":step,"response":raw_text}) + "\n")
+            return raw_text
+        except urllib.error.HTTPError as e:
+            body = ""
+            try: body = e.read().decode()[:300]
+            except: pass
+            if e.code == 429:
+                wait = min(5 * (attempt + 1), 30)
+                log(f"[VLM] 429 rate-limited (attempt {attempt+1}/{MAX_VLM_RETRIES}), "
+                    f"retrying in {wait}s...")
+                import time as _t; _t.sleep(wait)
+                continue
+            elif e.code == 400 and "at most 1 image" in body and len(img_content) > 1:
+                log(f"[VLM] Model supports 1 image only, falling back to single frame")
+                img_content = [img_content[-1]]
+                continue
+            else:
+                raise
+    raise RuntimeError(f"VLM retries exhausted after {MAX_VLM_RETRIES} attempts")
+
+def query_vlm_plan(img_paths, prompt, system_prompt, step=0):
+    """Query the VLM for a SEQUENCE of up to PLAN_LEN actions. Returns
+    (actions_list, fallback_bool). Supports 3-frame temporal context
+    with automatic single-image fallback and 429 retry."""
     try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            raw_text = json.loads(resp.read())["choices"][0]["message"]["content"].strip()
-        resp_log = os.path.join(RUN_DIR, "vlm_responses.jsonl")
-        with open(resp_log, "a") as f:
-            f.write(json.dumps({"step":step,"response":raw_text}) + "\n")
+        raw_text = _vlm_request(img_paths, prompt, system_prompt, step)
         text = strip_thinking(raw_text)
         up = text.upper()
-        # Apply aliases (STOP -> DONE)
         for alias, canonical in _PARSE_ALIASES.items():
             up = up.replace(alias, canonical)
         m = PLAN_RE.search(up)
@@ -194,12 +199,10 @@ def query_vlm_plan(img_paths, prompt, system_prompt, step=0):
             plan = [_PARSE_ALIASES.get(t, t) for t in tokens if t in ALL_ACTIONS or t in _PARSE_ALIASES]
             if plan:
                 return plan[:PLAN_LEN], False
-        # Fallback: single action via the ACTION: format
         am = ACTION_RE.search(up)
         if am:
             a = am.group(1).upper()
             return [_PARSE_ALIASES.get(a, a)], False
-        # Last resort: collect any action keywords in order of appearance
         found = sorted(((up.find(a), a) for a in ALL_ACTIONS if up.find(a) >= 0))
         if found:
             return [a for _, a in found][:PLAN_LEN], True
