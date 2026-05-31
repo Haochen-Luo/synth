@@ -233,19 +233,24 @@ try:
             try: UsdGeom.Imageable(p).MakeInvisible()
             except: pass
 
-    # ── Hide scene DomeLight to prevent sky bleed in bird's-eye view ──
-    # The DomeLight at /World/Env/env_light projects an HDR sky texture
-    # onto an infinite sphere. With the ceiling hidden, the bird-eye camera
-    # sees through the void and catches the sky dome (which can be red/blue
-    # depending on time-of-day). Its illumination contribution (0.25 intensity)
-    # is negligible compared to our fill lights (5x 80000). Runner-scoped
-    # DomeLights under /World/Humans/ are kept for runner mesh lighting.
+    # ── Neutralize scene DomeLights to prevent colored sky bleed ──
+    # The DomeLight at /World/Env/env_light may have an HDR sky texture
+    # that bleeds red/blue/green through the ceiling void in bird-eye view.
+    # Instead of hiding it (which kills illumination in some scenes), force
+    # it to neutral white and strip the sky texture.
     for p in stage.Traverse():
         if p.GetTypeName() == "DomeLight":
             pp = p.GetPath().pathString
             if pp.startswith("/World/Env/"):
-                UsdGeom.Imageable(p).MakeInvisible()
-                log(f"[BENCH] Hidden DomeLight {pp} (sky bleed prevention)")
+                dl = UsdLux.DomeLight(p)
+                # Clear HDR sky texture to prevent colored bleed
+                tex_attr = dl.GetTextureFileAttr()
+                if tex_attr and tex_attr.Get():
+                    tex_attr.Clear()
+                    log(f"[BENCH] Cleared sky texture on DomeLight {pp}")
+                # Force neutral white color
+                dl.GetColorAttr().Set(Gf.Vec3f(1.0, 1.0, 1.0))
+                log(f"[BENCH] Neutralized DomeLight {pp} to white (sky bleed prevention)")
 
     # ── Get runner scale from spec ──
     runner_scale = [0.53, 0.53, 0.53]
