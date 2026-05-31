@@ -1090,10 +1090,6 @@ try:
             # Adding GROUND_Z pushed the camera into the ceiling (2.25m).
             cxf.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, EYE_H))
             cxf.AddOrientOp().Set(cam_quat(ayaw, apitch))
-            # Fix FPV clipping into NPC or own arms when close
-            nav_cam_prim = UsdGeom.Camera(nav_cam)
-            if nav_cam_prim:
-                nav_cam_prim.CreateClippingRangeAttr().Set(Gf.Vec2f(0.3, 10000.0))
 
         # Animate runners to the start-of-step sim_t, then render this step's
         # frame. It lands in the *_smooth folders as a normal frame.
