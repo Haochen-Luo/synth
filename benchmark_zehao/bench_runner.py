@@ -71,7 +71,10 @@ for _p in phases:
     if _p.get("action") == "STOP":
         _p["action"] = "DONE"
 is_multi = len(phases) > 1 or phases[0]["action"] != "DONE"
-agent_start_xy = task["agent_start"]; agent_start_yaw = task["agent_yaw"]
+agent_start_xy = task.get("agent_start")
+agent_start_yaw = task.get("agent_yaw")
+auto_spawn = agent_start_xy is None  # will be resolved after target positions are known
+spawn_facing = task.get("spawn_facing", "face")
 
 RUNNER_MESH_GROUND_Z = 0.6773  # bbox-calibrated Z for runner mesh ground contact
 DANCER_MESH_GROUND_Z = 0.8961  # bbox-calibrated Z for dancer mesh
@@ -316,7 +319,13 @@ try:
             resolved_half_extents.append(0.0)  # door half-extent not critical
             log(f"[BENCH] Phase '{ph['name']}' -> door at {resolved_targets[-1]}")
         else:
-            pp = find_prim_by_factory(stage, tobj)
+            # Prefer explicit target_prim path if provided
+            pp = None
+            explicit_prim = ph.get("target_prim", "")
+            if explicit_prim and stage.GetPrimAtPath(explicit_prim).IsValid():
+                pp = explicit_prim
+            if not pp:
+                pp = find_prim_by_factory(stage, tobj)
             if pp:
                 target_prim_paths.add(pp)
                 c = get_prim_world_center(stage, pp)
@@ -346,6 +355,27 @@ try:
                 resolved_targets.append([5, 5])
                 resolved_half_extents.append(0.0)
                 log(f"[BENCH] WARNING: no prim found for {tobj}")
+
+    # ── Auto-spawn: compute agent start from first target position ──
+    if auto_spawn and resolved_targets:
+        import math, random as _rng
+        _rng.seed(hash(tid) & 0xFFFFFFFF)  # deterministic per task
+        tgt0 = resolved_targets[0]
+        # Spawn 5-8m away from first target
+        spawn_dist = 5.0 + _rng.random() * 3.0
+        # Random angle
+        angle = _rng.uniform(0, 2 * math.pi)
+        sx = tgt0[0] + spawn_dist * math.cos(angle)
+        sy = tgt0[1] + spawn_dist * math.sin(angle)
+        # Yaw: face vs back
+        face_yaw = math.degrees(math.atan2(tgt0[1] - sy, tgt0[0] - sx))
+        if spawn_facing == 'back':
+            agent_start_yaw = face_yaw + 180  # back to target
+        else:
+            agent_start_yaw = face_yaw  # face target
+        agent_start_xy = [sx, sy]
+        log(f"[BENCH] Auto-spawn: ({sx:.2f},{sy:.2f}) yaw={agent_start_yaw:.0f} "
+            f"(dist={spawn_dist:.1f}m from target, facing={spawn_facing})")
 
     # ── Place objects that need repositioning ──
     pickup_prim = None
