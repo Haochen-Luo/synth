@@ -160,8 +160,13 @@ def _vlm_request(img_paths, prompt, system_prompt, step=0):
                                     headers, method="POST")
         try:
             with urllib.request.urlopen(req, timeout=120) as resp:
-                content = json.loads(resp.read())["choices"][0]["message"]["content"]
-                raw_text = (content or "").strip()
+                data = json.loads(resp.read())
+                content = data["choices"][0]["message"]["content"]
+                if not content:
+                    log(f"[VLM] Empty/null content in 200 response (attempt {attempt+1}/{MAX_VLM_RETRIES}), retrying...")
+                    import time as _t; _t.sleep(3)
+                    continue
+                raw_text = content.strip()
             resp_log = os.path.join(RUN_DIR, "vlm_responses.jsonl")
             with open(resp_log, "a") as f:
                 f.write(json.dumps({"step":step,"response":raw_text}) + "\n")
