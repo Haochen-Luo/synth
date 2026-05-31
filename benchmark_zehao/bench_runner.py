@@ -17,6 +17,7 @@ from semantic_classes import semantic_class_of
 # ── Config ──
 VLLM_URL = os.environ.get("VLLM_URL", "http://localhost:8300/v1/chat/completions")
 MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen3-VL-30B-A3B-Thinking-FP8")
+VLM_API_KEY = os.environ.get("VLM_API_KEY", "")  # set for external APIs (OpenRouter, etc.)
 TASKS_JSON = os.environ.get("TASKS_JSON", os.path.join(SCRIPT_DIR, "benchmark_tasks.json"))
 RESULTS_BASE = os.path.join(SCRIPT_DIR, "results")
 
@@ -128,8 +129,11 @@ def query_vlm(img_paths, prompt, system_prompt, step=0):
                             {"role":"user","content":
                                 img_content +
                                 [{"type":"text","text":prompt}]}]}
+    headers = {"Content-Type":"application/json"}
+    if VLM_API_KEY:
+        headers["Authorization"] = f"Bearer {VLM_API_KEY}"
     req = urllib.request.Request(VLLM_URL, json.dumps(payload).encode(),
-                                {"Content-Type":"application/json"}, method="POST")
+                                headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=120) as resp:
             raw_text = json.loads(resp.read())["choices"][0]["message"]["content"].strip()
@@ -168,8 +172,11 @@ def query_vlm_plan(img_paths, prompt, system_prompt, step=0):
                             {"role":"user","content":
                                 img_content +
                                 [{"type":"text","text":prompt}]}]}
+    headers = {"Content-Type":"application/json"}
+    if VLM_API_KEY:
+        headers["Authorization"] = f"Bearer {VLM_API_KEY}"
     req = urllib.request.Request(VLLM_URL, json.dumps(payload).encode(),
-                                {"Content-Type":"application/json"}, method="POST")
+                                headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=120) as resp:
             raw_text = json.loads(resp.read())["choices"][0]["message"]["content"].strip()
