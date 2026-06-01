@@ -472,6 +472,9 @@ try:
     target_semantic = {semantic_class_of(tc) for tc in target_classes}
     log(f"[BENCH] Target semantic classes: {target_semantic}")
     log(f"[BENCH] Target prim paths: {target_prim_paths}")
+
+    # First pass: identify which prims to deactivate
+    prims_to_deactivate = []
     for container_path in ["/World/InteractiveProps", "/World/Env"]:
         container = stage.GetPrimAtPath(container_path)
         if not container or not container.IsValid():
@@ -482,12 +485,63 @@ try:
         for child in children:
             c_name = child.GetName()
             c_path = child.GetPath().pathString
-
             child_semantic = semantic_class_of(c_name)
             if child_semantic in target_semantic and c_path not in target_prim_paths:
-                child.SetActive(False)
-                log(f"[BENCH] Deactivated same-semantic-class ({child_semantic}) "
-                    f"non-target in {container_path}: {c_path}")
+                prims_to_deactivate.append(child)
+
+    # Second pass: for each deactivated prim, also deactivate objects resting on it.
+    # When a shelf is deactivated, objects on it lose support and fall to ground,
+    # creating impassable ground-level collision obstacles (the "falling lamp" bug).
+    cascade_deactivated = []
+    deactivate_paths = {p.GetPath().pathString for p in prims_to_deactivate}
+    for deact_prim in prims_to_deactivate:
+        try:
+            deact_img = UsdGeom.Imageable(deact_prim)
+            deact_bound = deact_img.ComputeWorldBound(Usd.TimeCode.Default(), "default")
+            deact_box = deact_bound.GetBox()
+            dmin = deact_box.GetMin()
+            dmax = deact_box.GetMax()
+            # Skip tiny prims (not furniture)
+            if (dmax[0]-dmin[0]) < 0.3 or (dmax[1]-dmin[1]) < 0.3:
+                continue
+            # Find all OTHER prims whose center is within the deactivated prim's
+            # XY footprint and whose Z is above the prim's bottom (resting on it)
+            for container_path in ["/World/InteractiveProps", "/World/Env"]:
+                container = stage.GetPrimAtPath(container_path)
+                if not container or not container.IsValid():
+                    continue
+                for child in container.GetChildren():
+                    cp = child.GetPath().pathString
+                    if cp in deactivate_paths or cp in target_prim_paths:
+                        continue  # already deactivating or is a target
+                    if cp in [c.GetPath().pathString for c in cascade_deactivated]:
+                        continue  # already cascade-marked
+                    try:
+                        ci = UsdGeom.Imageable(child)
+                        cb = ci.ComputeWorldBound(Usd.TimeCode.Default(), "default")
+                        cbox = cb.GetBox()
+                        cc = cbox.GetMidpoint()
+                        # XY center within deactivated prim's footprint
+                        xy_inside = (dmin[0] <= cc[0] <= dmax[0] and
+                                     dmin[1] <= cc[1] <= dmax[1])
+                        # Z above deactivated prim's bottom, within its height + 1m
+                        z_on_top = (dmin[2] <= cc[2] <= dmax[2] + 1.0)
+                        if xy_inside and z_on_top:
+                            cascade_deactivated.append(child)
+                    except:
+                        pass
+        except:
+            pass
+
+    # Deactivate everything
+    for p in prims_to_deactivate:
+        p.SetActive(False)
+        log(f"[BENCH] Deactivated same-semantic-class ({semantic_class_of(p.GetName())}) "
+            f"non-target: {p.GetPath().pathString}")
+    for p in cascade_deactivated:
+        p.SetActive(False)
+        log(f"[BENCH] Cascade-deactivated (resting on deactivated furniture): "
+            f"{p.GetPath().pathString}")
 
     # ── Instance agent ──
     human_usd = sf["human_usds"][0] if sf["human_usds"] else None
