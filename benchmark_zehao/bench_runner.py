@@ -1554,7 +1554,17 @@ try:
                 WALKABLE = ("floor", "ground", "rug", "blanket", "towel", "mat")
                 if any(w in hit_path for w in WALKABLE):
                     continue
-                hit_info = (sz, hit_path, hit.get("distance", -1))
+                hit_dist = float(hit.get("distance", -1))
+                # CRITICAL: if dist <= 0, the agent is ALREADY INSIDE the
+                # collider (e.g. an object fell onto the agent via gravity).
+                # Blocking movement would permanently trap the agent.
+                # Allow escape by not blocking when overlapping.
+                if hit_dist <= 0.01:
+                    log(f"[BENCH] Step {step}: OVERLAP z={sz} "
+                        f"dist={hit_dist:.3f}m hit={hit_path.split('/')[-1][:60]} "
+                        f"— allowing movement to escape")
+                    continue
+                hit_info = (sz, hit_path, hit_dist)
                 blocked = True; break
             if not blocked:
                 ax += STEP_DIST * dx; ay += STEP_DIST * dy
