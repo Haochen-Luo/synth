@@ -755,15 +755,19 @@ try:
         sys_prompt = make_nav_system_prompt(phases[0]["desc"])
 
     # ── Smooth-frame capture helpers ──
-    # FILLER_FPS controls how many in-between frames are rendered per second of
-    # sim-time while the VLM is thinking. Higher = smoother runner motion.
-    # Lowered 6 -> 3 to roughly halve filler render load (prototype speed).
+    # Strict per-step sim-time semantics: every executed step (VLM-call or
+    # queued, on-screen or off-screen) advances sim_t by exactly
+    # RUNNER_TIME_PER_STEP. On-screen steps render FILLER_FRAMES_PER_STEP
+    # filler frames that each correspond to one baked-animation atomic
+    # keyframe (FILLER_FPS == anim_fps == 10, so 1 filler frame == 0.1s).
+    # Off-screen steps skip the filler renders and advance sim_t directly.
+    # The two paths produce IDENTICAL sim_t advancement (0.5s/step), so the
+    # runner's world-time is strictly proportional to the agent's step count
+    # — independent of VLM wall-clock latency. Fully reproducible.
     FILLER_FPS = 10.0  # match anim fps to avoid trajectory undersampling at corners
     FILLER_SUBFRAMES = 4   # filler frames are video-only -> cheap PathTracing
     DECISION_SUBFRAMES = 16  # decision frames (VLM sees these) stay full quality
-    # Render at least this many filler frames per step so the runner visibly
-    # progresses even on a fast VLM response.
-    MIN_FILLER_FRAMES = 2
+    FILLER_FRAMES_PER_STEP = int(RUNNER_TIME_PER_STEP * FILLER_FPS)  # = 5
     smooth_counter = [0]  # global running index for *_smooth folders
     # ── Timing probes ── accumulate wall-clock seconds by category so the log
     # can show where each episode actually spends its time (render vs VLM).
@@ -1364,7 +1368,11 @@ try:
                         vlm_frames.append(prev_path)
             vlm_frames.append(frame_path)
 
-            # Query VLM concurrently; render filler frames while it thinks
+            # Query VLM concurrently; render filler frames while it thinks.
+            # Strict per-step: sim_t advances by exactly RUNNER_TIME_PER_STEP
+            # regardless of VLM wall-clock. On-screen → render FILLER_FRAMES_PER_STEP
+            # filler frames (each = 1 anim atomic keyframe). Off-screen → skip
+            # filler renders. Either way sim_t lands at sim_t + RUNNER_TIME_PER_STEP.
             import threading
             vlm_result = {}
             def _vlm_worker():
@@ -1372,22 +1380,24 @@ try:
             _t_vlm = time.time()
             vlm_thread = threading.Thread(target=_vlm_worker)
             vlm_thread.start()
-            filler_t = sim_t
 
-            # Visibility gate
-            VIS_SCAN_WINDOW = 3.0; VIS_SCAN_POINTS = 16
+            # Visibility gate: scan the upcoming step's sim_t interval
+            # [sim_t, sim_t + RUNNER_TIME_PER_STEP]. Narrow scan is enough now
+            # that sim_t advances deterministically per step.
+            VIS_SCAN_POINTS = 5
             _t_vis = time.time()
             runner_on_screen = any(
                 runner_visible(ax, ay, ayaw,
-                               sim_t + VIS_SCAN_WINDOW * k / (VIS_SCAN_POINTS - 1))
+                               sim_t + RUNNER_TIME_PER_STEP * k / (VIS_SCAN_POINTS - 1))
                 for k in range(VIS_SCAN_POINTS))
             timing["visibility_check"] += time.time() - _t_vis
             timing["n_runner_visible" if runner_on_screen else "n_runner_hidden"] += 1
 
             if runner_on_screen:
-                filler_n = 0
-                while vlm_thread.is_alive() or filler_n < MIN_FILLER_FRAMES:
-                    filler_t += 1.0 / FILLER_FPS
+                # Render fixed FILLER_FRAMES_PER_STEP frames spanning the step.
+                # Each filler frame corresponds to one baked anim atomic keyframe.
+                for i in range(FILLER_FRAMES_PER_STEP):
+                    filler_t = sim_t + RUNNER_TIME_PER_STEP * (i + 1) / FILLER_FRAMES_PER_STEP
                     ax, ay, _ = push_agent_if_overlap(ax, ay, filler_t, step=step, frame_kind="filler")
                     a_trans.Set(Gf.Vec3d(ax, ay, GROUND_Z))
                     if nav_cam and nav_cam.IsValid():
@@ -1403,10 +1413,8 @@ try:
                     render_frame(filler=True)
                     timing["render_filler"] += time.time() - _t_fr
                     timing["n_filler"] += 1
-                    filler_n += 1
-            else:
-                vlm_thread.join()
-                filler_t = sim_t + RUNNER_TIME_PER_STEP
+            sim_t += RUNNER_TIME_PER_STEP
+            # Wait for VLM to finish (it may take longer than the 5 filler renders).
             vlm_thread.join()
             timing["vlm"] += time.time() - _t_vlm
             timing["n_vlm"] += 1
@@ -1415,7 +1423,6 @@ try:
             cur_planned = list(plan)
             cur_executed = []
             vlm_calls += 1
-            sim_t = filler_t
             _vis_tag = "runner visible" if runner_on_screen else "runner off-screen, no filler"
             log(f"[BENCH] Step {step}: VLM call #{vlm_calls} -> plan={plan_queue} "
                 f"({_vis_tag})")
@@ -1639,8 +1646,37 @@ try:
                 timing["n_filler"] += 1
 
         nav_hist[-1]["moved"] = did_move
-        # Advance sim_t for queued steps (no VLM call = no filler loop to advance it)
+        # Advance sim_t for queued steps (plan items 2..N executed without a
+        # new VLM call). Mirror the VLM-call step's visibility-gated filler so
+        # the runner's baked walk-cycle stays continuous across queued steps.
         if not queried_this_step:
+            VIS_SCAN_POINTS = 5
+            _t_vis = time.time()
+            queued_on_screen = any(
+                runner_visible(ax, ay, ayaw,
+                               sim_t + RUNNER_TIME_PER_STEP * k / (VIS_SCAN_POINTS - 1))
+                for k in range(VIS_SCAN_POINTS))
+            timing["visibility_check"] += time.time() - _t_vis
+            timing["n_runner_visible" if queued_on_screen else "n_runner_hidden"] += 1
+
+            if queued_on_screen:
+                for i in range(FILLER_FRAMES_PER_STEP):
+                    filler_t = sim_t + RUNNER_TIME_PER_STEP * (i + 1) / FILLER_FRAMES_PER_STEP
+                    ax, ay, _ = push_agent_if_overlap(ax, ay, filler_t, step=step, frame_kind="filler")
+                    a_trans.Set(Gf.Vec3d(ax, ay, GROUND_Z))
+                    if nav_cam and nav_cam.IsValid():
+                        cxf_f = UsdGeom.Xformable(nav_cam)
+                        try: cxf_f.ClearXformOpOrder()
+                        except: pass
+                        cam_x = ax + 0.01 * math.cos(math.radians(ayaw))
+                        cam_y = ay + 0.01 * math.sin(math.radians(ayaw))
+                        cxf_f.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, EYE_H))
+                        cxf_f.AddOrientOp().Set(cam_quat(ayaw, apitch))
+                    pose_runners_at(filler_t)
+                    _t_fr = time.time()
+                    render_frame(filler=True)
+                    timing["render_filler"] += time.time() - _t_fr
+                    timing["n_filler"] += 1
             sim_t += RUNNER_TIME_PER_STEP
 
         # ── Decide whether the current plan ends here ──
