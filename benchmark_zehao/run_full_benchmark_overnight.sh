@@ -6,7 +6,8 @@
 # Usage: ssh GPU-843 'nohup bash /path/to/run_full_benchmark_overnight.sh \
 #            > /path/to/overnight_pipeline.log 2>&1 &'
 #
-set -e
+# NOTE: no set -e — Phase 1 may exit non-zero on OOM but cached scenes
+# are still valid. Pipeline continues with whatever was cached.
 WORKDIR="/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao"
 cd "$WORKDIR"
 

@@ -307,6 +307,12 @@ try:
         log(f"[VALIDATE] ✅ {short}: done in {elapsed:.1f}s "
             f"(reach={n_reach} unreach={n_unreach} spawns={len(spawn_candidates)})")
 
+        # ── Memory cleanup to prevent OOM on long runs ──
+        import gc
+        del reachable, reachable_list, prim_positions, all_positions
+        del reachable_props, unreachable_props, spawn_candidates
+        gc.collect()
+
     log(f"\n{'='*60}")
     log(f"[VALIDATE] DONE: {total_validated} validated, {total_skipped} skipped, {total_failed} failed")
     log(f"[VALIDATE] Cache dir: {CACHE_DIR}")
