@@ -12,7 +12,7 @@ random.seed(42)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CACHE_DIR = os.path.join(SCRIPT_DIR, "spawn_cache")
-OUT = os.path.join(SCRIPT_DIR, "benchmark_tasks_full_runner.json")
+OUT = os.path.join(SCRIPT_DIR, "full_benchmark_0601.json")
 
 FACTORY_NL = {
     'BookFactory': 'book', 'BookStackFactory': 'stack of books',
@@ -191,30 +191,8 @@ for scene_dir in sorted(glob.glob(os.path.join(scenes_base, "native_*_full_physi
     _rng = random.Random(hash(short) & 0xFFFFFFFF)
 
     def pick_spawn(target_pos, facing, candidates):
-        """Pick spawn 3-7m from target, return (x, y, yaw)."""
-        # Sort by distance to target, prefer 3-7m
-        scored = []
-        for sx, sy in candidates:
-            d = math.sqrt((sx-target_pos[0])**2 + (sy-target_pos[1])**2)
-            if d >= 2.0:
-                score = abs(d - 5.0)  # prefer ~5m
-                scored.append((score, sx, sy, d))
-        scored.sort()
-        if not scored:
-            # Fallback: any candidate
-            sx, sy = candidates[0]
-            d = math.sqrt((sx-target_pos[0])**2 + (sy-target_pos[1])**2)
-        else:
-            # Pick from top 10 randomly
-            pick = _rng.choice(scored[:min(10, len(scored))])
-            _, sx, sy, d = pick
-        face_yaw = math.degrees(math.atan2(target_pos[1]-sy, target_pos[0]-sx))
-        if facing == 'back':
-            yaw = face_yaw + 180
-        else:
-            yaw = face_yaw
-        yaw = ((yaw + 180) % 360) - 180
-        return round(sx, 2), round(sy, 2), round(yaw, 1)
+        """Return dummy spawn point at the target to force grid search later."""
+        return round(target_pos[0], 2), round(target_pos[1], 2), 0.0
 
     # Get first target position
     if task_type == 'pick_place':

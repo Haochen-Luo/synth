@@ -17,7 +17,7 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 BENCH_DIR  = os.path.dirname(os.path.abspath(__file__))
-TASKS_JSON = os.path.join(BENCH_DIR, "benchmark_tasks.json")
+TASKS_JSON = os.path.join(BENCH_DIR, "full_benchmark_0601.json")
 REPORT_OUT = os.path.join(BENCH_DIR, "spawn_validation_report.json")
 
 FIX_MODE = "--fix" in sys.argv
