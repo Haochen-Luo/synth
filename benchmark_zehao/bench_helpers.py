@@ -76,6 +76,13 @@ def discover_scene_files(scene_dir):
     stage = glob.glob(os.path.join(scene_dir,"compiled_stages","*.compiled.usda"))
     spec = glob.glob(os.path.join(scene_dir,"compiled_specs","*.compiled.spec.json"))
     humans = glob.glob(os.path.join(scene_dir,"assets","humans","*.usdc"))
+    if not humans:
+        # full_scenarios_extracted/ nests each human one level deeper:
+        # assets/humans/<obj_name>/<obj_name>.usdc. Only consulted when the
+        # flat layout above finds nothing, so legacy scene packages (which DO
+        # have flat humans/*.usdc) keep byte-identical behavior. Sorted so
+        # obj_1_* (the agent) precedes obj_2_* in multi-runner scenes.
+        humans = sorted(glob.glob(os.path.join(scene_dir,"assets","humans","*","*.usdc")))
     return {
         "stage": stage[0] if stage else None,
         "spec": spec[0] if spec else None,
