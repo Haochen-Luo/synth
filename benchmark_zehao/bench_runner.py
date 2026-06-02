@@ -15,8 +15,21 @@ from bench_helpers import (sample_human_motion, wrap_angle_deg, check_frame_qual
 from semantic_classes import semantic_class_of
 
 # ── Config ──
+def _auto_detect_model_name(vllm_url):
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(vllm_url)
+        base_url = f"{parsed.scheme}://{parsed.netloc}/v1/models"
+        req = urllib.request.Request(base_url)
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode())
+            return data["data"][0]["id"]
+    except Exception as e:
+        print(f"Warning: Could not auto-detect model from {vllm_url}: {e}")
+        return "Qwen/Qwen3-VL-30B-A3B-Thinking-FP8"
+
 VLLM_URL = os.environ.get("VLLM_URL", "http://localhost:8300/v1/chat/completions")
-MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen3-VL-30B-A3B-Thinking-FP8")
+MODEL_NAME = os.environ.get("MODEL_NAME") or _auto_detect_model_name(VLLM_URL)
 VLM_API_KEY = os.environ.get("VLM_API_KEY", "")  # set for external APIs (OpenRouter, etc.)
 TASKS_JSON = os.environ.get("TASKS_JSON", os.path.join(SCRIPT_DIR, "benchmark_tasks.json"))
 RESULTS_BASE = os.path.join(SCRIPT_DIR, "results")
@@ -45,6 +58,22 @@ ENABLE_BIRD_SMOOTH = os.environ.get("ENABLE_BIRD_SMOOTH", "0") == "1"
 # Lowered for prototype iteration speed; set RENDER_W/RENDER_H env to override.
 RENDER_W = int(os.environ.get("RENDER_W", "540"))
 RENDER_H = int(os.environ.get("RENDER_H", "360"))
+# Master filler-frame switch. Default 0 (off, prototype speed): NO filler
+# frames are rendered at all — every step renders only its single decision
+# frame (the image the VLM sees). sim_t still advances by RUNNER_TIME_PER_STEP
+# per step regardless, so runner world-time, dynamic-collision prediction and
+# the decision frames are byte-for-byte identical to a filler-on run; only the
+# *_smooth videos lose their in-between frames (runner leaps between decision
+# frames instead of walking smoothly). Set to 1 for paper-quality continuous
+# *_smooth video — then VISIBILITY_GATE (below) decides which steps get filler.
+RENDER_FILLER = os.environ.get("RENDER_FILLER", "0") == "1"
+# Visibility-gated filler rendering. ONLY consulted when RENDER_FILLER=1.
+# Default 0 (off): every step renders filler frames regardless of runner FOV.
+# This eliminates stale-USD-state visual artifacts seen after long off-screen
+# sequences (see case004-L2 investigation). Set to 1 to re-enable the ~30-50%
+# speedup that skips filler on off-screen steps — only do this if visual
+# continuity isn't needed and you've confirmed the artifacts don't recur.
+VISIBILITY_GATE = os.environ.get("VISIBILITY_GATE", "0") == "1"
 
 # ── Load task config ──
 task_id = os.environ.get("TASK_ID", "")
@@ -94,6 +123,7 @@ def log(msg):
 
 log(f"[BENCH] Task={tid} Level={level} Scene={task['scene_dir']}")
 log(f"[BENCH] Instruction: {task['instruction']}")
+log(f"[BENCH] Model: {MODEL_NAME}")
 log(f"[BENCH] Phases: {len(phases)}, MaxSteps={max_steps}")
 
 # ── VLM query ──
@@ -1383,17 +1413,29 @@ try:
 
             # Visibility gate: scan the upcoming step's sim_t interval
             # [sim_t, sim_t + RUNNER_TIME_PER_STEP]. Narrow scan is enough now
-            # that sim_t advances deterministically per step.
-            VIS_SCAN_POINTS = 5
-            _t_vis = time.time()
-            runner_on_screen = any(
-                runner_visible(ax, ay, ayaw,
-                               sim_t + RUNNER_TIME_PER_STEP * k / (VIS_SCAN_POINTS - 1))
-                for k in range(VIS_SCAN_POINTS))
-            timing["visibility_check"] += time.time() - _t_vis
-            timing["n_runner_visible" if runner_on_screen else "n_runner_hidden"] += 1
+            # that sim_t advances deterministically per step. Only needed to
+            # decide filler rendering, so it is skipped when RENDER_FILLER=0.
+            runner_on_screen = False
+            if RENDER_FILLER:
+                VIS_SCAN_POINTS = 5
+                _t_vis = time.time()
+                runner_on_screen = any(
+                    runner_visible(ax, ay, ayaw,
+                                   sim_t + RUNNER_TIME_PER_STEP * k / (VIS_SCAN_POINTS - 1))
+                    for k in range(VIS_SCAN_POINTS))
+                timing["visibility_check"] += time.time() - _t_vis
+                timing["n_runner_visible" if runner_on_screen else "n_runner_hidden"] += 1
 
-            if runner_on_screen:
+            # Filler frames are video-only and gated by the RENDER_FILLER master
+            # switch. When RENDER_FILLER=0 (default) NO filler is rendered — the
+            # block below is skipped entirely and sim_t still advances, so the
+            # runner/collision state is unchanged. When RENDER_FILLER=1,
+            # VISIBILITY_GATE decides: off → filler every step regardless of FOV
+            # (eliminates stale-USD artifacts on long off-screen sequences);
+            # on → filler only when a runner is actually on screen. Stats still
+            # reflect actual visibility either way.
+            render_filler_this_step = RENDER_FILLER and (runner_on_screen or not VISIBILITY_GATE)
+            if render_filler_this_step:
                 # Render fixed FILLER_FRAMES_PER_STEP frames spanning the step.
                 # Each filler frame corresponds to one baked anim atomic keyframe.
                 for i in range(FILLER_FRAMES_PER_STEP):
@@ -1423,7 +1465,14 @@ try:
             cur_planned = list(plan)
             cur_executed = []
             vlm_calls += 1
-            _vis_tag = "runner visible" if runner_on_screen else "runner off-screen, no filler"
+            if not RENDER_FILLER:
+                _vis_tag = "filler disabled"
+            elif runner_on_screen:
+                _vis_tag = "runner visible, filler rendered"
+            elif not VISIBILITY_GATE:
+                _vis_tag = "runner off-screen, filler forced"
+            else:
+                _vis_tag = "runner off-screen, no filler"
             log(f"[BENCH] Step {step}: VLM call #{vlm_calls} -> plan={plan_queue} "
                 f"({_vis_tag})")
             action_fb = ""
@@ -1561,17 +1610,7 @@ try:
                 WALKABLE = ("floor", "ground", "rug", "blanket", "towel", "mat")
                 if any(w in hit_path for w in WALKABLE):
                     continue
-                hit_dist = float(hit.get("distance", -1))
-                # CRITICAL: if dist <= 0, the agent is ALREADY INSIDE the
-                # collider (e.g. an object fell onto the agent via gravity).
-                # Blocking movement would permanently trap the agent.
-                # Allow escape by not blocking when overlapping.
-                if hit_dist <= 0.01:
-                    log(f"[BENCH] Step {step}: OVERLAP z={sz} "
-                        f"dist={hit_dist:.3f}m hit={hit_path.split('/')[-1][:60]} "
-                        f"— allowing movement to escape")
-                    continue
-                hit_info = (sz, hit_path, hit_dist)
+                hit_info = (sz, hit_path, hit.get("distance", -1))
                 blocked = True; break
             if not blocked:
                 ax += STEP_DIST * dx; ay += STEP_DIST * dy
@@ -1608,12 +1647,15 @@ try:
         ayaw = wrap_angle_deg(ayaw)
         did_move = abs(ax-pre_x) > 0.001 or abs(ay-pre_y) > 0.001
 
-        # ── Smooth Camera Transition ──
+        # ── Smooth Camera Transition (filler) ──
         # Camera transition interpolation: set to 0 to skip runtime PathTracing
         # of intermediate frames (~1.5s/frame savings). Use ffmpeg minterpolate
         # in post-processing for smooth video instead (pure CPU, zero render cost).
+        # Gated by the RENDER_FILLER master switch — these are filler frames too,
+        # so they never render when filler is disabled (default).
         CAM_TRANSITION_FRAMES = 0
-        if did_move or abs(ayaw - pre_yaw) > 0.1 or abs(apitch - pre_pitch) > 0.1:
+        if RENDER_FILLER and CAM_TRANSITION_FRAMES > 0 and (
+                did_move or abs(ayaw - pre_yaw) > 0.1 or abs(apitch - pre_pitch) > 0.1):
             def short_angle(a0, a1):
                 da = (a1 - a0) % 360
                 return 2 * da % 360 - da
@@ -1647,36 +1689,40 @@ try:
 
         nav_hist[-1]["moved"] = did_move
         # Advance sim_t for queued steps (plan items 2..N executed without a
-        # new VLM call). Mirror the VLM-call step's visibility-gated filler so
-        # the runner's baked walk-cycle stays continuous across queued steps.
+        # new VLM call). When RENDER_FILLER=1 this mirrors the VLM-call step's
+        # visibility-gated filler so the runner's baked walk-cycle stays
+        # continuous across queued steps. When RENDER_FILLER=0 (default) no
+        # filler is rendered and the visibility probe is skipped — sim_t still
+        # advances by RUNNER_TIME_PER_STEP so queued steps stay reproducible.
         if not queried_this_step:
-            VIS_SCAN_POINTS = 5
-            _t_vis = time.time()
-            queued_on_screen = any(
-                runner_visible(ax, ay, ayaw,
-                               sim_t + RUNNER_TIME_PER_STEP * k / (VIS_SCAN_POINTS - 1))
-                for k in range(VIS_SCAN_POINTS))
-            timing["visibility_check"] += time.time() - _t_vis
-            timing["n_runner_visible" if queued_on_screen else "n_runner_hidden"] += 1
+            if RENDER_FILLER:
+                VIS_SCAN_POINTS = 5
+                _t_vis = time.time()
+                queued_on_screen = any(
+                    runner_visible(ax, ay, ayaw,
+                                   sim_t + RUNNER_TIME_PER_STEP * k / (VIS_SCAN_POINTS - 1))
+                    for k in range(VIS_SCAN_POINTS))
+                timing["visibility_check"] += time.time() - _t_vis
+                timing["n_runner_visible" if queued_on_screen else "n_runner_hidden"] += 1
 
-            if queued_on_screen:
-                for i in range(FILLER_FRAMES_PER_STEP):
-                    filler_t = sim_t + RUNNER_TIME_PER_STEP * (i + 1) / FILLER_FRAMES_PER_STEP
-                    ax, ay, _ = push_agent_if_overlap(ax, ay, filler_t, step=step, frame_kind="filler")
-                    a_trans.Set(Gf.Vec3d(ax, ay, GROUND_Z))
-                    if nav_cam and nav_cam.IsValid():
-                        cxf_f = UsdGeom.Xformable(nav_cam)
-                        try: cxf_f.ClearXformOpOrder()
-                        except: pass
-                        cam_x = ax + 0.01 * math.cos(math.radians(ayaw))
-                        cam_y = ay + 0.01 * math.sin(math.radians(ayaw))
-                        cxf_f.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, EYE_H))
-                        cxf_f.AddOrientOp().Set(cam_quat(ayaw, apitch))
-                    pose_runners_at(filler_t)
-                    _t_fr = time.time()
-                    render_frame(filler=True)
-                    timing["render_filler"] += time.time() - _t_fr
-                    timing["n_filler"] += 1
+                if queued_on_screen or not VISIBILITY_GATE:
+                    for i in range(FILLER_FRAMES_PER_STEP):
+                        filler_t = sim_t + RUNNER_TIME_PER_STEP * (i + 1) / FILLER_FRAMES_PER_STEP
+                        ax, ay, _ = push_agent_if_overlap(ax, ay, filler_t, step=step, frame_kind="filler")
+                        a_trans.Set(Gf.Vec3d(ax, ay, GROUND_Z))
+                        if nav_cam and nav_cam.IsValid():
+                            cxf_f = UsdGeom.Xformable(nav_cam)
+                            try: cxf_f.ClearXformOpOrder()
+                            except: pass
+                            cam_x = ax + 0.01 * math.cos(math.radians(ayaw))
+                            cam_y = ay + 0.01 * math.sin(math.radians(ayaw))
+                            cxf_f.AddTranslateOp().Set(Gf.Vec3d(cam_x, cam_y, EYE_H))
+                            cxf_f.AddOrientOp().Set(cam_quat(ayaw, apitch))
+                        pose_runners_at(filler_t)
+                        _t_fr = time.time()
+                        render_frame(filler=True)
+                        timing["render_filler"] += time.time() - _t_fr
+                        timing["n_filler"] += 1
             sim_t += RUNNER_TIME_PER_STEP
 
         # ── Decide whether the current plan ends here ──
@@ -1751,7 +1797,7 @@ try:
         },
         "events": collision_events,
     }
-    results = {"task": task, "metrics": metrics, "nav_history": nav_hist,
+    results = {"task": task, "metrics": metrics, "model_name": MODEL_NAME, "nav_history": nav_hist,
                "resolved_targets": resolved_targets,
                "agent_start": agent_start_xy, "agent_yaw": agent_start_yaw,
                "spawn_adjusted": spawn_adjustment is not None,
@@ -1778,11 +1824,16 @@ try:
         f"{rf/max(1,nf):.1f}s/frame) | vlm-window {vt:.0f}s ({nv} calls, "
         f"{vt/nv:.1f}s/call) | pure-vlm≈{max(0,vt-rf):.0f}s")
     # Visibility-gated filler: how many VLM-call steps had the runner on screen
-    # (filler rendered) vs off-screen (filler skipped — render saved).
+    # (filler rendered) vs off-screen (filler skipped — render saved). Only
+    # meaningful when RENDER_FILLER=1; with filler disabled no probe runs (0/0).
     rv, rh = timing["n_runner_visible"], timing["n_runner_hidden"]
     vc = timing["visibility_check"]
-    log(f"[BENCH] VISIBILITY GATE: runner on-screen {rv} steps / off-screen {rh} "
-        f"steps (filler skipped) | visibility-check total {vc*1000:.0f}ms")
+    if RENDER_FILLER:
+        log(f"[BENCH] VISIBILITY GATE: runner on-screen {rv} steps / off-screen {rh} "
+            f"steps (filler skipped) | visibility-check total {vc*1000:.0f}ms")
+    else:
+        log("[BENCH] FILLER DISABLED (RENDER_FILLER=0): decision frames only, "
+            "no filler rendered; *_smooth holds 1 frame/step.")
 
     # ── Clean up render scratch dirs ──
     for d in [fpv_scratch, bird_scratch]:
