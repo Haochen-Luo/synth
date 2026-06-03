@@ -111,12 +111,20 @@ def probe_scene(stage, query_if=None):
     # "FloorLamp" etc. (which also contain "floor" and would poison the height).
     # Use the lowest floor top (ground) to be robust to mezzanines/raised platforms.
     floor_tops = []
+    primary_floor_xy = None; _best_area = -1.0
     for prim in stage.Traverse():
         nm = prim.GetName().lower()
         if nm.endswith("floor") and "lamp" not in nm:
             bb = _world_bbox(stage, prim)
             if bb:
-                floor_tops.append(bb[2][2])  # bbox_max z = floor surface
+                center, bmin, bmax = bb
+                floor_tops.append(bmax[2])  # bbox_max z = floor surface
+                # Largest floor mesh = the PRIMARY room; its center seeds the floodfill
+                # (room-grounded, matching validate_all_spawns — avoids the probe<->validate
+                # reachability disagreement where an object-centroid seed floods another region).
+                area = (bmax[0] - bmin[0]) * (bmax[1] - bmin[1])
+                if area > _best_area:
+                    _best_area = area; primary_floor_xy = (center[0], center[1])
     floor_z = min(floor_tops) if floor_tops else None
 
     # ── Enumerate object wrappers (direct children of the containers) ──
@@ -184,17 +192,21 @@ def probe_scene(stage, query_if=None):
     # ensure reachability by construction instead of dropping at validation). ──
     reach_meta = {"reachable_cells": None, "reachable_objects": None}
     if query_if is not None:
+        # ROOM-GROUNDED seed: floodfill from the PRIMARY (largest) floor mesh center,
+        # matching validate_all_spawns (which seeds inside the room floor polygon). The
+        # old object-centroid seed could flood a non-primary region → over-report
+        # reachable → tasks that validate then dropped (probe<->validate disagreement).
         seeds = []
-        if objects:
-            seeds.append((sum(o["center"][0] for o in objects) / len(objects),
-                          sum(o["center"][1] for o in objects) / len(objects)))
-        seeds += [(o["center"][0], o["center"][1]) for o in objects if o["on_floor"]][:8]
+        if primary_floor_xy:
+            cx, cy = primary_floor_xy
+            seeds = [(cx, cy), (cx + 1.0, cy), (cx - 1.0, cy), (cx, cy + 1.0), (cx, cy - 1.0)]
+        seeds += [(o["center"][0], o["center"][1]) for o in objects if o["on_floor"]][:6]
         reachable = set()
         for sx, sy in seeds:
             r = _flood_fill(query_if, sx, sy)
             if len(r) > len(reachable):
                 reachable = r
-            if len(reachable) >= 400:
+            if len(reachable) >= 300:   # primary-floor seed succeeded → stop (room-grounded)
                 break
         for o in objects:
             d = _nearest_reach_dist(reachable, o["center"][0], o["center"][1])

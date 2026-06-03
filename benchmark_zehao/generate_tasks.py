@@ -32,6 +32,16 @@ BASE = os.path.join(SCRIPT_DIR, "full_scenarios_extracted")
 OUT_TASKS = os.path.join(SCRIPT_DIR, "benchmark_tasks_generated.json")
 OUT_DROPPED = os.path.join(SCRIPT_DIR, "dropped_tasks.json")
 FLOOR_PICKUP_CAP = 0.30
+REACH_PICKUP_M = 1.0   # pickup radius (must match validate_all_spawns phase radius)
+REACH_DEST_M   = 1.5   # destination/nav radius
+
+def reach_ok(o, thr):
+    """Reachable within `thr` of a walkable cell (matches validate's per-radius gate).
+    Pre-reachability scene_facts (no reach_dist key) fall back to the old bool."""
+    if "reach_dist" not in o:
+        return o.get("reachable", True)
+    rd = o["reach_dist"]
+    return rd is not None and rd <= thr
 
 # ── Factory classification (kept in sync with probe_and_generate_tasks.py) ──
 PORTABLE_FACTORIES = {
@@ -167,7 +177,7 @@ def synth_pickup_on_surface(objects):
     to RELOCATE onto it (place_at). Returns (obj, place_at_xyz, surface) or None.
     Floor is intentionally NOT used (forces tilt-down, VLM-hard)."""
     surfaces = [o for o in objects if o["factory"] in DESTINATION_FACTORIES
-                and o.get("reachable", True)
+                and reach_ok(o, REACH_DEST_M)
                 and CAM_SURFACE_Z[0] <= o["bbox_max"][2] <= CAM_SURFACE_Z[1]]
     if not surfaces:
         return None
@@ -194,13 +204,14 @@ def gen_scene(facts, scene_dir_name, floor_state, dropped):
     def uniq(o):  # semantic class unique in this room
         return counts.get(o["semantic"], 0) == 1
 
-    # Candidate pools — pickups restricted to clear, nameable nouns (no "trinket"),
-    # and to REACHABLE objects (baked by probe_stage) so tasks are navigable by
-    # construction. .get(...,True) keeps backward-compat with pre-reachability facts.
+    # Candidate pools — clear nouns (no "trinket"), and reachable within the SAME
+    # radius the validator uses (pickup 1.0m, destination 1.5m). Using reach_dist with
+    # per-purpose thresholds (not the lenient 1.5m bool) makes probe agree with validate
+    # → fewer validation drops. reach_ok() keeps backward-compat with pre-reachability facts.
     pickups = [o for o in objects
-               if o["factory"] in CLEAR_PICKUP_FACTORIES and o.get("reachable", True)]
+               if o["factory"] in CLEAR_PICKUP_FACTORIES and reach_ok(o, REACH_PICKUP_M)]
     dests = [o for o in objects
-             if o["factory"] in DESTINATION_FACTORIES and o.get("reachable", True)]
+             if o["factory"] in DESTINATION_FACTORIES and reach_ok(o, REACH_DEST_M)]
     # prefer unique-in-room, larger, lower (easier to see) destinations
     dests.sort(key=lambda o: (not uniq(o), -o["half_extent_xy"]))
 
