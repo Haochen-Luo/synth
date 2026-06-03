@@ -212,7 +212,7 @@ def synth_pickup_on_surface(objects):
     return obj, place_at, surf
 
 
-def gen_scene(facts, scene_dir_name, floor_state, dropped):
+def gen_scene(facts, scene_dir_name, floor_state, dropped, mix_state):
     scene = facts["scene_name"]
     objects = facts["objects"]
     by_path = {o["prim_path"]: o for o in objects}
@@ -250,8 +250,11 @@ def gen_scene(facts, scene_dir_name, floor_state, dropped):
         # build instruction
         if len(phases) == 1:
             instr = f"Go to the {phases[0]['desc']}."
-        else:
+        elif phases[0]["action"] == "PICK_UP":
             instr = f"Pick up the {phases[0]['desc']} and bring it to the {phases[1]['desc']}."
+        else:
+            # two-waypoint navigation (phase-1 is a plain STOP, not a pickup)
+            instr = f"First go to the {phases[0]['desc']}, then go to the {phases[1]['desc']}."
         target_paths = {p["target_prim"] for p in phases}
         target_sems = {p["target_object_semantic"] for p in phases}
         pickup_support_paths = {p["_support_path"] for p in phases if p.get("_support_path")}
@@ -267,7 +270,9 @@ def gen_scene(facts, scene_dir_name, floor_state, dropped):
             "instruction": instr, "agent_start": None, "agent_yaw": None,
             "spawn_facing": facing, "phases": clean, "deactivate_prims": deact,
             "category": cat, "room_type": room,
-            "task_type": "navigate" if len(phases) == 1 else "pick_place",
+            "task_type": ("navigate" if len(phases) == 1
+                          else "pick_place" if phases[0]["action"] == "PICK_UP"
+                          else "two_nav"),
         })
 
     # ── pick a valid pickup (not enclosed in a closed container) ──
@@ -303,27 +308,36 @@ def gen_scene(facts, scene_dir_name, floor_state, dropped):
         ph["target_object_semantic"] = d["semantic"]
         add("L2", [ph], "back")
 
-    # L3 / L4: pick + place
-    pick = valid_pickup()
-    pick_place_at = None
-    synthetic = False
-    if pick is None:
-        # Fallback: relocate a distinct clear-noun object onto a reachable camera-height
-        # surface (never the floor). Validation still gates the placed position.
-        syn = synth_pickup_on_surface(objects)
-        if syn:
-            pick, pick_place_at, surf = syn
-            synthetic = True
-            psup_sem = surf["semantic"]            # rests on the chosen surface now
-            psup_path = None                       # surface kept (class != dest class below)
-            dropped.append({"id": f"{scene}-pickup",
-                            "reason": "no_existing_pickup_used_place_at_fallback",
-                            "object": pick["prim_path"], "surface": surf["prim_path"],
-                            "place_at": pick_place_at})
-    else:
-        psup_sem = support_semantic(pick, by_path)
-        psup_path = pick.get("support")
-    if pick:
+    # ── L3 / L4: two-phase tasks. phase-1 is EITHER a pickup ("pick up X, bring to Y")
+    # OR a plain navigation waypoint ("first go to X, then go to Y"). We target a global
+    # ~60% nav / ~40% pickup split across scenes (mix_state = [nav_used, pickup_used]),
+    # picking whichever variant is feasible AND currently under quota. Both variants keep
+    # the same two-phase shape and the same phase-2 destination semantics. ──
+    NAV_FRACTION = 0.6
+
+    def build_pickup_variant():
+        """Return (phases_template_fn, on_floor_obj) or None.
+        phases_template_fn(level, facing) emits a [PICK_UP, STOP] pair."""
+        pick = valid_pickup()
+        pick_place_at = None
+        synthetic = False
+        surf = None
+        if pick is None:
+            syn = synth_pickup_on_surface(objects)
+            if syn:
+                pick, pick_place_at, surf = syn
+                synthetic = True
+                psup_sem = surf["semantic"]
+                psup_path = None
+                dropped.append({"id": f"{scene}-pickup",
+                                "reason": "no_existing_pickup_used_place_at_fallback",
+                                "object": pick["prim_path"], "surface": surf["prim_path"],
+                                "place_at": pick_place_at})
+            else:
+                return None
+        else:
+            psup_sem = support_semantic(pick, by_path)
+            psup_path = pick.get("support")
         # destination of a DIFFERENT semantic class than the pickup's support
         d = None
         for cand in dests:
@@ -332,21 +346,70 @@ def gen_scene(facts, scene_dir_name, floor_state, dropped):
             if psup_sem and cand["semantic"] == psup_sem:
                 continue
             d = cand; break
-        if d:
-            if (not synthetic) and pick["on_floor"]:
-                u, t = floor_state; floor_state[0] = u + 1
-            # reach geometry = the EDGE of the furniture the pickup rests on (fallback: the
-            # surface it was placed on). Floor pickups have support_he 0 → reach to object.
-            reach_he = surf["half_extent_xy"] if synthetic else pick.get("support_he", 0.0)
-            for level, facing in (("L3", "face"), ("L4", "back")):
-                p1 = make_phase(pick, "PICK_UP", nl(pick["factory"]), 1.0,
-                                place_at=pick_place_at, reach_half_extent=reach_he)
-                p1["target_object_semantic"] = pick["semantic"]
-                p1["_support_path"] = psup_path
-                p1["_pickup_support_sem"] = psup_sem
-                p2 = make_phase(d, "STOP", nl(d["factory"]), 1.5)
-                p2["target_object_semantic"] = d["semantic"]
-                add(level, [p1, p2], facing)
+        if d is None:
+            return None
+        reach_he = surf["half_extent_xy"] if synthetic else pick.get("support_he", 0.0)
+
+        def emit(level, facing):
+            p1 = make_phase(pick, "PICK_UP", nl(pick["factory"]), 1.0,
+                            place_at=pick_place_at, reach_half_extent=reach_he)
+            p1["target_object_semantic"] = pick["semantic"]
+            p1["_support_path"] = psup_path
+            p1["_pickup_support_sem"] = psup_sem
+            p2 = make_phase(d, "STOP", nl(d["factory"]), 1.5)
+            p2["target_object_semantic"] = d["semantic"]
+            add(level, [p1, p2], facing)
+        return emit, (pick if (not synthetic and pick["on_floor"]) else None)
+
+    def build_nav_variant():
+        """Two distinct reachable destinations (waypoint -> final). Returns emit fn or None."""
+        if len(dests) < 2:
+            return None
+        # distinct prims AND (preferably) distinct semantic classes for an unambiguous route
+        wp = dests[0]
+        final = None
+        for cand in dests[1:]:
+            if cand["prim_path"] == wp["prim_path"]:
+                continue
+            final = cand; break
+        if final is None:
+            return None
+
+        def emit(level, facing):
+            p1 = make_phase(wp, "STOP", nl(wp["factory"]), 1.5)
+            p1["target_object_semantic"] = wp["semantic"]
+            p2 = make_phase(final, "STOP", nl(final["factory"]), 1.5)
+            p2["target_object_semantic"] = final["semantic"]
+            add(level, [p1, p2], facing)
+        return emit
+
+    nav_emit = build_nav_variant()
+    pick_built = build_pickup_variant()
+    pick_emit = pick_built[0] if pick_built else None
+
+    # choose variant: honor global ratio when both feasible, else take whichever exists
+    chosen = None
+    if nav_emit and pick_emit:
+        nav_used, pick_used = mix_state
+        total = nav_used + pick_used
+        cur_nav_frac = (nav_used / total) if total else 0.0
+        chosen = "nav" if cur_nav_frac < NAV_FRACTION else "pickup"
+    elif nav_emit:
+        chosen = "nav"
+    elif pick_emit:
+        chosen = "pickup"
+
+    if chosen == "nav":
+        mix_state[0] += 1
+        for level, facing in (("L3", "face"), ("L4", "back")):
+            nav_emit(level, facing)
+    elif chosen == "pickup":
+        mix_state[1] += 1
+        on_floor_obj = pick_built[1]
+        if on_floor_obj is not None:
+            floor_state[0] += 1
+        for level, facing in (("L3", "face"), ("L4", "back")):
+            pick_emit(level, facing)
     return tasks
 
 
@@ -359,6 +422,7 @@ def main():
 
     all_tasks, dropped = [], []
     floor_state = [0, 0]  # [floor_pickups_used, total_pickups] (running cap)
+    mix_state = [0, 0]    # [nav_variants_used, pickup_variants_used] (~60/40 target)
     # first pass to estimate total pickups for the cap denominator
     nfiles = 0
     for ff in fact_files:
@@ -372,7 +436,7 @@ def main():
             continue
         facts = json.load(open(ff))
         scene_dir_name = os.path.basename(os.path.dirname(ff))
-        ts = gen_scene(facts, scene_dir_name, floor_state, dropped)
+        ts = gen_scene(facts, scene_dir_name, floor_state, dropped, mix_state)
         all_tasks.extend(ts)
         print(f"[GEN] {facts['scene_name']}: {len(ts)} tasks")
 
@@ -382,8 +446,12 @@ def main():
         json.dump({"dropped": dropped}, f, indent=2)
     npick = sum(1 for t in all_tasks for p in t["phases"] if p["action"] == "PICK_UP")
     enc = sum(1 for d in dropped if d["reason"] == "enclosed_in_closed_container")
+    nav_v, pick_v = mix_state
+    tot_v = nav_v + pick_v
     print(f"[GEN] wrote {len(all_tasks)} tasks ({npick} pickup phases, "
           f"{floor_state[0]} on-floor pickups) -> {OUT_TASKS}")
+    print(f"[GEN] L3/L4 phase-1 mix: nav={nav_v} pickup={pick_v} "
+          f"({(nav_v/tot_v*100 if tot_v else 0):.0f}% nav target 60%)")
     print(f"[GEN] dropped {len(dropped)} ({enc} enclosed-in-closed-container) -> {OUT_DROPPED}")
 
 
