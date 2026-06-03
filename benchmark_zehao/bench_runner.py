@@ -11,7 +11,7 @@ from bench_helpers import (sample_human_motion, wrap_angle_deg, check_frame_qual
                            make_nav_system_prompt, make_multistep_system_prompt,
                            discover_scene_files, find_prim_by_factory,
                            find_all_prims_by_factory, get_prim_world_center,
-                           compute_metrics)
+                           resolve_target, compute_metrics)
 from semantic_classes import semantic_class_of
 
 # ── Config ──
@@ -349,42 +349,27 @@ try:
             resolved_half_extents.append(0.0)  # door half-extent not critical
             log(f"[BENCH] Phase '{ph['name']}' -> door at {resolved_targets[-1]}")
         else:
-            # Prefer explicit target_prim path if provided
-            pp = None
-            explicit_prim = ph.get("target_prim", "")
-            if explicit_prim and stage.GetPrimAtPath(explicit_prim).IsValid():
-                pp = explicit_prim
-            if not pp:
-                pp = find_prim_by_factory(stage, tobj)
-            if pp:
-                target_prim_paths.add(pp)
-                c = get_prim_world_center(stage, pp)
-                # Compute XY half-extent for edge-based distance
-                he = 0.0
-                try:
-                    imageable = UsdGeom.Imageable(stage.GetPrimAtPath(pp))
-                    bound = imageable.ComputeWorldBound(Usd.TimeCode.Default(), "default")
-                    box = bound.GetBox()
-                    mn, mx = box.GetMin(), box.GetMax()
-                    bw, bd = mx[0]-mn[0], mx[1]-mn[1]
-                    if 0 < bw < 100:
-                        he = max(bw, bd) / 2.0
-                except Exception:
-                    pass
-                resolved_half_extents.append(he)
-                if c:
-                    resolved_targets.append(c[:2])
-                    log(f"[BENCH] Phase '{ph['name']}' -> {tobj} prim={pp} center={c[:2]} half_ext={he:.2f}m")
-                else:
-                    resolved_targets.append([5, 5])
-                    log(f"[BENCH] WARNING: no bbox for {pp}")
-                # Track pickup prims
-                if ph["action"] == "PICK_UP" and not pickup_prim_path:
-                    pickup_prim_path = pp
-            else:
-                resolved_targets.append([5, 5])
-                resolved_half_extents.append(0.0)
-                log(f"[BENCH] WARNING: no prim found for {tobj}")
+            # Resolve to the REAL active geometry via the shared resolver (single
+            # source of truth shared with the validator + generator). NEVER fall back
+            # to a placeholder coordinate — a target that cannot be resolved is a
+            # broken task, so fail loud (caught by the top-level FATAL handler).
+            res = resolve_target(stage, ph)
+            if res is None:
+                log(f"[BENCH] ERROR: unresolvable target for phase '{ph['name']}' "
+                    f"(target_object={tobj}, target_prim={ph.get('target_prim','')}) "
+                    f"— no ACTIVE prim with a valid bbox. Aborting (fail-loud).")
+                raise RuntimeError(
+                    f"unresolvable target: phase={ph['name']} object={tobj} "
+                    f"prim={ph.get('target_prim','')}")
+            pp = res["prim_path"]
+            target_prim_paths.add(pp)
+            resolved_targets.append(res["center"][:2])
+            resolved_half_extents.append(res["half_extent_xy"])
+            log(f"[BENCH] Phase '{ph['name']}' -> {tobj} prim={pp} "
+                f"center={res['center'][:2]} half_ext={res['half_extent_xy']:.2f}m")
+            # Track pickup prims
+            if ph["action"] == "PICK_UP" and not pickup_prim_path:
+                pickup_prim_path = pp
 
     # ── Auto-spawn: compute agent start from scene geometry ──
     # Strategy: collect all prop centers as "room interior" samples, then
@@ -503,9 +488,22 @@ try:
     log(f"[BENCH] Target semantic classes: {target_semantic}")
     log(f"[BENCH] Target prim paths: {target_prim_paths}")
 
-    # First pass: identify which prims to deactivate
+    # Prefer a generation-baked deactivation list (decided once against real geometry:
+    # same-semantic-class non-targets + resting clutter, never a pickup's support). When
+    # present, the runtime just executes it and skips the legacy runtime dedup/cascade.
+    baked_deact = task.get("deactivate_prims")
+    if baked_deact is not None:
+        applied = 0
+        for dp in baked_deact:
+            prim = stage.GetPrimAtPath(dp)
+            if prim and prim.IsValid():
+                prim.SetActive(False); applied += 1
+        log(f"[BENCH] Applied baked deactivate_prims ({applied}/{len(baked_deact)}); "
+            f"skipping runtime dedup")
+
+    # First pass: identify which prims to deactivate (legacy; skipped when baked list used)
     prims_to_deactivate = []
-    for container_path in ["/World/InteractiveProps", "/World/Env"]:
+    for container_path in ([] if baked_deact is not None else ["/World/InteractiveProps", "/World/Env"]):
         container = stage.GetPrimAtPath(container_path)
         if not container or not container.IsValid():
             log(f"[BENCH] Container {container_path} NOT FOUND or invalid — skipping")

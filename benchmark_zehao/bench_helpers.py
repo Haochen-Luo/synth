@@ -138,6 +138,116 @@ def get_prim_world_center(stage, prim_path):
         return [float(c[0]), float(c[1]), float(c[2])]
     except: return None
 
+# ── Target resolution (single source of truth: generator + validator + runner) ──
+# In these compiled stages the real geometry lives under
+#   /World/Env/Obj_<id>_<Factory>/<Factory>_<facId>_spawn_asset_<spawnId>   (ACTIVE)
+# while the manifest-style path stored in task JSON,
+#   /World/Env/<Factory>__spawn_asset_<id>_  (double underscore + trailing underscore)
+# is only an INACTIVE `over` with an empty bbox. Trusting that path silently breaks
+# target distance (→ [5,5] fallback) and dedup. resolve_target() keys on the unique
+# factory/spawn id, finds the ACTIVE prim carrying it (stage.Traverse() skips inactive
+# overs), and walks up to the Obj_<id>_<Factory> wrapper. NEVER invents coordinates.
+
+_TARGET_CONTAINERS = ("/World/Env", "/World/InteractiveProps")
+
+def _extract_id_tokens(target_prim):
+    """Parse (factory_id, spawn_id) from a target_prim leaf name, or (None, None)."""
+    if not target_prim:
+        return None, None
+    leaf = str(target_prim).rstrip("/").split("/")[-1]
+    m = re.search(r'_(\d+)__spawn_asset_(\d+)_?$', leaf)
+    if m:
+        return m.group(1), m.group(2)
+    ids = re.findall(r'\d+', leaf)
+    if len(ids) >= 2:
+        return ids[0], ids[1]
+    if len(ids) == 1:
+        return ids[0], None
+    return None, None
+
+def _world_bbox(stage, prim):
+    """Return (center, bmin, bmax) in world space, or None if the bbox is empty."""
+    from pxr import UsdGeom
+    try:
+        bound = UsdGeom.Imageable(prim).ComputeWorldBound(0, "default")
+        r = bound.GetRange()
+        if r.IsEmpty():
+            return None
+        mn, mx = r.GetMin(), r.GetMax()
+        c = (mn + mx) / 2.0
+        return ([float(c[0]), float(c[1]), float(c[2])],
+                [float(mn[0]), float(mn[1]), float(mn[2])],
+                [float(mx[0]), float(mx[1]), float(mx[2])])
+    except Exception:
+        return None
+
+def _find_active_prim_by_ids(stage, fac_id, spawn_id):
+    """First ACTIVE prim whose name carries the unique id(s), most-specific first."""
+    for required in ([fac_id, spawn_id], [fac_id], [spawn_id]):
+        required = [t for t in required if t]
+        if not required:
+            continue
+        for prim in stage.Traverse():  # default predicate = active+defined → skips overs
+            name = prim.GetName()
+            if all(tok in name for tok in required):
+                return prim
+    return None
+
+def resolve_target(stage, phase):
+    """Resolve a phase's target to the REAL active geometry on the compiled stage.
+
+    Returns {prim_path, center, bbox_min, bbox_max, half_extent_xy} (prim_path is the
+    Obj_<id>_<Factory> wrapper, suitable for dedup/center), or **None** if no active
+    prim with a valid (non-empty) bbox can be found. Callers MUST treat None as a hard
+    failure (runner aborts the task, generator quarantines it) — never substitute a
+    placeholder coordinate.
+    """
+    phase = phase or {}
+    target_prim = phase.get("target_prim", "") or ""
+    factory = phase.get("target_object", "") or ""
+
+    fac_id, spawn_id = _extract_id_tokens(target_prim)
+    candidate = _find_active_prim_by_ids(stage, fac_id, spawn_id) if fac_id else None
+
+    # Fallback 1: explicit path, only if it is itself active with a real bbox.
+    if candidate is None and target_prim:
+        p = stage.GetPrimAtPath(target_prim)
+        if p and p.IsValid() and p.IsActive() and _world_bbox(stage, p):
+            candidate = p
+    # Fallback 2: by factory class (first active match).
+    if candidate is None and factory:
+        pp = find_prim_by_factory(stage, factory)
+        if pp:
+            candidate = stage.GetPrimAtPath(pp)
+
+    if candidate is None or not candidate.IsValid():
+        return None
+
+    # Walk up to the wrapper that is a direct child of a known container.
+    wrapper, cur = candidate, candidate
+    while cur and cur.IsValid():
+        parent = cur.GetParent()
+        if not parent or not parent.IsValid():
+            break
+        if parent.GetPath().pathString in _TARGET_CONTAINERS:
+            wrapper = cur
+            break
+        cur = parent
+
+    bb = _world_bbox(stage, wrapper) or _world_bbox(stage, candidate)
+    if bb is None:
+        return None
+    center, bmin, bmax = bb
+    bw, bd = bmax[0] - bmin[0], bmax[1] - bmin[1]
+    half_ext = max(bw, bd) / 2.0 if 0 < bw < 100 else 0.0
+    return {
+        "prim_path": wrapper.GetPath().pathString,
+        "center": center,
+        "bbox_min": bmin,
+        "bbox_max": bmax,
+        "half_extent_xy": half_ext,
+    }
+
 # ── Prompt builders ──
 def make_nav_system_prompt(target_desc):
     return f"""You are a navigation robot inside an indoor room. Your goal is to reach the {target_desc}.

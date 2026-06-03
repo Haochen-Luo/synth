@@ -364,3 +364,214 @@ All `bench_runner.py` changes use `.get()` with defaults:
 1. **multiaction_v1_full** (30B, 38 tasks L1-L4 pilot) — ~34/38 done, finishing
 2. **qwen235b_L3L4_test** (235B, 18 tasks L3-L4 pilot) — running
 3. **overnight pipeline** (floodfill validate → 366-task batch) — Phase 1 running
+
+
+### VERY IMPORTANT UTILS
+please read /home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/UTILS_README.md
+
+---
+
+## Session 2026-06-02: Benchmark-Correctness Audit & Resolver Unification
+
+**Core requirement driving this work:** the benchmark itself must be *provably
+correct*, so that when the model fails at navigation it is **necessarily the model's
+fault — not a broken task.** Everything below is judged against that single standard.
+
+### Trigger
+case003-L3 ("Pick up the bottle and bring it to the kitchen cabinet") renders **no
+bottle** in the FPV frame. Root-causing it exposed a *dataset-wide* correctness bug.
+
+### Core Observations
+
+1. **Prim-path convention mismatch — the root cause, affects 606/606 `target_prim`s.**
+   In the compiled stages, real geometry lives at
+   `/World/Env/Obj_<id>_<Factory>/<Factory>_<facId>_spawn_asset_<spawnId>` (active,
+   single underscores). The path stored in every task JSON / manifest / inventory,
+   `/World/Env/<Factory>__spawn_asset_<id>_` (double underscore + trailing underscore),
+   is **only an inactive `over` (`active=false`, empty bbox)**.
+   - case003 evidence: real bottle = `/World/Env/Obj_26523_BottleFactory`
+     ([compiled USDA L9887](benchmark_zehao/full_scenarios_extracted/native_case003_official_solo_run_full_physics_scene/compiled_stages/native_case003_official_solo_run_full_physics.compiled.usda#L9887));
+     the task's `BottleFactory_9203792__spawn_asset_6999656_` is the inactive over
+     ([USDA L586](benchmark_zehao/full_scenarios_extracted/native_case003_official_solo_run_full_physics_scene/compiled_stages/native_case003_official_solo_run_full_physics.compiled.usda#L586)).
+     Same for the destination: real cabinet = `Obj_683538_KitchenCabinetFactory`
+     ([USDA L10318](benchmark_zehao/full_scenarios_extracted/native_case003_official_solo_run_full_physics_scene/compiled_stages/native_case003_official_solo_run_full_physics.compiled.usda#L10318)),
+     task points at the over.
+
+2. **Silent `[5,5]` fallback = the cardinal sin.** When the target prim has no bbox,
+   [bench_runner.py:379-386](benchmark_zehao/bench_runner.py#L379) falls back to a
+   hardcoded `[5,5]` target. The agent navigated to empty floor; logged `dist=7.68m`
+   = exactly the distance from spawn (10.91,9.91) to (5,5). The run *looks* fine
+   (frames, log, trajectory) but is meaningless. **A broken task that looks like it
+   ran is the worst failure mode a benchmark can have.**
+
+3. **Semantic dedup deactivated BOTH real targets.** Dedup matches targets by exact
+   path against `target_prim_paths` ([bench_runner.py:519](benchmark_zehao/bench_runner.py#L519)).
+   Because the recorded paths are the wrong (over) names, the real `Obj_<id>` bottle
+   *and* cabinet were treated as "same-semantic-class non-target" and deactivated.
+   Cascade ([bench_runner.py:543-560](benchmark_zehao/bench_runner.py#L543)) *skips*
+   targets ([L545](benchmark_zehao/bench_runner.py#L545)), so a protected target
+   resting on a deactivated support is left unsupported (falls in dynamic scenes).
+
+4. **Validator ↔ runner resolve DIFFERENT prims (consistency bug).**
+   [validate_all_spawns.py:634](benchmark_zehao/validate_all_spawns.py#L634) resolves
+   targets via `find_prim_by_factory` → `stage.Traverse()` only sees *active* prims →
+   finds the real `Obj_<id>` geometry → valid bbox, LOS/FOV pass.
+   [bench_runner.py:355](benchmark_zehao/bench_runner.py#L355) trusts the JSON
+   `__spawn_asset_` path (short-circuit) → inactive over → `[5,5]`. **The validator
+   green-lit case003 against a scene the runner never runs.** (Also:
+   `find_prim_by_factory` is first-match — with 8 BottleFactory instances it may not
+   even validate the intended one.)
+
+5. **Dual source of truth.** Manifest (`__spawn_asset_`, no geometry) vs compiled
+   stage (`Obj_<id>`, real geometry). `scene_inventory.json` and `scene_catalog.json`
+   are manifest-derived → no positions/bboxes, wrong paths. `scene_object_relations`
+   (support) is empty (`physics_support_relation_source: missing_4d_world_physics_support_sidecar`).
+
+6. **Dynamics scan:** 72/122 compiled scenes have real `RigidBodyAPI` (dynamic);
+   case003 is static (so its failure is purely the path bug, not settling drift). In
+   the 72 dynamic scenes, `resolved_targets` is snapshotted *before* the 100-frame
+   warmup ([bench_runner.py:649](benchmark_zehao/bench_runner.py#L649)), so a target
+   that settles/falls leaves the recorded coord stale.
+
+7. **`shelves` is a mega-class** ([semantic_classes.py:38-50](benchmark_zehao/semantic_classes.py#L38)):
+   countertop, kitchen island, cabinet, bookcase, desk, TV stand all collapse to
+   `shelves`. So the canonical kitchen task "pick X off the counter → put in the
+   cabinet" almost always makes dedup deactivate the counter (the pickup's support) →
+   in dynamic scenes the pickup falls. **The merge is intentional and
+   asset-author-confirmed** (cabinet ≈ shelf visually indistinguishable); the class
+   MUST NOT be split — disambiguation is non-negotiable for task validity.
+
+### Design Philosophy (north star: validated ⟺ executed ⟺ correct)
+
+1. **Single source of truth = the compiled stage.** What is rendered & measured IS
+   the spec's reference. Manifest-derived paths never enter task specs.
+2. **Decide at generation, execute at runtime.** All fuzzy decisions (which prim,
+   visible?, reachable?, what to deactivate, spawn) are made once at generation
+   against the real stage and *baked* into a self-contained task. Runtime becomes a
+   thin deterministic executor.
+3. **Fail loud, never silently substitute.** Delete the `[5,5]` fallback. A task that
+   cannot resolve to active geometry with a valid bbox is never emitted (quarantined
+   with a reason). **300 rock-solid tasks ≫ 366 with silent corruption.**
+4. **One shared `resolve_target(stage, phase)`** used by generator + validator +
+   runner, keyed on the unique factory-instance id (not first-match factory, not the
+   over path). Then "validated" provably equals "executed".
+5. **Prefer naturally-unique-in-room targets.** Big furniture (sofa/bed/oven/fridge/
+   dining table) is usually unique → zero deactivation → no cascade/fall *by
+   construction*. Lean on it for L2 nav and L3/L4 destinations.
+6. **Pickups are the only small-object targets** (the task requires them).
+   Disambiguate a pickup by deactivating only *other small same-class props*
+   (cascade-free — nothing rests on a bottle). Never deactivate a pickup's support;
+   never let a destination share the support's semantic class (avoid the unresolvable
+   counter↔cabinet conflict at generation, not at runtime).
+7. **Floor-placed pickups ≤30%** — hard case: forces dynamic camera tilt-down, which
+   the VLM handles poorly. Default pickups on furniture near camera height.
+8. **Correctness > diversity.** Reducing per-scene task count to guarantee
+   uniqueness/validity is the accepted trade.
+
+### Target Architecture
+
+```
+compiled stages  ← single source of truth
+   │  probe_stage.py   [the only Isaac-dependent step]
+   │    traverse ACTIVE Obj_<id> geometry → real path / center+bbox /
+   │    z→on_floor / factory→semantic / support via bbox-stack
+   ▼
+scene_facts.json   ← single derived truth (replaces inventory+catalog)
+   │  generate_tasks.py   [pure Python, no Isaac]
+   │    enforce ALL constraints: prefer-unique target, support-class
+   │    exclusion, floor≤30%, reachable, visible; bake resolved target +
+   │    deactivate_prims list + spawn
+   ▼
+tasks.json   ← one canonical artifact (collapses the ~20 benchmark_tasks_*.json forks)
+   │  bench_runner.py   [thin executor: assert prim active+has-bbox, apply
+   │    baked deactivate list, run nav; NO factory search, NO [5,5], NO
+   │    runtime dedup policy — fail loud on assertion failure]
+   ▼
+results
+```
+
+**Keystone fix** that alone resolves case003 + the validator/runner mismatch: the
+shared `resolve_target()` in `bench_helpers.py`.
+
+### Helpful Files (exact locations — so we don't re-hunt)
+
+| Path | Role / key lines |
+|---|---|
+| [bench_runner.py](benchmark_zehao/bench_runner.py) | runs ONE task. Target resolve L352-387 (explicit-prim short-circuit [L355](benchmark_zehao/bench_runner.py#L355) = bug; `[5,5]` fallback [L379](benchmark_zehao/bench_runner.py#L379)); dedup [L506-574](benchmark_zehao/bench_runner.py#L506); cascade [L543-560](benchmark_zehao/bench_runner.py#L543) (skips targets [L545](benchmark_zehao/bench_runner.py#L545)); warmup [L649](benchmark_zehao/bench_runner.py#L649); loop reads `resolved_targets[cur_phase]` (static) [L1265](benchmark_zehao/bench_runner.py#L1265) |
+| [bench_helpers.py](benchmark_zehao/bench_helpers.py) | `get_prim_world_center` [L127](benchmark_zehao/bench_helpers.py#L127) (None on empty bbox); `find_prim_by_factory` [L92](benchmark_zehao/bench_helpers.py#L92) (active-only traverse, first-match) — the natural home for the shared `resolve_target()` |
+| [semantic_classes.py](benchmark_zehao/semantic_classes.py) | `SEMANTIC_CLASS` map; `shelves` mega-class [L38-50](benchmark_zehao/semantic_classes.py#L38); `semantic_class_of()` |
+| [validate_all_spawns.py](benchmark_zehao/validate_all_spawns.py) | gen-time correctness gate (V5): `find_floor_polygon` [L194](benchmark_zehao/validate_all_spawns.py#L194), `check_forward_clearance` [L376](benchmark_zehao/validate_all_spawns.py#L376), `check_line_of_sight` [L419](benchmark_zehao/validate_all_spawns.py#L419), `check_fov` [L486](benchmark_zehao/validate_all_spawns.py#L486) (L1/L3 visible, L2/L4 hidden), `fix_yaw_for_fov` [L529](benchmark_zehao/validate_all_spawns.py#L529), target resolve [L634](benchmark_zehao/validate_all_spawns.py#L634). **Reuse as the validation half of generation.** |
+| [validate_full_spawns.py](benchmark_zehao/validate_full_spawns.py) | PhysX floodfill spawn validation across 122 scenes (overnight; OOM-fixed); writes `spawn_cache/` |
+| [probe_and_generate_tasks.py](benchmark_zehao/probe_and_generate_tasks.py) | 05-31 systematic probe + L2/L3/L4 task gen (manifest-based → inherits path bug) |
+| [scene_prober.py](benchmark_zehao/scene_prober.py) | loads stage, extracts prim+bbox — but currently grabs `__spawn_asset_` overs → null bbox; **must be fixed to traverse `Obj_<id>` wrappers** (basis for `probe_stage.py`) |
+| `generate_validated_benchmark.py`, `generate_full_benchmark.py`, `convert_to_runner_format.py` | task-gen pipeline |
+| `full_benchmark_0601.json`, `benchmark_tasks_full_runner.json` | the 366-task sets; **all 606 `target_prim`s use the wrong `__spawn_asset_` style** |
+| `full_scenarios_extracted/<scene>/compiled_stages/*.compiled.usda` | **ground truth.** case003 anchors: `Obj_26523_BottleFactory` L9887; inactive over L586; dest `Obj_683538_KitchenCabinetFactory` L10318 |
+| `full_scenarios_extracted/<scene>/scene_inventory.json` | manifest-derived asset list (`family_token`, paths); **no geometry; relations empty** |
+| `scene_catalog.json` | older catalog; null bboxes; `__spawn_asset_` paths |
+| `results/fullrun_235B_validated_0601_180_v2/L3/case003_official_solo_run-L3_20260602_125738/` | the broken example run (`run.log` shows `WARNING: no bbox`, `dist=7.68`) |
+
+### Implementation Results (2026-06-02)
+
+All Phase A/B code landed and verified on Isaac (GPU-180). **Two new findings surfaced
+during implementation:**
+
+1. **Targets sealed inside closed furniture.** The case003 bottle *loads fine* (12,010-pt
+   mesh, active, visible) but sits **inside a closed `SingleCabinet`** — the occlusion ray
+   from the spawn hits the cabinetry at 1.5m, and bbox-containment confirms the bottle is
+   *nested within* the cabinet volume (not on-top). Cabinets don't open → it's an
+   **intrinsically invalid pickup**, independent of the resolver bug. So case003-L3 had
+   *two* defects: the resolver/[5,5]/dedup bug (fixed) **and** an unpickable target.
+
+2. **The LOS gate was silently bypassed.** `validate_all_spawns.check_line_of_sight` (the
+   multi-ray ∃ check) never caught the sealed bottle because the old code resolved the
+   target via `find_prim_by_factory`/the over → `target_xy=None` → `check_fov` returns
+   `"no_target"` = trivial PASS. The shared resolver **re-arms** it (and the validator now
+   hard-FAILs on an unresolvable target).
+
+**Verified end-to-end:** resolver → real `Obj_<id>` geometry for both case003 phases
+(Step 0 dist 2.85m, not 7.68 to [5,5]); targets not deactivated; runner applies baked
+`deactivate_prims` (e.g. 6/6, 15/15) and skips legacy dedup; generation drops enclosed
+targets + prefers unique-in-room (deact=0 where possible) + bakes real target paths;
+spawn-validation fills `agent_start` with clearance + LOS (11/12 tasks; 1 dropped = no
+valid spawn); sanity batch renders the real target in-frame (case003 picks the **visible
+can on the counter**, not the sealed bottle).
+
+**New files:**
+
+| File | Role |
+|---|---|
+| [probe_stage.py](benchmark_zehao/probe_stage.py) | Isaac: traverse ACTIVE Obj_ geometry → `scene_facts.json` (real paths, bboxes, `on_floor`, support). NOTE: floor-z detector must match `_floor` meshes and exclude `FloorLamp`. |
+| [generate_tasks.py](benchmark_zehao/generate_tasks.py) | pure-Python: enclosure filter (drops targets sealed in closed containers) + prefer-unique + support-class exclusion + floor≤30% + bake real target / `deactivate_prims` |
+| [validate_generated_spawns.py](benchmark_zehao/validate_generated_spawns.py) | Isaac: fill `agent_start`/`agent_yaw` with clearance + forward-clearance + LOS (drops no-LOS tasks) |
+| `full_scenarios_extracted/<scene>/scene_facts.json` | the single derived source of truth (replaces manifest inventory/catalog for generation) |
+
+**Pipeline:** `probe_stage.py` → `scene_facts.json` → `generate_tasks.py` →
+`benchmark_tasks_generated.json` → `validate_generated_spawns.py` (or floodfill
+`validate_full_spawns.py` for denser spawn search) → `benchmark_tasks_generated_spawned.json`
+→ `bench_runner.py`.
+
+**Update (2026-06-03) — reachability, fallback, parallelism:**
+- **Reachability-at-generation:** `probe_stage.py` now floodfills once per scene (two-height
+  sweep, aligned with `scratch_archive/validate_and_fix_spawns.py`) and bakes `reachable`/
+  `reach_dist` per object; `generate_tasks.py` selects only reachable targets → tasks
+  navigable by construction (e.g. case003 swaps the caged bottle for a reachable one).
+- **`validate_all_spawns.py` is the authoritative gate** — I added floodfill reachability
+  (it lacked a navigable-path check; LOS alone passed case003's narrow gap), `agent_start=None`
+  handling (generates the spawn), and `VAL_VALID_OUT` (writes only PASS/FIXED, drops the rest).
+  ALL pre-existing V1–V5 checks kept. Verified: case003-L3/L4 correctly dropped (UNREACHABLE
+  / target outside floor polygon); case01-L3 spawns in-room (void fixed).
+- **`place_at` surface fallback** (`generate_tasks.synth_pickup_on_surface`, NEEDS a validation
+  run): when a scene has no valid existing pickup, relocate a distinct clear-noun object onto a
+  **reachable furniture top at camera height (0.55–1.05m)** — never the floor (floor forces
+  camera tilt-down, the VLM-hard case).
+- **Known gap:** probe seeds floodfill from object centroid (not room-grounded) → over-reports
+  reachable for other-room objects; validate (floor-polygon seeded) is authoritative. Fix: seed
+  probe from the floor polygon, or fuse probe+generate+validate into one per-scene pass (load +
+  floodfill once → ~2× faster, removes the duplicate floodfill).
+
+**Remaining (production):** construction needs **no vLLM** (pure Isaac geometry) → close the 30B
+on `:8300` to free GPU 0, run construction across **GPU 0 + GPU 3** (both ~80 GB) as **4–6
+sharded Isaac workers** (probe via `SCENES=` subsets; validate by splitting the generated JSON;
+merge). Then the model run. Cosmetic: fill-light overexposure on some spawns. **Nothing committed
+yet** (branch `benchmark-multiaction`). Handoff details: memory `project_zehao_pipeline_v2`.

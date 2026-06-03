@@ -17,10 +17,24 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 BENCH_DIR  = os.path.dirname(os.path.abspath(__file__))
-TASKS_JSON = os.path.join(BENCH_DIR, "full_benchmark_0601.json")
-REPORT_OUT = os.path.join(BENCH_DIR, "spawn_validation_report.json")
+# TASKS_JSON / outputs overridable via env so the SAME validator (ALL its checks) can
+# gate generate_tasks.py output, not just full_benchmark_0601.json. Defaults unchanged.
+TASKS_JSON = os.environ.get("VAL_TASKS_JSON", os.path.join(BENCH_DIR, "full_benchmark_0601.json"))
+REPORT_OUT = os.environ.get("VAL_REPORT_OUT", os.path.join(BENCH_DIR, "spawn_validation_report.json"))
+# When set, write ONLY valid (PASS/FIXED) tasks here (drops FAIL/ERROR) — used by the
+# generation pipeline. When unset, the legacy in-place fix-write behavior is kept.
+VALID_OUT  = os.environ.get("VAL_VALID_OUT", "")
 
-FIX_MODE = "--fix" in sys.argv
+FIX_MODE = "--fix" in sys.argv or os.environ.get("VAL_FIX") == "1"
+
+# ── Floodfill reachability (ported from validate_full_spawns.py) ──
+# validate_all_spawns historically gated spawn QUALITY (floor/clear/FOV/LOS) but NOT a
+# navigable PATH to the target. Without it a spawn can SEE a target through a gap too
+# narrow to walk (case003). Added as an EXTRA gate — no existing check is removed.
+GRID_RES = 0.25        # metres per floodfill cell
+MAX_CELLS = 6000       # BFS budget
+AGENT_RADIUS = 0.40    # sphere-sweep radius for walkability
+_4DIRS = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
 # ── Geometry / FOV constants ──
 FLOOR_INSET   = 0.3   # metres inward from floor bbox edges (avoid wall-hugging)
@@ -62,7 +76,7 @@ sim_app = SimulationApp({"headless": True, "width": 64, "height": 64})
 import omni, omni.physx, omni.timeline, carb
 from omni.isaac.core.utils.stage import is_stage_loading
 from pxr import Usd, UsdGeom, Gf
-from bench_helpers import discover_scene_files, find_prim_by_factory, get_prim_world_center
+from bench_helpers import discover_scene_files, find_prim_by_factory, get_prim_world_center, resolve_target
 
 # ─────────────────────────────────────────────────────────────────
 # Validation helpers
@@ -586,12 +600,70 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
 
     query_if = omni.physx.get_physx_scene_query_interface()
 
+    # ── Floodfill reachable set for this scene (walkable cells) ──
+    def _to_grid(x, y): return (round(x / GRID_RES), round(y / GRID_RES))
+    def _from_grid(gx, gy): return (gx * GRID_RES, gy * GRID_RES)
+    def _flood_fill(seedx, seedy):
+        start = _to_grid(seedx, seedy); visited = {start}; queue = [start]; idx = 0
+        while idx < len(queue) and len(visited) < MAX_CELLS:
+            gx, gy = queue[idx]; idx += 1
+            wx, wy = _from_grid(gx, gy)
+            for ddx, ddy in _4DIRS:
+                ngx, ngy = gx + ddx, gy + ddy
+                if (ngx, ngy) in visited:
+                    continue
+                # Two-height sweep (body + head), aligned with validate_and_fix_spawns:
+                # a single 0.5m sweep would walk through gaps blocked at head height.
+                blocked = False
+                for sz in (0.5, 1.0):
+                    h = query_if.sweep_sphere_closest(AGENT_RADIUS, carb.Float3(wx, wy, sz),
+                                                      carb.Float3(ddx, ddy, 0), GRID_RES)
+                    if h["hit"]:
+                        wp = (h.get("rigidBody") or h.get("collider") or "").lower()
+                        if any(w in wp for w in WALKABLE):
+                            continue
+                        blocked = True
+                        break
+                if not blocked:
+                    visited.add((ngx, ngy)); queue.append((ngx, ngy))
+        return visited
+    def _reachable(rset, tx, ty, tol=2):
+        tg = _to_grid(tx, ty)
+        for dx in range(-tol, tol + 1):
+            for dy in range(-tol, tol + 1):
+                if (tg[0] + dx, tg[1] + dy) in rset:
+                    return True
+        return False
+    # Seed from a walkable in-room point (first clear, in-polygon cell of the floor bbox).
+    seed = None
+    reachable = set()
+    if floor_bbox:
+        bx0, by0, bx1, by1 = floor_bbox
+        gx = bx0 + FLOOR_INSET
+        while gx <= bx1 - FLOOR_INSET and seed is None:
+            gy = by0 + FLOOR_INSET
+            while gy <= by1 - FLOOR_INSET:
+                if check_in_floor(gx, gy, floor_poly):
+                    ok, _ = check_collision_clear(query_if, gx, gy)
+                    if ok:
+                        seed = (gx, gy); break
+                gy += GRID_STEP
+            gx += GRID_STEP
+        if seed:
+            reachable = _flood_fill(seed[0], seed[1])
+    log(f"[VAL] Reachable cells: {len(reachable)} (seed={seed})")
+
     # ── Per-task validation ──
     for t in scene_task_list:
         tid   = t["id"]
         level = t["level"]
-        sx, sy = t["agent_start"]
-        yaw    = t.get("agent_yaw", 0.0)
+        _astart = t.get("agent_start")
+        force_gen = _astart is None  # generate_tasks output has no spawn yet
+        if force_gen:
+            sx, sy = (seed if seed else (0.0, 0.0))
+        else:
+            sx, sy = _astart
+        yaw    = (t.get("agent_yaw") or 0.0)
         phases = t.get("phases", [])
 
         result = {
@@ -599,6 +671,11 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
             "original_start": [sx, sy], "original_yaw": yaw,
             "checks": {}, "status": "PASS", "fixes": []
         }
+        if force_gen:
+            # No spawn provided → force the auto-fix grid search to place a valid,
+            # reachable one (all quality checks below still apply to the result).
+            result["status"] = "FAIL"
+            result["checks"]["needs_spawn"] = {"pass": False, "detail": "agent_start=None (generate)"}
 
         # ── Check 1: Floor Polygon ──
         in_floor = check_in_floor(sx, sy, floor_poly)
@@ -631,10 +708,19 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
             tobj = phases[0]["target_object"]
             if not tobj.startswith("__human_"):
                 first_target_factory = tobj
-                pp = find_prim_by_factory(stage, tobj)
-                if pp:
-                    first_target_prim_path = pp
-                    first_target_half_ext = get_prim_half_extent_xy(stage, pp)
+                # Shared resolver — the SAME prim the runner will use (real Obj_
+                # geometry, not the inactive __spawn_asset_ over). This is what makes
+                # the validator's guarantee equal to what the runner executes.
+                res = resolve_target(stage, phases[0])
+                if res:
+                    first_target_prim_path = res["prim_path"]
+                    first_target_half_ext = res["half_extent_xy"]
+                else:
+                    result["status"] = "FAIL"
+                    result["checks"]["target_resolve"] = {
+                        "pass": False,
+                        "detail": f"unresolvable target {tobj} prim={phases[0].get('target_prim','')}"}
+                    log(f"[VAL] ❌ {tid}: unresolvable target {tobj} — would FAIL in runner")
                 # Use place_at if present (L3 pick-up tasks relocate the
                 # object at runtime; validator must check the ACTUAL position)
                 pa = phases[0].get("place_at")
@@ -642,11 +728,10 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                     first_target_xy = (pa[0], pa[1])
                     first_target_z = pa[2] if len(pa) > 2 else None
                     log(f"[VAL]   Using place_at ({pa[0]:.1f},{pa[1]:.1f},{pa[2] if len(pa)>2 else '?'}) as target position")
-                elif pp:
-                    c = get_prim_world_center(stage, pp)
-                    if c:
-                        first_target_xy = c[:2]
-                        first_target_z = c[2] if len(c) > 2 else None
+                elif res:
+                    c = res["center"]
+                    first_target_xy = c[:2]
+                    first_target_z = c[2] if len(c) > 2 else None
                 if first_target_half_ext > 0:
                     log(f"[VAL]   Target half-extent={first_target_half_ext:.2f}m (edge-distance mode)")
 
@@ -703,6 +788,19 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                 result["status"] = "FAIL"
                 log(f"[VAL] ❌ {tid}: LOS blocked — {los_detail}")
 
+        # ── Check 5b: Reachability — target must have a navigable path (floodfill) ──
+        # (The gate validate_all_spawns lacked; LOS alone passed case003's narrow gap.)
+        tgt_reach = True
+        if first_target_xy and reachable:
+            rtol = max(2, math.ceil(phases[0].get("radius", 0.5) / GRID_RES)) if phases else 4
+            tgt_reach = _reachable(reachable, first_target_xy[0], first_target_xy[1], tol=rtol)
+            result["checks"]["target_reachable"] = {
+                "pass": tgt_reach,
+                "detail": f"target {'reachable' if tgt_reach else 'UNREACHABLE'} via floodfill (tol={rtol})"}
+            if not tgt_reach:
+                result["status"] = "FAIL"
+                log(f"[VAL] ❌ {tid}: target UNREACHABLE — no navigable path within radius")
+
         # ── Check 6: Spawn-win (agent already within success radius) ──
         # Uses edge-distance: dist_to_surface = dist_to_center - half_extent
         tgt_radius = phases[0]["radius"] if phases else 0
@@ -732,8 +830,9 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                     "detail": f"edge_dist={edge_dist:.2f}m > radius={tgt_radius:.1f}m"
                 }
 
-        # ── Auto-fix ──
-        if result["status"] == "FAIL" and FIX_MODE:
+        # ── Auto-fix ── (skip entirely if the TARGET is unreachable — moving the spawn
+        # cannot fix an unreachable target, so such tasks stay FAIL and get dropped.)
+        if result["status"] == "FAIL" and FIX_MODE and tgt_reach:
             fixed = False
             new_x, new_y, new_yaw = sx, sy, yaw
 
@@ -766,6 +865,10 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                     gy = ymin + FLOOR_INSET
                     while gy <= ymax - FLOOR_INSET:
                         if not check_in_floor(gx, gy, floor_poly):
+                            gy += GRID_STEP
+                            continue
+                        # Reachability: candidate spawn must be in the walkable component.
+                        if reachable and not _reachable(reachable, gx, gy, tol=1):
                             gy += GRID_STEP
                             continue
                         c_ok, _ = check_collision_clear(query_if, gx, gy)
@@ -858,12 +961,20 @@ with open(REPORT_OUT, "w") as f:
                "results": all_results}, f, indent=2)
 log(f"\n[VAL] Report written to {REPORT_OUT}")
 
-# Write fixed JSON
-if FIX_MODE and fixes_applied > 0:
+# Write valid-only tasks (PASS/FIXED) for the generation pipeline — drops FAIL/ERROR.
+if VALID_OUT:
+    valid_ids = {r["task_id"] for r in all_results if r["status"] in ("PASS", "FIXED")}
+    kept = [t for t in tasks if t["id"] in valid_ids]
+    with open(VALID_OUT, "w") as f:
+        json.dump({"tasks": kept}, f, indent=2)
+    log(f"[VAL] ✅ Wrote {len(kept)}/{len(tasks)} valid tasks → {VALID_OUT}")
+
+# Write fixed JSON (legacy in-place behavior; only when not using VALID_OUT)
+if not VALID_OUT and FIX_MODE and fixes_applied > 0:
     with open(TASKS_JSON, "w") as f:
         json.dump(task_cfg, f, indent=2)
     log(f"[VAL] ✅ Fixed {fixes_applied} tasks → written to {TASKS_JSON}")
-elif FIX_MODE:
+elif not VALID_OUT and FIX_MODE:
     log(f"[VAL] No fixes needed")
 
 sim_app.close()
