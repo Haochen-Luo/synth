@@ -575,3 +575,66 @@ on `:8300` to free GPU 0, run construction across **GPU 0 + GPU 3** (both ~80 GB
 sharded Isaac workers** (probe via `SCENES=` subsets; validate by splitting the generated JSON;
 merge). Then the model run. Cosmetic: fill-light overexposure on some spawns. **Nothing committed
 yet** (branch `benchmark-multiaction`). Handoff details: memory `project_zehao_pipeline_v2`.
+
+---
+
+## Session 2026-06-03: Parallel Construction + Reachability Solved (support-edge)
+
+### What was built
+The corrected pipeline (Session 2026-06-02) was run **at scale, in parallel, across GPU 0 + GPU 3**,
+and the reachability model was made physically correct. **All committed** on `benchmark-multiaction`:
+`a2b30b0` (core pipeline) → `966d381` (room-grounded probe + matched thresholds) →
+`1974e78` (fallback pickup-reachable surface) → `d85f297` (support-edge reach).
+
+### Pipeline + how to run it (no vLLM needed for construction)
+```
+probe_stage.py (Isaac, 1 floodfill/scene)  → full_scenarios_extracted/<scene>/scene_facts.json
+  (real Obj_<id> path, bbox/center, on_floor, support + support_he, reachable + reach_dist)
+generate_tasks.py (pure Python)  → benchmark_tasks_generated.json  (+ dropped_tasks.json)
+validate_all_spawns.py (Isaac, AUTHORITATIVE, VAL_FIX=1)  → benchmark_tasks_generated_validated.json
+bench_runner.py  (shared resolve_target + baked deactivate_prims + support-edge success)
+```
+**6-way parallel** (the construction runs that produced the dataset):
+- 2 Isaac containers: `vlm-jupyter-180` (GPU 0) + `vlm-isaac-g3` (GPU 3, spun from
+  `nvcr.io/nvidia/isaac-sim:4.5.0`, `--network host --gpus device=3`, repo bind-mounted, default
+  entrypoint). 3 worker procs each. `CUDA_VISIBLE_DEVICES=0` inside each (each sees only its GPU).
+- Helper scripts (host, in `benchmark_zehao/`, gitignored): `run_build_v2.sh` (full),
+  `run_incremental.sh` (re-process only failed scenes), `_split_tasks.py`, `_merge_stats.py`,
+  `_merge_incremental.py`. Effective ~3–4× (3 Isaac/GPU contend; probe+validate are 2 passes).
+
+### Reachability model (the core correctness work)
+- **Single source of truth = compiled stage**; `resolve_target()` maps task `target_prim` → real
+  active `Obj_<id>` geometry (shared by runner+validator). Fail-loud (no `[5,5]`).
+- **Room-grounded floodfill**: probe seeds from the *primary (largest) floor mesh* center (not the
+  object centroid) — matches validate; two-height sweep (aligned with `scratch_archive/validate_and_fix_spawns.py`).
+- **Thresholds match validate radii**: pickup 1.0m, dest 1.5m (via baked `reach_dist`).
+- **Support-edge reach (key):** a pickup's reach/reachability/success is measured to the EDGE of the
+  furniture it rests on (`dist_to_center − support_he`) — you reach a tabletop object by walking to
+  the table; LOS/FOV still gate on seeing the object. **Floor pickups have `support_he=0`, so it
+  degenerates to the object's own edge** (walk right up to it). Implemented in probe (`support_he`),
+  generate (`pickup_reach_ok`, baked `reach_half_extent`), validate (`first_target_half_ext` +
+  expanded `rtol`), runner (PICK_UP edge-distance).
+- **Enclosure filter**: pickups sealed in closed cabinets are dropped (can't see/reach).
+- **Clear-noun pickups only** (no ambiguous "trinket"). **Floor pickups ≤30%** (hard tilt-down case).
+- **place_at fallback**: scenes with no valid existing pickup relocate a distinct clear-noun object
+  onto a reachable camera-height surface (0.55–1.05m), never the floor.
+
+### Dataset state (as of handoff)
+- v1 facts run: **235 valid tasks**, 39/52 scenes zero-pickup → exposed the probe↔validate
+  reachability disagreement (now fixed).
+- v1 facts → room-grounded + matched-threshold incremental: 268 valid.
+- **Support-edge incremental (final): 272 valid** (103 L2 / 84 L3 / 85 L4). Recovered 15/52
+  zero-pickup scenes (vs 14 before → +1 scene, +4 tasks); **37 still zero-pickup**. Support-edge was
+  primarily a **correctness** win (success metric now physically sensible — reach the support, not
+  the object center) rather than a count gain — residual scenes are limited by *object availability*
+  (~15 have **no portable object at all**), not reach tolerance. Canonical dataset:
+  `benchmark_tasks_generated_validated.json`.
+- Residual 37 zero-pickup are at the *selection* ceiling (no portable / no reachable surface);
+  recovering them would need spawning new geometry (out of scope).
+
+### Remaining
+1. **Efficiency**: fuse `probe`+`validate` into one per-scene pass (load + floodfill **once** →
+   ~2× and removes the double floodfill + the residual probe↔validate seam).
+2. **Model run** (the eval): restart the 30B vLLM on `:8300`, run `bench_runner` over the validated
+   dataset (batched on GPU 0+3).
+3. Sanity-check a few validated L3 frames (target visible, agent at the support edge).

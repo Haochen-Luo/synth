@@ -172,6 +172,7 @@ def probe_scene(stage, query_if=None):
     for o in objects:
         if o["on_floor"]:
             o["support"] = None
+            o["support_he"] = 0.0   # floor has no edge -> reach degenerates to the object's own edge
             continue
         cx, cy = o["center"][0], o["center"][1]
         zb = o["z_bottom"]
