@@ -629,12 +629,77 @@ bench_runner.py  (shared resolve_target + baked deactivate_prims + support-edge 
   the object center) rather than a count gain — residual scenes are limited by *object availability*
   (~15 have **no portable object at all**), not reach tolerance. Canonical dataset:
   `benchmark_tasks_generated_validated.json`.
-- Residual 37 zero-pickup are at the *selection* ceiling (no portable / no reachable surface);
-  recovering them would need spawning new geometry (out of scope).
+- ~~Residual 37 zero-pickup are at the *selection* ceiling~~ — **this was WRONG** (corrected below
+  in the 2026-06-03 cont. session): most of the 37 were *false drops* from a validate-side floodfill
+  seed bug, not a true ceiling.
 
 ### Remaining
 1. **Efficiency**: fuse `probe`+`validate` into one per-scene pass (load + floodfill **once** →
    ~2× and removes the double floodfill + the residual probe↔validate seam).
 2. **Model run** (the eval): restart the 30B vLLM on `:8300`, run `bench_runner` over the validated
    dataset (batched on GPU 0+3).
+
+## Session 2026-06-03 (cont.): validate-seed bug, 60/40 task mix, 333-task dataset
+
+### What was investigated & fixed
+User asked two questions that exposed real issues:
+
+**1. "Why did the place_at fallback not recover all zero-pickup scenes?"**
+Classifying the 37 zero-pickup scenes (after the support-edge incremental) by root cause showed the
+fallback was *not* the problem — and the earlier "37 = selection ceiling" claim was **wrong**:
+- **15** scenes: truly **no portable object at all** → fallback has nothing to relocate (real ceiling).
+- **18** scenes: generate *did* emit a valid `[PICK_UP, STOP]` task, but **validate dropped it** as
+  "target UNREACHABLE". Isolated Isaac re-run of `case33` (24 reachable portables, 10 cam-height
+  surfaces) proved it: probe saw **429 reachable cells**, validate saw only **14** — validate's
+  floodfill seed was trapped in a cluttered corner.
+- 3 + 1: no reachable surface / no destination.
+
+**FIX A — room-grounded validate floodfill seed (commit `aff85b7`).** `validate_all_spawns.py`
+seeded its floodfill from the *first clear cell scanning from the floor-bbox corner*, which lands in
+cluttered corners and traps the BFS in a tiny pocket. Now it seeds like `probe_stage.py` (commit
+`966d381`): floor-polygon **centroid + offsets** first, then a coarse in-polygon grid, flood from each
+clear candidate, **keep the largest reachable set**. Verified on case33: **14 → 429 cells, task now
+PASSES** (was dropped). This is a *correctness* fix (validate now sees the same room the probe does),
+**not** a relaxation — collision/buffer model is unchanged (agent-radius 0.40 two-height sphere-sweep,
+360° spawn clearance, 1.2m forward raycast).
+
+**Same-room semantics:** user requires agent + target in the **same room** (cross-room search deferred).
+These scenes are single-room, so the probe's full-room reachable set is the *correct* answer; matching
+validate to it is consistent with same-room. Multi-room layouts: only the largest connected region
+yields tasks (the rest is implicitly dropped) — acceptable until cross-room is added.
+
+**2. "What's the L3 phase-1 task-type distribution? All pickups?"**
+Yes — L3 was 100% `[PICK_UP, STOP]` and the pickup noun skewed ~49% to "book stack".
+
+**FIX B — L3/L4 phase-1 mix 60% nav / 40% pickup (commit `d77a6cd`).** Added a two-waypoint
+navigation variant `[STOP, STOP]` ("first go to X, then go to Y") alongside the pickup variant, with a
+global `mix_state` counter targeting ~60% nav / 40% pickup across scenes (whichever is feasible &
+under quota). `task_type` is now `navigate` (L2) / `pick_place` / `two_nav`. (User decided: **no**
+"other interaction" / TURN_ON for now — TURN_ON works & is visually verifiable, the runner spawns a
+real SphereLight, but its difficulty ≈ PICK_UP and it adds light rather than toggling the fixture.)
+
+### Final dataset (full re-run, Fix A + Fix B)
+Full `generate` (345 tasks over 122 scenes, mix hit **exactly 60% nav / 40% pickup** = 68/46 scenes)
+→ parallel `validate` (6 shards, GPU0+GPU3, ~10 min):
+- **333 validated tasks** (113 L2 / 110 L3 / 110 L4), 333/345 = **96.5%** pass.
+- **zero-pickup scenes: 37 → 7** (the 7 are the true no-portable ceiling).
+- scenes with ≥1 valid task: **113/117**.
+> NB: 272 (prior) was an incremental splice (235-baseline + failed subset); 333 is a clean **full**
+> re-run of all 122 scenes under the latest code. Not a strict same-pipeline delta, but 333 is the
+> self-consistent canonical dataset → `benchmark_tasks_generated_validated.json`.
+
+### Sanity-check (5 spawn frames rendered, MAX_STEPS=1, dead VLLM_URL)
+3 two_nav + 2 pickup L3 frames: all spawn in open floor (not corners), targets visible, geometry sound;
+confirmed bench_runner uses the validate-assigned `agent_start`. **Known cosmetic issue:** scenes with
+`MirrorFactory`/`WindowFactory` render **black panels** in FPV. Root cause located: the Infinigen
+scenes carry a **MirroredBall-format environment map** which the **Isaac RTX renderer does not support**
+(`[Error] [rtx.scenedb.plugin] MirroredBall environment format not supported yet` — fires **once per
+scene**, in *every* scene, independent of mirror count → renderer-level, **NOT** a H100 issue, **NOT** a
+spawn/geometry issue). Renderer discards the env map → mirrors have nothing to reflect and windows have
+no backdrop → black. **Decision: record as a known eval input-noise variable, do not fix before eval.**
+
+### Remaining (unchanged)
+1. Efficiency: fuse probe+validate into one per-scene pass.
+2. **Model run (the eval)**: restart 30B vLLM on `:8300`, run `bench_runner` over the **333** tasks on
+   GPU 0+3.
 3. Sanity-check a few validated L3 frames (target visible, agent at the support edge).
