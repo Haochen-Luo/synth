@@ -176,8 +176,12 @@ def synth_pickup_on_surface(objects):
     """Pick a reachable camera-height furniture surface + a distinct clear-noun portable
     to RELOCATE onto it (place_at). Returns (obj, place_at_xyz, surface) or None.
     Floor is intentionally NOT used (forces tilt-down, VLM-hard)."""
+    # Surface must be reachable within the PICKUP radius (1.0m) AND small enough that its
+    # CENTER is within pickup reach of a walkable cell — otherwise placing at the center
+    # (e.g. the middle of a bed/large table) is unreachable. reach_dist is measured to the
+    # object center, so reach_ok(o, REACH_PICKUP_M) already guarantees center-reachability.
     surfaces = [o for o in objects if o["factory"] in DESTINATION_FACTORIES
-                and reach_ok(o, REACH_DEST_M)
+                and reach_ok(o, REACH_PICKUP_M)
                 and CAM_SURFACE_Z[0] <= o["bbox_max"][2] <= CAM_SURFACE_Z[1]]
     if not surfaces:
         return None
