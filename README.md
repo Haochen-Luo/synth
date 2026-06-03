@@ -10,7 +10,9 @@ stay on this branch.
 ---
 
 ## Environment
+conda activate evo_llm 
 
+&& CUDA_VISIBLE_DEVICES=0 vllm serve Qwen/Qwen3-VL-30B-A3B-Thinking-FP8   --port 8300 --tensor-parallel-size 1 --enable-expert-parallel   --limit-mm-per-prompt.video 0 --max-model-len 16384   --gpu-memory-utilization 0.6
 - **Always run inside the `vlm-jupyter` Docker container on GPU-843** — never
   run `pxr`/`omni`/`isaacsim` code on the host.
   - `ssh GPU-843` then `docker exec vlm-jupyter /isaac-sim/python.sh <script>`
@@ -703,3 +705,72 @@ no backdrop → black. **Decision: record as a known eval input-noise variable, 
 2. **Model run (the eval)**: restart 30B vLLM on `:8300`, run `bench_runner` over the **333** tasks on
    GPU 0+3.
 3. Sanity-check a few validated L3 frames (target visible, agent at the support edge).
+
+## Session 2026-06-03 (cont. 2): L3 visibility definition + the "invisible plant" investigation
+
+### The question that drove this
+During a pre-eval sanity-check, the phase-1 target of an L3 task (`case010_official_run_dance-L3`,
+"First go to the large plant, then go to the shelf") was **not visible in the step-0 FPV frame** even
+though `spawn_facing=face` and the validator passed it. This raised two questions: *(a) what exactly
+defines L3 visibility?* and *(b) is there a rendering bug?*
+
+### The "invisible plant" — diagnosed, not a rendering bug
+Geometry (agent `(5.93,3.93)` yaw `18.5°`, plant center `(11.01,5.64,0.43)`):
+- **Horizontal:** plant bearing rel-to-yaw = **0.1°** → dead center of the frame.
+- **Vertical:** plant pitch rel-to-camera = −2.1° → inside the ±29° VFOV.
+- **bbox-in-FOV:** all **8/8 bbox corners inside the view cone → 100%**.
+- **BUT** the plant is **0.5 m wide at 5.4 m** → angular diameter **≈5.8°** → only **~35 px** on a
+  540-px-wide frame, sitting low (top z=0.71 m, below the 1.58 m eye) against a pale floor/bed-skirt
+  background → a low-contrast speck the eye skips over. At step 1 (yaw 34°) the plant slides to the
+  **dark wainscot wall** on the left, where contrast makes it "guessable" — hence "invisible at step
+  0, visible at step 1." **No occluder** lies on the sightline (one PointLamp is near the bearing but
+  is a thin pole); nothing within 1.5 m of the plant. **Conclusion: size + low contrast, NOT a render
+  bug, NOT a stale-pose bug, NOT occlusion.** (Final confirmation deferred: when `case010` comes up in
+  the running eval it will emit a fresh step-0 frame at the same yaw — if the plant is still a centered
+  speck, the size/contrast explanation is confirmed.)
+
+### Two *different* visibility notions (don't conflate them)
+- **bbox-in-FOV (angular cone coverage)** → catches a target **clipped off the frame edge / yaw aimed
+  wrong**. (e.g. `case008...-L3` wine glass: horiz rel **−105.7°** → 0% in FOV → a real yaw bug.)
+- **angular diameter / pixel size** → catches a target that is **in-frame but too far/small to read**
+  (e.g. `case010` plant, 100% in FOV yet ~35 px). bbox-in-FOV gives it full marks.
+
+A scan of all 220 L3/L4 phase-1 targets:
+- **bbox-in-FOV < 50%:** L3 = **1/110** (only `case008`, the yaw bug); L4 = 110/110 and L2 = 113/113
+  (this is **correct** — L2/L4 are *designed* to face away from the goal). So the bbox gate is a clean
+  near-no-op on L3 that only flags genuine yaw errors.
+- **angular diameter:** median **6.9°**, and **24.5%** of phase-1 targets are < 4° (small portables
+  like wine glass/cup at distance). Rendered at 540×360 (6 px/°) the *smallest* target is still
+  **9.2 px** — i.e. **nothing is sub-pixel / degenerate**.
+
+### L3 definition (decided)
+**L3 = a two-phase task whose phase-1 target is within the camera view frustum at spawn**
+(`bbox ≥ 50% inside the ±45° H / ±29° V cone, eye 1.58 m, pitch −10°`), phase-2 is a navigation goal.
+Rationale: *if it's in the frustum, the agent only has to nudge/rotate slightly to bring it into clear
+view* — that matches L3's intent ("start already oriented toward the goal"). We deliberately **do NOT**
+add an angular-diameter / pixel-size gate: far-but-small targets like `case010`'s plant are **kept** as
+legitimate (harder) L3 cases. L2/L4 remain "phase-1 *not* in the frustum" (must explore). Phase-1 may
+be a navigation waypoint (`two_nav`, ~60%) or a `PICK_UP` (~40%); both keep the same two-phase shape.
+
+> Wording fix TODO: "large plant" overstates a 0.5 m potted plant — rename the NL phrase to "plant" /
+> "potted plant" (cosmetic, in `FACTORY_TO_NL`); does not affect geometry or validation.
+
+### Eval launched (2026-06-03 18:01 UTC)
+Both models over the 333-task set, in parallel, in detached tmux on GPU-180 (survives SSH drop):
+- `tmux eval30b` → **Qwen3-VL-30B-A3B-Thinking** @ `:8300`, render container `vlm-jupyter-180` (GPU 0),
+  log `eval_30b_v2.log`.
+- `tmux eval235b` → **Qwen3-VL-235B-A22B-Thinking** @ `:8301`, render container `vlm-isaac-g3` (GPU 3),
+  log `eval_235b_v2.log`.
+- vLLMs are **host tmux processes** (conda `evo_llm`), NOT in Docker: 30B `CUDA_VISIBLE_DEVICES=0
+  --tensor-parallel-size 1`, 235B `CUDA_VISIBLE_DEVICES=4,5,6,7 --tensor-parallel-size 4`.
+- GPU 3 is protected from external grab by a resident VRAM warmer (`vlm_kv_cache_warmer.py`, ~40 GB) in
+  tmux `query_vlm` — Isaac's render container holds only ~3.5 GB, so without it an external 70 GB job
+  could seize GPU 3 during a container-restart window.
+- Per-task isolation + crash recovery: `bench_batch.py` docker-exec's one task at a time and, on an
+  Isaac segfault signature, `docker restart`s the container + restores `nvoptix.bin` + retries once
+  (the known "vlm-jupyter degrades to segfault on long runs" issue).
+- Smoke-tested first (1 task/model in parallel): both produced valid `results.json`, model name
+  auto-detected from `/v1/models`, episodes terminated cleanly at the 50-VLM-call cap.
+
+Expected wall-clock: a hard L3/L4 episode runs to the 50-VLM-call cap ≈ 6–10 min, so ~30–50 h/model;
+the two models run on separate GPUs in parallel.

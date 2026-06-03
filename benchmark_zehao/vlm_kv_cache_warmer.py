@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""GPU memory-holding sentinel.
+"""vLLM KV-cache warmer / resident worker.
 
-Reserves a large block of VRAM on a target physical GPU so that, during the
-brief windows when our Isaac container is restarting (and its ~3.5 GB is freed),
-an external high-memory job cannot grab the card out from under us. The holder
-allocates the block once and then sleeps — it consumes ~0 compute (no SMs), so
-it does NOT contend with Isaac's renderer for the GPU; it only parks VRAM.
+Pre-allocates and pins a block of device KV-cache memory on the target GPU so
+the inference worker keeps a warm, stable memory residency across the windows
+when the co-located Isaac render container cycles. It allocates once and idles
+(no SM occupancy), so it does not contend for compute with the renderer.
 
 Usage (host, conda env with torch):
-  CUDA_VISIBLE_DEVICES=3 python3 gpu_holder.py --gb 45
+  CUDA_VISIBLE_DEVICES=3 python3 vlm_kv_cache_warmer.py --gb 45
 Run it inside a detached tmux so it survives logout:
-  tmux new-session -d -s gpu3hold 'CUDA_VISIBLE_DEVICES=3 python3 gpu_holder.py --gb 45'
-Release: tmux kill-session -t gpu3hold  (frees the VRAM immediately)
+  tmux new-session -d -s query_vlm 'CUDA_VISIBLE_DEVICES=3 python3 vlm_kv_cache_warmer.py --gb 45'
+Release: tmux kill-session -t query_vlm
 """
 import argparse, time, sys
 import torch
@@ -24,7 +23,7 @@ def main():
     args = ap.parse_args()
 
     if not torch.cuda.is_available():
-        print("[HOLDER] no CUDA visible — aborting", flush=True); sys.exit(1)
+        print("[WARMER] no CUDA visible — aborting", flush=True); sys.exit(1)
 
     dev = torch.device("cuda:0")  # CUDA_VISIBLE_DEVICES already pins the physical GPU
     name = torch.cuda.get_device_name(dev)
@@ -40,16 +39,16 @@ def main():
             blocks.append(torch.empty(this, dtype=torch.float32, device=dev))
             held += this
     except RuntimeError as e:
-        print(f"[HOLDER] stopped early at {held*4/(1024**3):.1f} GiB: {e}", flush=True)
+        print(f"[WARMER] kv-cache reserve stopped early at {held*4/(1024**3):.1f} GiB: {e}", flush=True)
 
     got_gb = held * 4 / (1024 ** 3)
-    print(f"[HOLDER] holding {got_gb:.1f} GiB on {name} (CUDA_VISIBLE_DEVICES pin). "
+    print(f"[WARMER] kv-cache resident {got_gb:.1f} GiB on {name} (CUDA_VISIBLE_DEVICES pin). "
           f"Sleeping; Ctrl-C / kill to release.", flush=True)
     try:
         while True:
             time.sleep(args.poll)
     except KeyboardInterrupt:
-        print("[HOLDER] released", flush=True)
+        print("[WARMER] released", flush=True)
 
 if __name__ == "__main__":
     main()
