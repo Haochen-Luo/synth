@@ -714,7 +714,11 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                 res = resolve_target(stage, phases[0])
                 if res:
                     first_target_prim_path = res["prim_path"]
-                    first_target_half_ext = res["half_extent_xy"]
+                    # For pickups on furniture, reach/success is to the support's EDGE:
+                    # use the larger of the object's own half-extent and the baked
+                    # reach_half_extent (support furniture). LOS/FOV still use the object center.
+                    first_target_half_ext = max(res["half_extent_xy"],
+                                                float(phases[0].get("reach_half_extent", 0.0)))
                 else:
                     result["status"] = "FAIL"
                     result["checks"]["target_resolve"] = {
@@ -792,7 +796,8 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
         # (The gate validate_all_spawns lacked; LOS alone passed case003's narrow gap.)
         tgt_reach = True
         if first_target_xy and reachable:
-            rtol = max(2, math.ceil(phases[0].get("radius", 0.5) / GRID_RES)) if phases else 4
+            # tolerance = radius + reach half-extent (reach to the support's edge, not center)
+            rtol = max(2, math.ceil((phases[0].get("radius", 0.5) + first_target_half_ext) / GRID_RES)) if phases else 4
             tgt_reach = _reachable(reachable, first_target_xy[0], first_target_xy[1], tol=rtol)
             result["checks"]["target_reachable"] = {
                 "pass": tgt_reach,

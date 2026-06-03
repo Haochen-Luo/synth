@@ -187,6 +187,9 @@ def probe_scene(stage, query_if=None):
             if abs(zb - s_top) <= SUPPORT_Z_TOL and s_top > best_top:
                 best, best_top = s, s_top
         o["support"] = best["prim_path"] if best else None
+        # half-extent of the supporting furniture — used downstream as the pickup's reach
+        # geometry (you reach an object by walking to the furniture it sits on, not its center)
+        o["support_he"] = round(best["half_extent_xy"], 4) if best else 0.0
 
     # ── Reachability (floodfill ONCE per scene; bake per-object so generation can
     # ensure reachability by construction instead of dropping at validation). ──

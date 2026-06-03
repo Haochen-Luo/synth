@@ -159,13 +159,29 @@ def bake_deactivate(target_paths, target_semantics, pickup_support_paths, object
     return sorted(deact)
 
 
-def make_phase(obj, action, desc, radius, place_at=None):
+def make_phase(obj, action, desc, radius, place_at=None, reach_half_extent=0.0):
     # When place_at is set (fallback relocation), the target center IS the placed
     # position (validator + runner use it), not the object's authored center.
+    # reach_half_extent = half-extent of the SUPPORT furniture for pickups: reach/success
+    # is measured to the support's EDGE (you reach a tabletop object by walking to the
+    # table), while LOS/FOV stay on the object. validator + runner use it via edge-distance.
     center = list(place_at[:3]) if place_at else obj["center"]
     return {"name": f"{action.lower()}_{obj['factory']}", "target_object": obj["factory"],
             "target_prim": obj["prim_path"], "radius": radius, "action": action,
-            "desc": desc, "place_at": place_at, "_center": center}
+            "desc": desc, "place_at": place_at, "reach_half_extent": round(reach_half_extent, 4),
+            "_center": center}
+
+
+def pickup_reach_ok(o):
+    """Pickup reachable if the agent can get within the pickup radius of the EDGE of the
+    furniture it rests on (reach across the surface), not its exact center. Floor objects
+    (support_he 0) reduce to the plain distance check."""
+    if "reach_dist" not in o:
+        return o.get("reachable", True)
+    rd = o["reach_dist"]
+    if rd is None:
+        return False
+    return (rd - o.get("support_he", 0.0)) <= REACH_PICKUP_M
 
 
 # ── Fallback placement (when a scene has no valid existing pickup) ──
@@ -213,7 +229,7 @@ def gen_scene(facts, scene_dir_name, floor_state, dropped):
     # per-purpose thresholds (not the lenient 1.5m bool) makes probe agree with validate
     # → fewer validation drops. reach_ok() keeps backward-compat with pre-reachability facts.
     pickups = [o for o in objects
-               if o["factory"] in CLEAR_PICKUP_FACTORIES and reach_ok(o, REACH_PICKUP_M)]
+               if o["factory"] in CLEAR_PICKUP_FACTORIES and pickup_reach_ok(o)]
     dests = [o for o in objects
              if o["factory"] in DESTINATION_FACTORIES and reach_ok(o, REACH_DEST_M)]
     # prefer unique-in-room, larger, lower (easier to see) destinations
@@ -319,8 +335,12 @@ def gen_scene(facts, scene_dir_name, floor_state, dropped):
         if d:
             if (not synthetic) and pick["on_floor"]:
                 u, t = floor_state; floor_state[0] = u + 1
+            # reach geometry = the EDGE of the furniture the pickup rests on (fallback: the
+            # surface it was placed on). Floor pickups have support_he 0 → reach to object.
+            reach_he = surf["half_extent_xy"] if synthetic else pick.get("support_he", 0.0)
             for level, facing in (("L3", "face"), ("L4", "back")):
-                p1 = make_phase(pick, "PICK_UP", nl(pick["factory"]), 1.0, place_at=pick_place_at)
+                p1 = make_phase(pick, "PICK_UP", nl(pick["factory"]), 1.0,
+                                place_at=pick_place_at, reach_half_extent=reach_he)
                 p1["target_object_semantic"] = pick["semantic"]
                 p1["_support_path"] = psup_path
                 p1["_pickup_support_sem"] = psup_sem

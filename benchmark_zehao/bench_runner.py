@@ -364,9 +364,12 @@ try:
             pp = res["prim_path"]
             target_prim_paths.add(pp)
             resolved_targets.append(res["center"][:2])
-            resolved_half_extents.append(res["half_extent_xy"])
+            # For pickups on furniture, success is measured to the support's EDGE: use the
+            # larger of the object half-extent and the baked reach_half_extent (support).
+            he = max(res["half_extent_xy"], float(ph.get("reach_half_extent", 0.0)))
+            resolved_half_extents.append(he)
             log(f"[BENCH] Phase '{ph['name']}' -> {tobj} prim={pp} "
-                f"center={res['center'][:2]} half_ext={res['half_extent_xy']:.2f}m")
+                f"center={res['center'][:2]} half_ext={he:.2f}m")
             # Track pickup prims
             if ph["action"] == "PICK_UP" and not pickup_prim_path:
                 pickup_prim_path = pp
