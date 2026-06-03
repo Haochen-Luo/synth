@@ -634,23 +634,46 @@ for scene_dir_name, scene_task_list in sorted(scene_tasks.items()):
                 if (tg[0] + dx, tg[1] + dy) in rset:
                     return True
         return False
-    # Seed from a walkable in-room point (first clear, in-polygon cell of the floor bbox).
+    # Seed the floodfill ROOM-GROUNDED, matching probe_stage.py's multi-seed approach
+    # (commit 966d381). The old code seeded from the FIRST clear cell scanning from the
+    # floor-bbox corner — which lands in cluttered corners and gets the BFS trapped in a
+    # tiny pocket (e.g. case33: 14 cells vs probe's 429), spuriously marking in-room
+    # targets unreachable and dropping otherwise-valid pickup tasks. Instead: try the
+    # floor-polygon CENTROID + offsets first, then a coarse in-polygon grid, flood from
+    # each clear candidate, and KEEP THE LARGEST reachable set. This makes validate's
+    # reachable region agree with the probe's so they no longer disagree on the room.
     seed = None
     reachable = set()
     if floor_bbox:
         bx0, by0, bx1, by1 = floor_bbox
+        # Primary-room centroid (robust interior point), then small offsets around it.
+        cx = sum(p[0] for p in floor_poly) / len(floor_poly) if floor_poly else (bx0 + bx1) / 2
+        cy = sum(p[1] for p in floor_poly) / len(floor_poly) if floor_poly else (by0 + by1) / 2
+        candidates = [(cx, cy)]
+        for ddx in (-1.5, 0.0, 1.5):
+            for ddy in (-1.5, 0.0, 1.5):
+                candidates.append((cx + ddx, cy + ddy))
+        # Coarse in-polygon grid as a backstop (covers rooms whose centroid sits on furniture).
         gx = bx0 + FLOOR_INSET
-        while gx <= bx1 - FLOOR_INSET and seed is None:
+        while gx <= bx1 - FLOOR_INSET:
             gy = by0 + FLOOR_INSET
             while gy <= by1 - FLOOR_INSET:
-                if check_in_floor(gx, gy, floor_poly):
-                    ok, _ = check_collision_clear(query_if, gx, gy)
-                    if ok:
-                        seed = (gx, gy); break
+                candidates.append((gx, gy))
                 gy += GRID_STEP
             gx += GRID_STEP
-        if seed:
-            reachable = _flood_fill(seed[0], seed[1])
+        for (sx0, sy0) in candidates:
+            if not check_in_floor(sx0, sy0, floor_poly):
+                continue
+            ok, _ = check_collision_clear(query_if, sx0, sy0)
+            if not ok:
+                continue
+            r = _flood_fill(sx0, sy0)
+            if len(r) > len(reachable):
+                reachable = r; seed = (sx0, sy0)
+            # Centroid-class seeds (first 10 candidates) that already flood a large region
+            # are good enough — skip the exhaustive grid to keep validate fast.
+            if seed is not None and len(reachable) >= 60:
+                break
     log(f"[VAL] Reachable cells: {len(reachable)} (seed={seed})")
 
     # ── Per-task validation ──
