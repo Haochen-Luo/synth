@@ -1549,6 +1549,12 @@ try:
             # agent emit PUT_DOWN, so it's accepted for a DONE- or PUT_DOWN-phase.
             # But a two_nav phase (empty-handed — never picked anything up) must
             # NOT be completed by a stray PUT_DOWN; it only accepts DONE.
+            # NOTE: `inventory` is the right gate here, not an explicit "is this a
+            # pick task?" check. inventory becomes non-empty ONLY via a successful
+            # PICK_UP (a pick_place phase1), so `and inventory` already implies
+            # "this is a pick task AND we've actually grabbed the object" — strictly
+            # stronger than a task-type check (it also rejects a pick task that
+            # PUT_DOWNs before ever picking up). Don't add a task-type condition.
             if ph["action"] in ("PUT_DOWN", "DONE") and dist < tgt_radius and inventory:
                 inventory.pop()
                 cur_phase += 1
