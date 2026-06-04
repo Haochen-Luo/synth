@@ -714,43 +714,65 @@ During a pre-eval sanity-check, the phase-1 target of an L3 task (`case010_offic
 though `spawn_facing=face` and the validator passed it. This raised two questions: *(a) what exactly
 defines L3 visibility?* and *(b) is there a rendering bug?*
 
-### The "invisible plant" — diagnosed, not a rendering bug
-Geometry (agent `(5.93,3.93)` yaw `18.5°`, plant center `(11.01,5.64,0.43)`):
-- **Horizontal:** plant bearing rel-to-yaw = **0.1°** → dead center of the frame.
-- **Vertical:** plant pitch rel-to-camera = −2.1° → inside the ±29° VFOV.
+### The "invisible plant" — diagnosed: **furniture occlusion** (an earlier "low-contrast" call was WRONG)
+Geometry (agent `(5.93,3.93)` yaw `18.5°`, plant center `(11.01,5.64,0.43)`, dist 5.4 m):
+- **Horizontal:** plant bearing rel-to-yaw = **0.0°** → dead center of the frame.
+- **Vertical:** plant pitch rel-to-camera = −2.1° → inside the VFOV; projects to screen ≈(270,191) of
+  540×360, ~23×31 px.
 - **bbox-in-FOV:** all **8/8 bbox corners inside the view cone → 100%**.
-- **BUT** the plant is **0.5 m wide at 5.4 m** → angular diameter **≈5.8°** → only **~35 px** on a
-  540-px-wide frame, sitting low (top z=0.71 m, below the 1.58 m eye) against a pale floor/bed-skirt
-  background → a low-contrast speck the eye skips over. At step 1 (yaw 34°) the plant slides to the
-  **dark wainscot wall** on the left, where contrast makes it "guessable" — hence "invisible at step
-  0, visible at step 1." **No occluder** lies on the sightline (one PointLamp is near the bearing but
-  is a thin pole); nothing within 1.5 m of the plant. **Conclusion: size + low contrast, NOT a render
-  bug, NOT a stale-pose bug, NOT occlusion.** (Final confirmation deferred: when `case010` comes up in
-  the running eval it will emit a fresh step-0 frame at the same yaw — if the plant is still a centered
-  speck, the size/contrast explanation is confirmed.)
+- **BUT the plant is hidden behind a bed.** This scene has *two* `BedFactory` instances; the one at
+  center `(10.1,4.1)` (top z **1.68 m**) sits at **4.2 m** — *in front of* the plant at 5.4 m. Ray-marching
+  camera→plant-center passes **straight through that bed's bbox** at 3.35 m, height z≈0.86 m (and the
+  sightline to the plant *top* is blocked too). On screen the bed's top edge is at +11.7° while the plant
+  centre is at −2.1°, so the plant sits squarely in the screen band the bed body covers. The fresh eval
+  step-0 frame confirms it: dead-centre you see the **bed**, no plant.
+- **The VLM's own trace confirms occlusion, not faintness:** across steps 17–38 it repeatedly reasoned
+  *"the plant isn't visible yet … I should turn to scan for the plant … turn left to reveal more of the
+  room."* It only **finds the plant by ~step 21** after moving to `(8.34,4.96)`, turning yaw 18°→48°, and
+  closing to 2.76 m — i.e. by **stepping around the bed**. (A small low-contrast speck would not require
+  20 steps of exploration; a hidden target does.)
+- **Conclusion: geometric occlusion by a bed — NOT low-contrast, NOT a render bug, NOT a stale-pose bug.**
+  ⚠️ The previous commit's "size + low contrast, not occlusion" claim was a **diagnosis error**: that scan
+  only searched for occluders within ±10–12° of the plant's bearing *using object centers*; the bed's
+  *center* is at −16.3° offset so it was missed, but the bed *body* still crosses the sightline. Always
+  test occlusion with **bbox extents**, not centers.
 
-### Two *different* visibility notions (don't conflate them)
-- **bbox-in-FOV (angular cone coverage)** → catches a target **clipped off the frame edge / yaw aimed
+### Three *different* visibility notions (don't conflate them)
+The `case010` saga showed that "is the target visible at spawn?" decomposes into **three independent**
+gates — and our current L3 gate only implements the first:
+- **(1) bbox-in-FOV (angular cone coverage)** → catches a target **clipped off the frame edge / yaw aimed
   wrong**. (e.g. `case008...-L3` wine glass: horiz rel **−105.7°** → 0% in FOV → a real yaw bug.)
-- **angular diameter / pixel size** → catches a target that is **in-frame but too far/small to read**
-  (e.g. `case010` plant, 100% in FOV yet ~35 px). bbox-in-FOV gives it full marks.
+- **(2) angular diameter / pixel size** → catches a target that is **in-frame but too far/small to read**
+  (a target 100% in FOV can still be only ~20 px). Not gated.
+- **(3) occlusion (line-of-sight)** → catches a target that is **in-frame and big enough but hidden
+  behind furniture** (e.g. `case010` plant: 100% in FOV, but a bed sits on the sightline). Not gated.
+  This is the one that actually explained `case010`.
 
-A scan of all 220 L3/L4 phase-1 targets:
+A scan of all 220 L3/L4 phase-1 targets (gate 1 only):
 - **bbox-in-FOV < 50%:** L3 = **1/110** (only `case008`, the yaw bug); L4 = 110/110 and L2 = 113/113
   (this is **correct** — L2/L4 are *designed* to face away from the goal). So the bbox gate is a clean
   near-no-op on L3 that only flags genuine yaw errors.
 - **angular diameter:** median **6.9°**, and **24.5%** of phase-1 targets are < 4° (small portables
   like wine glass/cup at distance). Rendered at 540×360 (6 px/°) the *smallest* target is still
   **9.2 px** — i.e. **nothing is sub-pixel / degenerate**.
+- **occlusion:** **not yet scanned** (a login-node raycast over all 110 L3 phase-1 targets is the
+  outstanding to-do; `case010` is one confirmed case, count unknown).
 
-### L3 definition (decided)
+### L3 definition (current) + open occlusion question
 **L3 = a two-phase task whose phase-1 target is within the camera view frustum at spawn**
 (`bbox ≥ 50% inside the ±45° H / ±29° V cone, eye 1.58 m, pitch −10°`), phase-2 is a navigation goal.
-Rationale: *if it's in the frustum, the agent only has to nudge/rotate slightly to bring it into clear
-view* — that matches L3's intent ("start already oriented toward the goal"). We deliberately **do NOT**
-add an angular-diameter / pixel-size gate: far-but-small targets like `case010`'s plant are **kept** as
-legitimate (harder) L3 cases. L2/L4 remain "phase-1 *not* in the frustum" (must explore). Phase-1 may
-be a navigation waypoint (`two_nav`, ~60%) or a `PICK_UP` (~40%); both keep the same two-phase shape.
+Rationale: *if it's in the frustum, the agent only has to nudge/rotate/step to bring it into clear view*
+— that matches L3's intent ("start already oriented toward the goal"). We deliberately **do NOT** add an
+angular-diameter / pixel-size gate (gate 2): far-but-small targets are **kept** as legitimately harder L3.
+L2/L4 remain "phase-1 *not* in the frustum" (must explore). Phase-1 may be a navigation waypoint
+(`two_nav`, ~60%) or a `PICK_UP` (~40%); both keep the same two-phase shape.
+
+> **OPEN: occlusion gate (gate 3) is undecided.** `case010` proves an in-frustum target can be fully
+> occluded by furniture at spawn (the VLM needed ~20 exploration steps to round the bed). Options:
+> (a) keep occluded-but-in-frustum as legit hard L3 ("step aside, it's revealed") — matches the
+> nudge-to-see rationale; (b) add a line-of-sight gate and re-spawn/drop occluded targets — stricter,
+> truest to "starts facing a *visible* target", but **needs re-rendering which is currently blocked
+> (GPU-180 reclaimed)**. Decision pending a login-node occlusion scan to size the impact.
 
 > Wording fix TODO: "large plant" overstates a 0.5 m potted plant — rename the NL phrase to "plant" /
 > "potted plant" (cosmetic, in `FACTORY_TO_NL`); does not affect geometry or validation.
@@ -774,3 +796,38 @@ Both models over the 333-task set, in parallel, in detached tmux on GPU-180 (sur
 
 Expected wall-clock: a hard L3/L4 episode runs to the 50-VLM-call cap ≈ 6–10 min, so ~30–50 h/model;
 the two models run on separate GPUs in parallel.
+
+### Partial results snapshot (eval cut short — GPU-180 reclaimed 2026-06-04)
+**GPU-180 was reclaimed before the run finished**, so the eval stopped at a partial sample and **no
+further rendering is possible** (login-node / inspect-only from here). The per-task `results.json` files
+that did complete are synced locally under `benchmark_zehao/results/eval_{30B,235B}_333_v2/`. Aggregated
+from what finished (`success`, mean `subtask_progress`, mean `goal_distance_m`, mean collisions/episode):
+
+**Qwen3-VL-30B-A3B-Thinking — 45 / 333 tasks done**
+
+| level | n | SR | subtask | goalDist | timeout | col/ep |
+|-------|---|------|---------|----------|---------|--------|
+| L2 | 16 | 18.8% | 18.8% | 4.46 m | 0% | 42.9 |
+| L3 | 15 | 6.7% | 13.3% | 3.79 m | 0% | 36.5 |
+| L4 | 14 | 0.0% | 3.6% | 3.71 m | 0% | 36.2 |
+| **ALL** | **45** | **8.9%** | 12.2% | | | |
+
+**Qwen3-VL-235B-A22B-Thinking — 16 / 333 tasks done**
+
+| level | n | SR | subtask | goalDist | timeout | col/ep |
+|-------|---|------|---------|----------|---------|--------|
+| L2 | 6 | 0.0% | 0.0% | 5.17 m | 33% | 45.5 |
+| L3 | 5 | 0.0% | 20.0% | 2.65 m | 40% | 35.0 |
+| L4 | 5 | 0.0% | 0.0% | 3.83 m | 60% | 38.4 |
+| **ALL** | **16** | **0.0%** | 6.2% | | | |
+
+⚠️ **Read these as preliminary only** — 30B covers 13.5% of the set, 235B only 5%, and both samples are
+the *first* (alphabetical) tasks, not a random draw. Three caveats before drawing conclusions:
+1. **Collisions/episode = 36–45 is anomalously high** — likely either real wall-hugging/stuck behaviour
+   or a counter that tallies "sliding along a wall" every frame. **Un-audited; may be depressing SR.**
+   (Next inspect-only task: decompose `collisions.json` — clustered-at-a-few-steps = stuck, vs
+   evenly-spread = counting artifact.)
+2. **Opposite failure modes:** 30B has 0% timeout yet low SR → it `DONE`s early without reaching the
+   goal; 235B has 33–60% timeout → it burns steps without arriving (its L3 mean goalDist 2.65 m is
+   actually the *closest* of any cell). So 235B's 0% is more "cautious-but-stuck" than "worse model."
+3. Sample is too small and too front-loaded to compare the two models.
