@@ -4,7 +4,7 @@
 set -e
 
 BATCH="fullrun_v7_3frame_thinking"
-WORKDIR="/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao"
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
 
 TASKS=(
   case01-L1 case01-L2 case01-L3 case01-L4

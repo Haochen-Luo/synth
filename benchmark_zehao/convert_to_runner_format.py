@@ -7,8 +7,9 @@ spawn points at runtime using the floodfill-based spawn validator.
 """
 import json, os
 
-IN = '/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/benchmark_tasks_full.json'
-OUT = '/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/benchmark_tasks_full_runner.json'
+_HERE = os.path.dirname(os.path.abspath(__file__))
+IN = os.path.join(_HERE, 'benchmark_tasks_full.json')
+OUT = os.path.join(_HERE, 'benchmark_tasks_full_runner.json')
 
 data = json.load(open(IN))
 runner_tasks = []

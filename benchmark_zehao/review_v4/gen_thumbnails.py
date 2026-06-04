@@ -3,7 +3,7 @@ import glob
 from PIL import Image
 
 def main():
-    directory = "/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/review_v4"
+    directory = os.path.dirname(os.path.abspath(__file__))
     if not os.path.exists(directory):
         print(f"Directory {directory} does not exist.")
         return

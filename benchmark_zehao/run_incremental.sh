@@ -1,6 +1,6 @@
 #!/bin/bash
 set -u
-D=/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao
+D="$(cd "$(dirname "$0")" && pwd)"
 C0=vlm-jupyter-180; C3=vlm-isaac-g3; NW=6; PY=/isaac-sim/python.sh
 LOG="$D/incremental.log"; : > "$LOG"; ts(){ date -u +%H:%M:%S; }
 cont(){ [ "$1" -lt 3 ] && echo "$C0" || echo "$C3"; }

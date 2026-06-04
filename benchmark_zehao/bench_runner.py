@@ -1843,7 +1843,7 @@ try:
 
     # ── Generate media (HD + Preview) via gen_media.sh ──
     import subprocess
-    gen_media_sh = "/home/qi/hc/Puppeteer/zehao_task/gen_media.sh"
+    gen_media_sh = os.path.join(os.path.dirname(SCRIPT_DIR), "gen_media.sh")
     if os.path.exists(gen_media_sh):
         log("[BENCH] Running gen_media.sh...")
         mr = subprocess.run(["bash", gen_media_sh, RUN_DIR], capture_output=True, text=True, timeout=600)

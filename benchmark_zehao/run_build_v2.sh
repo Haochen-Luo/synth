@@ -2,7 +2,7 @@
 # Corrected full build: room-grounded probe + matched reach thresholds + fallback.
 # 6-way parallel (GPU0 vlm-jupyter-180 + GPU3 vlm-isaac-g3). File-based split/merge (no stdin bug).
 set -u
-D=/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao
+D="$(cd "$(dirname "$0")" && pwd)"
 SF="$D/full_scenarios_extracted"
 C0=vlm-jupyter-180; C3=vlm-isaac-g3; NW=6; PY=/isaac-sim/python.sh
 LOG="$D/build_v2.log"; : > "$LOG"

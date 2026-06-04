@@ -7,7 +7,7 @@
 set -u
 
 # Accept run directory as argument, or use default
-BASE="${1:-/home/qi/hc/Puppeteer/zehao_task}"
+BASE="${1:-$(cd "$(dirname "$0")" && pwd)}"
 PREVIEW="$BASE/nav_preview"
 mkdir -p "$PREVIEW"
 

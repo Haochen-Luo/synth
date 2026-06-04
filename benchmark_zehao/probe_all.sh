@@ -1,6 +1,6 @@
 #!/bin/bash
 # Probe all scenes sequentially inside the bench-isaac container
-SCENES_DIR="/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao"
+SCENES_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROBER="$SCENES_DIR/scene_prober.py"
 
 for scene in $SCENES_DIR/native_*_full_physics_scene; do

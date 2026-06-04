@@ -11,7 +11,7 @@ from bench_helpers import aggregate_metrics, print_report
 TASKS_JSON = os.environ.get("TASKS_JSON", os.path.join(SCRIPT_DIR, "benchmark_tasks.json"))
 RESULTS_DIR = os.path.join(SCRIPT_DIR, "results")
 DOCKER_CONTAINER = "vlm-jupyter"  #"bench-isaac"
-RUNNER_PATH = "/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/bench_runner.py"
+RUNNER_PATH = os.path.join(SCRIPT_DIR, "bench_runner.py")
 VLLM_URL = "http://localhost:8300/v1/chat/completions"
 MODEL_NAME = ""
 

@@ -17,8 +17,9 @@ Output: A JSON file compatible with benchmark_tasks.json
 import json, os, re, glob, sys
 from collections import Counter
 
-BASE = '/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/full_scenarios_extracted'
-OUT_DIR = '/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao'
+_HERE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.join(_HERE, 'full_scenarios_extracted')
+OUT_DIR = _HERE
 
 # ── Factory classification ──
 # Portable objects (can be PICK_UP'd) — dynamic or low mass
@@ -233,8 +234,7 @@ for scene_dir in scene_dirs:
     if not stage_files:
         stats['no_stage'] += 1
         continue
-    stage_rel = os.path.relpath(stage_files[0],
-                                '/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao')
+    stage_rel = os.path.relpath(stage_files[0], _HERE)
     
     # L2: Navigate to target (back to target)
     if l2_target:

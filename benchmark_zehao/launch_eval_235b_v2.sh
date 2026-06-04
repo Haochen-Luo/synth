@@ -4,7 +4,7 @@
 # Isaac render container: vlm-isaac-g3 (physical GPU3; provisioned nvoptix+ffmpeg)
 # Runs in PARALLEL with the 30B eval (which renders on GPU0) — separate GPUs,
 # separate vLLM ports, so the two batches don't contend.
-WORKDIR="/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao"
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$WORKDIR"
 
 BATCH="eval_235B_333_v2"

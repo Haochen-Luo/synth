@@ -3,7 +3,7 @@
 # vLLM: Qwen3-VL-30B-A3B-Thinking-FP8 (host tmux, GPU0) @ :8300
 # Isaac render container: vlm-jupyter-180 (physical GPU0, has nvoptix+ffmpeg)
 # Per-task docker-exec via bench_batch.py -> segfault-isolated + auto-recover.
-WORKDIR="/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao"
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$WORKDIR"
 
 BATCH="eval_30B_333_v2"

@@ -15,8 +15,9 @@ from collections import Counter
 
 random.seed(42)  # reproducible
 
-BASE = '/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/full_scenarios_extracted'
-OUT_DIR = '/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao'
+_HERE = os.path.dirname(os.path.abspath(__file__))
+BASE = os.path.join(_HERE, 'full_scenarios_extracted')
+OUT_DIR = _HERE
 
 # ══════════════════════════════════════════════════════════════
 # Factory classification — comprehensive list
@@ -164,8 +165,7 @@ for scene_dir in scene_dirs:
     stage_files = glob.glob(os.path.join(scene_dir, 'compiled_stages', '*.usda'))
     if not stage_files:
         skipped.append((short, 'no_stage')); continue
-    stage_rel = os.path.relpath(stage_files[0],
-                                '/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao')
+    stage_rel = os.path.relpath(stage_files[0], _HERE)
     
     props = spec.get('interactive_props', [])
     humans = spec.get('active_humans', [])

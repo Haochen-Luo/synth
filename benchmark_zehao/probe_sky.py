@@ -6,17 +6,18 @@ Usage (inside vlm-jupyter container):
   /isaac-sim/python.sh probe_sky.py
 """
 import os, sys, json
-sys.path.insert(0, "/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao")
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _HERE)
 
-OUT_FILE = "/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/probe_sky_result.txt"
-TASKS_JSON = "/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao/benchmark_tasks.json"
+OUT_FILE = os.path.join(_HERE, "probe_sky_result.txt")
+TASKS_JSON = os.path.join(_HERE, "benchmark_tasks.json")
 
 with open(TASKS_JSON) as f:
     cfg = json.load(f)
 task = {t["id"]: t for t in cfg["tasks"]}["case06-L2"]
 
 from bench_helpers import discover_scene_files
-scene_dir = os.path.join("/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao", task["scene_dir"])
+scene_dir = os.path.join(_HERE, task["scene_dir"])
 sf = discover_scene_files(scene_dir)
 
 from isaacsim import SimulationApp

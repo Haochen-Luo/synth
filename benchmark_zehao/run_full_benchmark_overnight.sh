@@ -8,7 +8,7 @@
 #
 # NOTE: no set -e — Phase 1 may exit non-zero on OOM but cached scenes
 # are still valid. Pipeline continues with whatever was cached.
-WORKDIR="/home/qi/hc/Puppeteer/zehao_task/benchmark_zehao"
+WORKDIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$WORKDIR"
 
 echo "========================================"
