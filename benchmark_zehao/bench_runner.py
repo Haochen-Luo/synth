@@ -1485,8 +1485,12 @@ try:
         if not queried_this_step:
             log(f"[BENCH] Step {step}: action={action} (queued, {len(plan_queue)} remaining)")
 
-        # DONE confirm — verify with a single-action query before accepting
-        if action == "DONE":
+        # DONE confirm — only when NOT already within radius. If the agent is
+        # already in range, accept DONE immediately: a confirm re-query where the
+        # model wavers (returns a non-DONE action) used to silently discard a
+        # valid arrival, depressing SR. The confirm is a guard against premature
+        # DONE while still far, not a second gate on a legitimate arrival.
+        if action == "DONE" and not (ph["action"] == "DONE" and dist < tgt_radius):
             for cr in range(1, DONE_CONFIRM):
                 ca, _ = query_vlm(frame_path, "You chose DONE. Is the target within arm's reach? Confirm.", sys_prompt, step)
                 if ca != "DONE": action = ca; plan_queue = []; break
@@ -1501,8 +1505,15 @@ try:
                          "blocked_reason":None,"blocked_detail":None})
 
         # ── Execute action ──
+        # DONE and PUT_DOWN are interchangeable for a "bring it to / go to X"
+        # completion phase: the instruction ("bring it to the plant") makes a
+        # carrying agent naturally emit PUT_DOWN, while a pure-nav phase emits
+        # DONE. Both mean "I'm here and done with this phase", so a DONE-action
+        # phase accepts PUT_DOWN too (and vice-versa below) as long as in range.
         if action == "DONE":
-            if ph["action"] == "DONE" and dist < tgt_radius:
+            if ph["action"] in ("DONE", "PUT_DOWN") and dist < tgt_radius:
+                if action == "PUT_DOWN" and inventory:
+                    inventory.pop()
                 cur_phase += 1
                 log(f"[BENCH] DONE success phase {cur_phase}/{len(phases)} dist={dist:.2f}")
                 if cur_phase >= len(phases):
@@ -1535,8 +1546,13 @@ try:
                 log(f"[BENCH] PICK_UP failed dist={dist:.2f}")
 
         elif action == "PUT_DOWN":
-            if ph["action"] == "PUT_DOWN" and dist < tgt_radius and inventory:
-                inventory.pop()
+            # Accept PUT_DOWN for a DONE-completion phase too (symmetric with the
+            # DONE block above): "bring it to X" + arriving in range completes the
+            # phase whether the model says PUT_DOWN or DONE. inventory is optional
+            # for a DONE-phase (a two_nav phase never picked anything up).
+            if ph["action"] in ("PUT_DOWN", "DONE") and dist < tgt_radius:
+                if inventory:
+                    inventory.pop()
                 cur_phase += 1
                 log(f"[BENCH] PUT_DOWN success, advancing to phase {cur_phase+1}")
                 if cur_phase < len(phases):
@@ -1746,6 +1762,29 @@ try:
                                   "executed": list(cur_executed),
                                   "outcome": outcome})
             if plan_interrupted and plan_queue:
+                # Arrival-rescue: a collision on an earlier action (e.g.
+                # MOVE_FORWARD) used to abort the WHOLE queue, discarding a
+                # trailing DONE/PUT_DOWN even when the agent is ALREADY within
+                # the goal radius. A blocked "nudge forward" must not mask the
+                # fact that we have arrived. So if the dropped tail contains a
+                # completion action and the current phase is a DONE/PUT_DOWN
+                # arrival phase already satisfied, complete it instead.
+                tail_has_done = any(a in ("DONE", "PUT_DOWN") for a in plan_queue)
+                if (collided and tail_has_done
+                        and ph["action"] in ("DONE", "PUT_DOWN")
+                        and dist < tgt_radius):
+                    if inventory:
+                        inventory.pop()
+                    cur_phase += 1
+                    log(f"[BENCH] arrival-rescue: completing phase {cur_phase}/{len(phases)} "
+                        f"from dropped tail DONE/PUT_DOWN dist={dist:.2f}")
+                    plan_queue = []
+                    cur_planned = []; cur_executed = []
+                    if cur_phase >= len(phases):
+                        log(f"[BENCH] ALL PHASES DONE — SUCCESS at step {step}")
+                        break
+                    tgt = resolved_targets[cur_phase]
+                    continue
                 log(f"[BENCH] Step {step}: aborting queued plan ({outcome}), "
                     f"dropped {len(plan_queue)} action(s) -> re-query next step")
                 plan_queue = []
