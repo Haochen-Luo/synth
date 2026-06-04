@@ -1505,15 +1505,13 @@ try:
                          "blocked_reason":None,"blocked_detail":None})
 
         # ── Execute action ──
-        # DONE and PUT_DOWN are interchangeable for a "bring it to / go to X"
-        # completion phase: the instruction ("bring it to the plant") makes a
-        # carrying agent naturally emit PUT_DOWN, while a pure-nav phase emits
-        # DONE. Both mean "I'm here and done with this phase", so a DONE-action
-        # phase accepts PUT_DOWN too (and vice-versa below) as long as in range.
+        # DONE means "I've arrived / this phase is complete". It completes any
+        # arrival phase (a two_nav DONE-phase OR a pick_place PUT_DOWN-phase) when
+        # in range — reaching the destination is the goal; whether the model then
+        # literally says DONE vs PUT_DOWN shouldn't gate a nav benchmark. (The
+        # PUT_DOWN block below handles the carrying case and pops inventory.)
         if action == "DONE":
             if ph["action"] in ("DONE", "PUT_DOWN") and dist < tgt_radius:
-                if action == "PUT_DOWN" and inventory:
-                    inventory.pop()
                 cur_phase += 1
                 log(f"[BENCH] DONE success phase {cur_phase}/{len(phases)} dist={dist:.2f}")
                 if cur_phase >= len(phases):
@@ -1546,13 +1544,13 @@ try:
                 log(f"[BENCH] PICK_UP failed dist={dist:.2f}")
 
         elif action == "PUT_DOWN":
-            # Accept PUT_DOWN for a DONE-completion phase too (symmetric with the
-            # DONE block above): "bring it to X" + arriving in range completes the
-            # phase whether the model says PUT_DOWN or DONE. inventory is optional
-            # for a DONE-phase (a two_nav phase never picked anything up).
-            if ph["action"] in ("PUT_DOWN", "DONE") and dist < tgt_radius:
-                if inventory:
-                    inventory.pop()
+            # PUT_DOWN completes an arrival phase ONLY while actually carrying
+            # something (inventory non-empty). "bring it to X" makes a carrying
+            # agent emit PUT_DOWN, so it's accepted for a DONE- or PUT_DOWN-phase.
+            # But a two_nav phase (empty-handed — never picked anything up) must
+            # NOT be completed by a stray PUT_DOWN; it only accepts DONE.
+            if ph["action"] in ("PUT_DOWN", "DONE") and dist < tgt_radius and inventory:
+                inventory.pop()
                 cur_phase += 1
                 log(f"[BENCH] PUT_DOWN success, advancing to phase {cur_phase+1}")
                 if cur_phase < len(phases):
@@ -1769,11 +1767,17 @@ try:
                 # fact that we have arrived. So if the dropped tail contains a
                 # completion action and the current phase is a DONE/PUT_DOWN
                 # arrival phase already satisfied, complete it instead.
-                tail_has_done = any(a in ("DONE", "PUT_DOWN") for a in plan_queue)
-                if (collided and tail_has_done
+                # A trailing DONE completes any arrival phase when in range; a
+                # trailing PUT_DOWN only completes while carrying (inventory) —
+                # an empty-handed two_nav phase is never rescued by a stray
+                # PUT_DOWN (mirrors the PUT_DOWN execute-block rule above).
+                tail_has_done = "DONE" in plan_queue
+                tail_has_putdown = "PUT_DOWN" in plan_queue
+                rescuable = tail_has_done or (tail_has_putdown and inventory)
+                if (collided and rescuable
                         and ph["action"] in ("DONE", "PUT_DOWN")
                         and dist < tgt_radius):
-                    if inventory:
+                    if tail_has_putdown and inventory:
                         inventory.pop()
                     cur_phase += 1
                     log(f"[BENCH] arrival-rescue: completing phase {cur_phase}/{len(phases)} "
