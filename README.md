@@ -831,3 +831,49 @@ the *first* (alphabetical) tasks, not a random draw. Three caveats before drawin
    goal; 235B has 33–60% timeout → it burns steps without arriving (its L3 mean goalDist 2.65 m is
    actually the *closest* of any cell). So 235B's 0% is more "cautious-but-stuck" than "worse model."
 3. Sample is too small and too front-loaded to compare the two models.
+
+## Session 2026-06-04: clean sync to a standalone repo (`Haochen-Luo/synth`)
+
+### Why
+`zehao_task` lives *inside* the Puppeteer repo (`/home/qi/hc/Puppeteer`, origin
+`4DSynthesis.git`, upstream `Seed3D/Puppeteer`) but is semantically a sibling of Puppeteer,
+not a child. To deploy to a **new machine with no scp/rsync path**, we split `zehao_task` into
+its own repo so the new machine clones a clean root with no Puppeteer 3D-asset baggage.
+
+### Method — `git subtree split` (history-preserving, no Puppeteer code)
+```
+# on benchmark-multiaction (restore point: commit 93660b4)
+git add <curated untracked files>           # the 333 dataset + launch/host scripts were UNTRACKED
+git commit -m "track files needed for synth standalone sync"
+git push origin benchmark-multiaction       # safety: old repo keeps everything
+git subtree split --prefix=zehao_task -b zehao-standalone   # new branch, root = zehao_task/
+git remote add synth https://github.com/Haochen-Luo/synth.git
+git push synth zehao-standalone:main
+```
+- **All operations are reversible & non-destructive** — `add`/`commit`/`subtree split`/`push`
+  never modify or delete working-tree file *content*. subtree split only *creates* a new branch
+  off existing history; the `benchmark-multiaction` branch and working tree are untouched.
+  Restore point: `git reset --soft 93660b4`. (Never `git reset --hard`.)
+- **Data is auto-excluded:** `results/`, `full_scenarios_extracted/`, `native_case*/`, render
+  frames, etc. were **never git-tracked**, so the split repo is clean by construction — no
+  `.gitignore` surgery needed. Large data is re-downloaded from Google Drive on the new machine.
+
+### What was curated INTO the sync (key finding: the canonical dataset was UNTRACKED)
+`benchmark_tasks_generated_validated.json` (the 333-task canonical set), the v2 launch scripts,
+the GPU-180 host scripts (`_split_tasks.py`/`_merge_*.py`/`run_build_v2.sh`), `scratch_archive/
+validate_and_fix_spawns.py` (floodfill alignment reference, README §Session 2026-06-03), and
+`extract_bev_annotation_data_blender.py` (concave-boundary logic source, README §V1) were all
+**untracked** and had to be `git add`'ed before the split. Core runtime (`bench_runner`,
+`bench_batch`, `bench_helpers`, `semantic_classes`, `probe_stage`, `generate_tasks`,
+`validate_all_spawns`, `vlm_kv_cache_warmer`) was already tracked.
+
+### New-machine landing checklist
+1. `git clone https://github.com/Haochen-Luo/synth.git` (root == old `zehao_task/`).
+2. Re-download `full_scenarios_extracted/` (+ per-scene `scene_facts.json`) from Google Drive.
+3. **Fix 24 hardcoded `/home/qi/hc/Puppeteer/...` paths** (audited via `git grep`): runtime code
+   (`bench_batch.py:14`, `bench_runner.py:1846`, `probe_sky.py`, `generate_*`/`probe_*` BASE/OUT_DIR,
+   the `*.sh` WORKDIRs) + `scenes_base` in the `benchmark_tasks_*.json`. Recommend collapsing to a
+   repo-root-relative base (`Path(__file__).parent`) or an env var. Stale `zehao_new_folder/...`
+   refs (`check_dancer_bbox.py`, `vlm_nav_benchmark.py`, `vlm_nav_interactive.py`) point outside
+   `zehao_task` and are legacy — drop or repoint.
+4. Rebuild the conda/Isaac env; smoke-test one task before a batch.

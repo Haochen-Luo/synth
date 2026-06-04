@@ -35,6 +35,9 @@ def recover_container():
     subprocess.run(f"docker cp {NVOPTIX_HOST} "
                    f"{DOCKER_CONTAINER}:/usr/share/nvidia/nvoptix.bin",
                    shell=True, capture_output=True, text=True, timeout=120)
+    print("  [RECOVERY] ensuring ffmpeg is installed ...")
+    subprocess.run(f"docker exec {DOCKER_CONTAINER} bash -c 'apt-get update && apt-get install -y ffmpeg'",
+                   shell=True, capture_output=True, text=True, timeout=120)
     print("  [RECOVERY] container back up")
 
 def _run_once(task_id, batch_name, dry_run):

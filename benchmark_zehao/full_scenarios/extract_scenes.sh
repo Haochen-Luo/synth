@@ -13,7 +13,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SRC_DIR="$SCRIPT_DIR/physics_isaac_deliverables_20260519"
-DST_DIR="$SCRIPT_DIR/.."  # benchmark_zehao/ — scenes go alongside bench_runner.py
+DST_DIR="$SCRIPT_DIR/../full_scenarios_extracted"
+mkdir -p "$DST_DIR"
 
 CATEGORIES=("15_real2sim" "20_native" "40_textmask" "80_official")
 
