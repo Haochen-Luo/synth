@@ -5,6 +5,10 @@ Usage: TASK_ID=01-L1 /isaac-sim/python.sh bench_runner.py
 import sys, os, json, math, base64, glob, time, traceback, re
 import urllib.request, datetime as _dt
 
+# Make all created files/dirs world-writable so host user can access
+# Docker results (runner executes as root inside container).
+os.umask(0o000)
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 from bench_helpers import (sample_human_motion, wrap_angle_deg, check_frame_quality,
