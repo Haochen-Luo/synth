@@ -34,6 +34,7 @@ for w in $(seq 0 $((NW-1))); do
     echo "[PARALLEL] Creating container $NAME (GPU 0)..."
     docker run -d --name "$NAME" \
         --gpus '"device=0"' \
+        --network host \
         --entrypoint bash \
         -v /home/liuqi/hc/synth:/home/liuqi/hc/synth \
         "$ISAAC_IMAGE" \
