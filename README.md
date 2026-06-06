@@ -877,3 +877,83 @@ validate_and_fix_spawns.py` (floodfill alignment reference, README §Session 202
    refs (`check_dancer_bbox.py`, `vlm_nav_benchmark.py`, `vlm_nav_interactive.py`) point outside
    `zehao_task` and are legacy — drop or repoint.
 4. Rebuild the conda/Isaac env; smoke-test one task before a batch.
+
+## Session 2026-06-06: Cross-Machine Deployment (HK A100) + Repo Architecture Clarification
+
+### Repo architecture
+
+`synth` (this repo) is a **standalone sibling** of Puppeteer, NOT a child. History:
+
+```
+Puppeteer (4DSynthesis.git)
+  └── zehao_task/  ← benchmark code lived here on branch `benchmark-multiaction`
+        │
+        │  git subtree split --prefix=zehao_task → synth-main branch
+        ▼
+synth (Haochen-Luo/synth.git)   ← THIS REPO, clean standalone
+  ├── benchmark_zehao/           ← all benchmark code
+  ├── README.md                  ← this file
+  └── ...
+```
+
+- **`benchmark-multiaction`** (in Puppeteer): the original working branch. Contains full
+  Puppeteer 3D-asset history + benchmark code. **Considered buggy / legacy** — do NOT
+  develop on it further.
+- **`synth-main`** (in Puppeteer): a clean extraction via `git subtree split`. Root = old
+  `zehao_task/`. This was pushed to `Haochen-Luo/synth.git` as `main`.
+- **`/home/qi/hc/synth`** (SG): a fresh `git clone` of `synth.git` — the canonical
+  development copy. All new work happens here, NOT in Puppeteer.
+- Commit `af74d48` made all runtime paths self-locating (`os.path.dirname(__file__)`) so
+  the repo runs from **any clone location** with zero per-machine config edits.
+
+### Cross-machine deployment
+
+| Node | Role | synth repo | Scene data | Isaac Sim |
+|------|------|-----------|-----------|-----------|
+| **SG** (login) | Coding, git hub | `/home/qi/hc/synth` | N/A (no GPU) | N/A |
+| **HK** (liuqi-g1) | Isaac rendering, eval | `/home/liuqi/hc/synth` | TODO: rsync/download | Docker (TODO) |
+| ~~GPU-180~~ | ~~was primary~~ | ~~reclaimed 2026-06-04~~ | — | — |
+
+**HK node setup (done 2026-06-06):**
+- Deployed `haochen` GitHub deploy key to `/home/liuqi/.ssh/haochen`
+- Configured SSH to use port 443 (`ssh.github.com`) since GitHub port 22 is blocked on HK
+- `git clone git@haochen:Haochen-Luo/synth.git` → verified at commit `c86a0c5`
+
+**Code sync workflow:**
+```
+SG: edit → git push
+HK: git pull                    # instant, ~seconds
+```
+
+**Scene data sync:**
+```
+# One-time: rsync from SG or re-download from Google Drive on HK
+rsync -avzP --partial /home/qi/hc/synth/benchmark_zehao/full_scenarios_extracted/ \
+  hk:/home/liuqi/hc/synth/benchmark_zehao/full_scenarios_extracted/
+```
+
+### Latest commits summary (post-split, on synth main)
+
+The top 4 commits address **systematically-undercounted L3/L4 success rates** discovered
+during the partial eval (45 + 16 tasks, GPU-180, before it was reclaimed):
+
+| Commit | Fix | Impact |
+|--------|-----|--------|
+| `af74d48` | All runtime paths self-locating (`__file__`-relative) | Zero-config on any fresh clone |
+| `d1bcc94` | **Arrival-rescue**: trailing DONE/PUT_DOWN in a plan queue was silently discarded on collision; DONE confirm gate was re-querying when already in-range; DONE/PUT_DOWN now interchangeable for arrival phases | Recovers false-failures where agent WAS within goal radius |
+| `737a516` | **PUT_DOWN inventory gate**: a stray PUT_DOWN on an empty-handed `two_nav` task was falsely completing it | Prevents false-positive completions |
+| `c86a0c5` | Comment-only: documents why `inventory` is the gate (not task-type) | Prevents future "fix" of a non-bug |
+
+**Status: NOT yet runtime-verified** (GPU-180 reclaimed before smoke-test). First priority
+on HK: set up Isaac Docker container → smoke-test one L2 + one L3 task → verify the
+arrival-rescue fix is correct before a full eval.
+
+### Remaining (HK deployment)
+
+1. **Isaac Sim Docker**: Pull `nvcr.io/nvidia/isaac-sim:4.5.0`, bind-mount synth repo,
+   configure GPU access. Adapt from `start_jupyter.sh`.
+2. **Scene data**: Download `full_scenarios_extracted/` (122 scenes) — either rsync from
+   SG (if available) or re-download from Google Drive on HK.
+3. **VLM server**: Set up vLLM with Qwen3-VL model on one A100 for eval.
+4. **Smoke-test**: Run one task end-to-end to verify the fix commits.
+5. **Full eval**: 333-task benchmark run.
