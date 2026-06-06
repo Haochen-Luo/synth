@@ -9,7 +9,7 @@ cd "$WORKDIR"
 BATCH="eval_30B_333_v2"
 TASKS_FILE="$WORKDIR/full_task_ids_v2_333.txt"
 TASKS_JSON="$WORKDIR/benchmark_tasks_generated_validated.json"
-CONTAINER="vlm-jupyter-180"
+CONTAINER="vlm-jupyter"
 VLLM_URL="http://localhost:8300/v1/chat/completions"
 
 mapfile -t TASKS < "$TASKS_FILE"
