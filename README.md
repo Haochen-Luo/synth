@@ -911,25 +911,22 @@ synth (Haochen-Luo/synth.git)   ← THIS REPO, clean standalone
 | Node | Role | synth repo | Scene data | Isaac Sim |
 |------|------|-----------|-----------|-----------|
 | **SG** (login) | Coding, git hub | `/home/qi/hc/synth` | N/A (no GPU) | N/A |
-| **HK** (liuqi-g1) | Isaac rendering, eval | `/home/liuqi/hc/synth` | TODO: rsync/download | Docker (TODO) |
+| **HK** (liuqi-g1) | Isaac rendering, eval | `/home/liuqi/hc/synth` | ✅ 122 scenes extracted | ✅ Docker (`vlm-jupyter`) |
 | ~~GPU-180~~ | ~~was primary~~ | ~~reclaimed 2026-06-04~~ | — | — |
 
 **HK node setup (done 2026-06-06):**
 - Deployed `haochen` GitHub deploy key to `/home/liuqi/.ssh/haochen`
 - Configured SSH to use port 443 (`ssh.github.com`) since GitHub port 22 is blocked on HK
 - `git clone git@haochen:Haochen-Luo/synth.git` → verified at commit `c86a0c5`
+- **Docker**: `isaac-sim:4.5.0` container (`vlm-jupyter`) running with GPU 0, `nvoptix.bin` copied, ffmpeg installed.
+- **Data**: Extracted 122 `full_scenarios_extracted` scenes locally on HK from Google Drive archives.
+- **VLM Server**: Created `vlm` conda env with `vllm==0.14.0` (aligned with SG) and generated `serve_vlm.sh` for GPU 1.
+- **Verification**: Successful "dry-run" using `probe_sky.py` via Docker exec verified Isaac Sim runs headless and finds the stage without errors.
 
 **Code sync workflow:**
 ```
 SG: edit → git push
 HK: git pull                    # instant, ~seconds
-```
-
-**Scene data sync:**
-```
-# One-time: rsync from SG or re-download from Google Drive on HK
-rsync -avzP --partial /home/qi/hc/synth/benchmark_zehao/full_scenarios_extracted/ \
-  hk:/home/liuqi/hc/synth/benchmark_zehao/full_scenarios_extracted/
 ```
 
 ### Latest commits summary (post-split, on synth main)
@@ -944,16 +941,11 @@ during the partial eval (45 + 16 tasks, GPU-180, before it was reclaimed):
 | `737a516` | **PUT_DOWN inventory gate**: a stray PUT_DOWN on an empty-handed `two_nav` task was falsely completing it | Prevents false-positive completions |
 | `c86a0c5` | Comment-only: documents why `inventory` is the gate (not task-type) | Prevents future "fix" of a non-bug |
 
-**Status: NOT yet runtime-verified** (GPU-180 reclaimed before smoke-test). First priority
-on HK: set up Isaac Docker container → smoke-test one L2 + one L3 task → verify the
-arrival-rescue fix is correct before a full eval.
+**Status: Dry-run successful, pending full pipeline test**. The Isaac Sim container operates successfully, but the interaction loop with VLM needs a final smoke test.
 
-### Remaining (HK deployment)
+### Next Steps
 
-1. **Isaac Sim Docker**: Pull `nvcr.io/nvidia/isaac-sim:4.5.0`, bind-mount synth repo,
-   configure GPU access. Adapt from `start_jupyter.sh`.
-2. **Scene data**: Download `full_scenarios_extracted/` (122 scenes) — either rsync from
-   SG (if available) or re-download from Google Drive on HK.
-3. **VLM server**: Set up vLLM with Qwen3-VL model on one A100 for eval.
-4. **Smoke-test**: Run one task end-to-end to verify the fix commits.
-5. **Full eval**: 333-task benchmark run.
+1. **VLM Model**: Launch `serve_vlm.sh` on HK (will auto-download `Qwen3-VL-30B-A3B-Thinking-FP8` if missing).
+2. **China Node**: (Parallel) `Qwen3-8B` downloading via `hf download` in tmux session `qwen_download`.
+3. **Smoke-test**: Run one task end-to-end to verify the fix commits.
+4. **Full eval**: 333-task benchmark run.
