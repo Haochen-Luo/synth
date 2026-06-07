@@ -968,7 +968,6 @@ During the parallel run, visual inspection of 140 tasks revealed ~7% contain **p
 ### Next Steps
 
 1. **Wait for completion**: The 333-task parallel benchmark is currently running. Expected completion: ~24 hours.
-2. **China Node**: `Qwen3-8B` downloading via `hf download` in tmux session `qwen_download`. Serve it once complete to compare 8B vs 30B.
 
 > NOTE (superseded 2026-06-08): step 1 above was interrupted — the run was paused
 > at 224/333 and resumed under the wall-clip fix into a separate folder. See the
