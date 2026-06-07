@@ -78,6 +78,10 @@ RENDER_FILLER = os.environ.get("RENDER_FILLER", "0") == "1"
 # speedup that skips filler on off-screen steps — only do this if visual
 # continuity isn't needed and you've confirmed the artifacts don't recur.
 VISIBILITY_GATE = os.environ.get("VISIBILITY_GATE", "0") == "1"
+# Diagnostic: log every MOVE_FORWARD sweep result (hit/dist/path per height) to
+# investigate collider registration / wall clipping. Off by default = zero impact
+# on normal eval runs.
+SWEEP_DEBUG = os.environ.get("SWEEP_DEBUG", "0") == "1"
 
 # ── Load task config ──
 task_id = os.environ.get("TASK_ID", "")
@@ -124,6 +128,36 @@ LOG = os.path.join(RUN_DIR, "run.log")
 def log(msg):
     with open(LOG, "a") as f: f.write(msg + "\n")
     print(msg)
+
+# ── Collision-ignore whitelist (PRECISE, not substring) ──
+# A PhysX sweep/raycast hit on one of these is NOT a navigation obstacle:
+#   - structural floor meshes (the sweep sphere bottom dips below floor-top and
+#     PhysX reports a dist=0 overlap that is not a real wall),
+#   - soft floor-level textiles that drape and should never block navigation.
+# IMPORTANT: this MUST be exact/token matching, NOT substring `in`. The old
+# substring whitelist ("floor","ground","rug","blanket","towel","mat") matched
+# FloorLampFactory (contains "floor") and MattressFactory (contains "mat"),
+# making a floor lamp and a mattress "walkable" — the agent then walked straight
+# through the lamp (and, via the dist=0 closest-hit occluding the wall behind it,
+# straight through the wall too). See docs/bw_samples_analysis/ANALYSIS.md.
+WALKABLE_FACTORIES = frozenset({
+    "rugfactory", "blanketfactory", "towelfactory",
+    "comforterfactory", "boxcomforterfactory",
+})
+def is_walkable_hit(hit_path):
+    """True if a PhysX hit path is a non-obstacle (floor / soft textile).
+    Matches on the prim's basename, not arbitrary substrings."""
+    if not hit_path:
+        return False
+    seg = hit_path.rstrip("/").split("/")[-1].lower()
+    # structural floor: '<room>_<i>_<j>_floor' (NOT _wall/_exterior/_ceiling/skirtingboard)
+    if seg.endswith("_floor") or seg in ("floor", "ground"):
+        return True
+    # factory: pull the '<name>factory' token from e.g. obj_123_rugfactory_spawn_asset_0
+    m = re.search(r'([a-z]+factory)', seg)
+    if m and m.group(1) in WALKABLE_FACTORIES:
+        return True
+    return False
 
 log(f"[BENCH] Task={tid} Level={level} Scene={task['scene_dir']}")
 log(f"[BENCH] Instruction: {task['instruction']}")
@@ -927,10 +961,8 @@ try:
                                 carb.Float3(dx, dy, 0), dist + 0.15)
                             if h["hit"]:
                                 wp = (h.get("rigidBody") or
-                                      h.get("collider") or "").lower()
-                                if any(w in wp for w in
-                                       ("floor","ground","rug","blanket",
-                                        "towel","mat")):
+                                      h.get("collider") or "")
+                                if is_walkable_hit(wp):
                                     continue
                                 return max(float(h.get("distance", 0)) - 0.15, 0.0)
                     except Exception:
@@ -1170,7 +1202,6 @@ try:
     sim_app.update()
     query_if = omni.physx.get_physx_scene_query_interface()
 
-    WALKABLE_SPAWN = ("floor", "ground", "rug", "blanket", "towel", "mat")
     _8DIRS = [(1,0),(-1,0),(0,1),(0,-1),
               (0.707,0.707),(-0.707,0.707),(0.707,-0.707),(-0.707,-0.707)]
 
@@ -1184,8 +1215,8 @@ try:
                     0.40, carb.Float3(cx, cy, sz),
                     carb.Float3(dx, dy, 0), 0.05)
                 if h["hit"]:
-                    wp = (h.get("rigidBody") or h.get("collider") or "").lower()
-                    if any(w in wp for w in WALKABLE_SPAWN):
+                    wp = (h.get("rigidBody") or h.get("collider") or "")
+                    if is_walkable_hit(wp):
                         continue
                     d = float(h.get("distance", 0))
                     if d < 0.01:
@@ -1633,19 +1664,20 @@ try:
                     break
                 hit = query_if.sweep_sphere_closest(0.40, carb.Float3(ax,ay,sz),
                                                      carb.Float3(dx,dy,0), STEP_DIST)
+                if SWEEP_DEBUG:
+                    _hp = (hit.get("rigidBody") or hit.get("collider") or "")
+                    log(f"[SWEEP] step={step} pos=({ax:.3f},{ay:.3f}) dir=({dx:+.2f},{dy:+.2f}) "
+                        f"z={sz} hit={hit['hit']} dist={hit.get('distance',-1):.4f} "
+                        f"path={_hp.split('/')[-1][:32]}")
                 if not hit["hit"]:
                     continue
-                hit_path = (hit.get("rigidBody") or hit.get("collider") or "").lower()
-                # Ignore thin floor-level objects — the sweep sphere bottom
-                # (z=sz-0.40) sits below the floor top, so PhysX reports an
-                # overlap at distance 0. These are not real obstacles:
-                #   floor/ground  — floor meshes
-                #   rug           — RugFactory (flat textile, ~1cm thick)
-                #   blanket/towel — draped textiles that may touch the floor
-                WALKABLE = ("floor", "ground", "rug", "blanket", "towel", "mat")
-                if any(w in hit_path for w in WALKABLE):
+                hit_path = (hit.get("rigidBody") or hit.get("collider") or "")
+                # Skip non-obstacle hits (floor meshes + soft draped textiles).
+                # Precise basename match — see is_walkable_hit (NOT substring,
+                # which used to let FloorLamp/Mattress pass as "walkable").
+                if is_walkable_hit(hit_path):
                     continue
-                hit_info = (sz, hit_path, hit.get("distance", -1))
+                hit_info = (sz, hit_path.lower(), hit.get("distance", -1))
                 blocked = True; break
             if not blocked:
                 ax += STEP_DIST * dx; ay += STEP_DIST * dy
@@ -1658,6 +1690,12 @@ try:
                     f"hit={hit_info[1].split('/')[-1][:60]}"
                 )
                 action_fb = "MOVE_FORWARD blocked by an obstacle. Try turning or choosing another route."
+                # dist==0 means the agent sphere already OVERLAPS this collider
+                # (it is partially inside it) — a clip/embedding warning sign worth
+                # surfacing for later debugging (see ANALYSIS.md wall-clip case).
+                if hit_info[2] <= 1e-6:
+                    log(f"[CLIP?] step={step} agent=({ax:.2f},{ay:.2f}) overlaps "
+                        f"{hit_info[1].split('/')[-1][:48]} (dist=0) — possible embedding")
                 record_collision_event({
                     "step": step,
                     "type": "static_obstacle",
