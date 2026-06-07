@@ -15,7 +15,9 @@ cd "$WORKDIR"
 
 NW=${1:-4}
 BATCH=${2:-eval_30B_333_remaining_fixed}
-COMPLETED_FROM="eval_30B_333_v2"
+# COMPLETED_FROM: comma-separated batch dir(s) whose results.json count as "done"
+# (so they are skipped). Defaults to the original buggy run.
+COMPLETED_FROM="${3:-eval_30B_333_v2}"
 TASKS_JSON="$WORKDIR/benchmark_tasks_generated_validated.json"
 VLLM_URL="http://localhost:8300/v1/chat/completions"
 ISAAC_IMAGE="nvcr.io/nvidia/isaac-sim:4.5.0"
