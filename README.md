@@ -943,9 +943,29 @@ during the partial eval (45 + 16 tasks, GPU-180, before it was reclaimed):
 
 **Status: Dry-run successful, pending full pipeline test**. The Isaac Sim container operates successfully, but the interaction loop with VLM needs a final smoke test.
 
+## Session 2026-06-07: Parallel Execution & Anomaly Analysis
+
+### Parallel Benchmark Scaling
+- Upgraded the HK evaluation from sequential to **5-worker parallel execution** (`parallel_launch.sh` / `parallel_split.py`). 
+- 5 `isaac-sim` containers run concurrently on GPU 0.
+- `docker run` uses `--network host` to allow all containers to reach the vLLM server at `localhost:8300` on GPU 1, fixing `Connection refused` errors.
+- Added `os.umask(0o000)` inside `bench_runner.py` to prevent `root`-created Docker output files from locking out the host user.
+- **Throughput**: Scaled from ~4.5 tasks/hour to ~9.4 tasks/hour. The bottleneck shifted from GPU 0 idle time to GPU 1 (VLM) batching saturation.
+
+### 30B Model Anomaly Analysis (Camera Clipping)
+During the parallel run, visual inspection of 140 tasks revealed ~7% contain **pure black** or **pure white (overexposed)** frames in `vlm_nav_frames_fpv`.
+
+**The Problem (Camera Clipping):**
+- Pure black frames occur when the agent's camera clips inside solid geometry (e.g., cabinets, walls).
+- Pure white frames occur when the camera clips directly into a bright light source (e.g., vanity lamps).
+- **Why this happens:** The collision capsule has a radius of `0.40m`, and the physical raycast sweep happens at `z=0.5m` and `z=1.0m`. However, the FPV camera is positioned at `z=1.6m` (Eye Height) with a `+0.01m` forward offset. If the agent hits an overhanging object (like a wall cabinet) that exists at `z=1.6m` but not at `0.5m-1.0m`, or if the wall is uneven, the camera physically breaches the mesh surface.
+
+**Conclusion & Impact:**
+- This is **not a benchmark bug**, but a standard 3D camera clipping phenomenon caused by the agent driving itself hard against an obstacle. 
+- It does **not** cause false evaluations. The agent receives textual feedback (`MOVE_FORWARD blocked by an obstacle`) when this happens. A capable agent should use this feedback to turn around and escape the collision loop.
+- The 30B model consistently fails to escape these loops (84% of tasks exhaust the 50 VLM call budget), highlighting a severe deficiency in spatial reasoning and recovery, particularly in L2 tasks (back-spawn) where SR is currently ~4.3%.
+
 ### Next Steps
 
-1. **VLM Model**: Launch `serve_vlm.sh` on HK (will auto-download `Qwen3-VL-30B-A3B-Thinking-FP8` if missing).
-2. **China Node**: (Parallel) `Qwen3-8B` downloading via `hf download` in tmux session `qwen_download`.
-3. **Smoke-test**: Run one task end-to-end to verify the fix commits.
-4. **Full eval**: 333-task benchmark run.
+1. **Wait for completion**: The 333-task parallel benchmark is currently running. Expected completion: ~24 hours.
+2. **China Node**: `Qwen3-8B` downloading via `hf download` in tmux session `qwen_download`. Serve it once complete to compare 8B vs 30B.
