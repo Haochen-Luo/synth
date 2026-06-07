@@ -978,9 +978,11 @@ During the parallel run, visual inspection of 140 tasks revealed ~7% contain **p
 ## Session 2026-06-08: Wall-clip ROOT CAUSE found + dataset SPLIT INTO TWO BATCHES
 
 > ⚠️⚠️ READ THIS BEFORE TOUCHING ANY 30B RESULTS ⚠️⚠️
-> The eval results now live in **TWO separate folders with DIFFERENT collision
-> physics**. They are NOT directly comparable and must NOT be merged blindly.
-> See "Dataset state" below.
+> The eval results now live in **THREE separate folders**: one BUGGY baseline
+> (`eval_30B_333_v2`, 224) and two FIXED folders whose union is the real dataset
+> (`eval_30B_333_remaining_fixed` 109 + `eval_30B_333_rerun_fixed` 224 = 333).
+> The buggy baseline and the fixed folders use DIFFERENT collision physics and
+> must NOT be merged. See "Dataset state — THREE folders" below.
 
 ### The 2026-06-07 "camera clipping, not a benchmark bug" conclusion was WRONG
 The previous session blamed the black/white FPV frames on camera-height clipping
@@ -1044,34 +1046,56 @@ Related commits:
 - `repro_badcase.sh [TASK_ID]`: re-runs ONE task with SWEEP_DEBUG into an
   isolated batch dir `results/_repro_sweep_debug/` (never touches eval stats).
 
-### ⭐ Dataset state — TWO batches, DO NOT CONFUSE THEM ⭐
-The original parallel run was **paused partway** (224/333 done) and the
-remaining tasks were resumed with the FIXED code into a SEPARATE folder:
+### ⭐ Dataset state — THREE folders, DO NOT CONFUSE THEM ⭐
+The original parallel run was **paused partway** (224/333 done) under the buggy
+physics. Recovery plan: run *everything* again under the FIXED code, but reuse
+the 224-already-done split point so we don't redo work twice. This produces
+**three** result folders:
 
-| Folder | Tasks | Code / physics | Meaning |
+| Folder | Tasks | Code / physics | Role |
 |---|---|---|---|
-| `results/eval_30B_333_v2/` | **224** (done before pause) | OLD code, **buggy** WALKABLE substring physics (agents could clip through lamps/mattresses/walls) | The pre-fix run. Trajectories/SR here are contaminated by the clip bug. |
-| `results/eval_30B_333_remaining_fixed/` | **109** (the rest) | NEW code (`03cadbe`+), **fixed** physics | Resume of the remaining tasks with correct collision. |
+| `results/eval_30B_333_v2/` | **224** | OLD code, **BUGGY** WALKABLE-substring physics (agents clipped through lamps/mattresses/walls) | **Baseline only.** Pre-fix run, kept untouched. SR/trajectories here are contaminated. |
+| `results/eval_30B_333_remaining_fixed/` | **109** | NEW code (`03cadbe`+), **FIXED** physics | Batch-1: the tasks the original run never reached. Running now. |
+| `results/eval_30B_333_rerun_fixed/` | **224** | NEW code, **FIXED** physics | Batch-2: re-run of the tasks the buggy run did. Auto-starts after batch-1 (see watcher). |
 
-- Split basis: `parallel_split.py --completed-from eval_30B_333_v2` → the 109
-  tasks with no `results.json` in `eval_30B_333_v2`.
-- Resume launched with **4 workers** (5 showed no 5× speedup; GPU0 render + GPU1
-  VLM contention) via `parallel_launch_remaining.sh 4`.
-- **These two folders use different collision physics. To get a clean,
-  self-consistent 333-task dataset you should eventually RE-RUN ALL 333 with the
-  fixed code into one fresh folder.** The current split is a pragmatic
-  "don't-waste-the-224-already-done" measure, NOT a clean dataset.
-- Comparing `eval_30B_333_v2` vs `eval_30B_333_remaining_fixed` on the SAME task
-  ids (none overlap by construction) is not possible; but a full v1(buggy) vs
-  v2(fixed) re-run would directly quantify the clip bug's effect on SR — a
-  worthwhile experiment.
+**The clean, self-consistent fixed dataset = `remaining_fixed` (109) +
+`rerun_fixed` (224) = all 333 tasks under fixed physics.** Keep them in two
+folders or merge them — either way that union is the dataset to report.
+`eval_30B_333_v2` is **NOT** part of it; it is only the buggy baseline for a
+v1(buggy)-vs-v2(fixed) comparison that quantifies the clip bug's effect on SR.
+
+- Why split, not one fresh 333 run: avoids re-rendering the 109 already done
+  under the fix. By construction the two fixed folders never overlap
+  (batch-2 uses `--completed-from eval_30B_333_remaining_fixed`).
+- All fixed runs use **4 workers** (5 showed no 5× speedup; GPU0 render + GPU1
+  VLM contention).
+
+### Automation: `watch_then_rerun.sh`
+A watcher polls batch-1 until it reaches its target (= 333 − orig_done = 109),
+then auto-launches batch-2 into `eval_30B_333_rerun_fixed`. Launched detached on
+HK; log at `/home/liuqi/hc/watch_rerun.log`.
 
 ### How to relaunch / monitor (HK)
 ```bash
 ssh hk
-# resume remaining into the fixed folder (4 workers):
-cd /home/liuqi/hc/synth/benchmark_zehao && bash parallel_launch_remaining.sh 4
-# monitor:
-tail -f /home/liuqi/hc/eval_remaining_worker_*.log
+cd /home/liuqi/hc/synth/benchmark_zehao
+
+# (already running) batch-1: remaining tasks, fixed code, 4 workers
+bash parallel_launch_remaining.sh 4 eval_30B_333_remaining_fixed eval_30B_333_v2
+
+# (already running, detached) auto-start batch-2 when batch-1 finishes
+nohup bash watch_then_rerun.sh > /home/liuqi/hc/watch_rerun.log 2>&1 &
+
+# manual batch-2 (if not using the watcher): re-run the orig-done tasks, fixed,
+# skipping whatever batch-1 already did, into the third folder
+bash parallel_launch_remaining.sh 4 eval_30B_333_rerun_fixed eval_30B_333_remaining_fixed
+
+# monitor
+tail -f /home/liuqi/hc/eval_remaining_worker_*.log    # workers
+tail -f /home/liuqi/hc/watch_rerun.log                # watcher / batch-2 trigger
 tmux ls            # worker_0..3 ; NEVER kill vlm_serve (the vLLM server)
 ```
+
+> Launcher args: `parallel_launch_remaining.sh <N_WORKERS> <OUTPUT_BATCH> <SKIP_FROM_BATCH(es)>`.
+> `<SKIP_FROM>` accepts a comma-separated list, so a final clean-up pass could use
+> `eval_30B_333_remaining_fixed,eval_30B_333_rerun_fixed` to fill any stragglers.
