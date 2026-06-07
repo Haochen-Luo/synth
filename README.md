@@ -969,3 +969,110 @@ During the parallel run, visual inspection of 140 tasks revealed ~7% contain **p
 
 1. **Wait for completion**: The 333-task parallel benchmark is currently running. Expected completion: ~24 hours.
 2. **China Node**: `Qwen3-8B` downloading via `hf download` in tmux session `qwen_download`. Serve it once complete to compare 8B vs 30B.
+
+> NOTE (superseded 2026-06-08): step 1 above was interrupted — the run was paused
+> at 224/333 and resumed under the wall-clip fix into a separate folder. See the
+> 2026-06-08 session below for the authoritative current state.
+
+---
+
+## Session 2026-06-08: Wall-clip ROOT CAUSE found + dataset SPLIT INTO TWO BATCHES
+
+> ⚠️⚠️ READ THIS BEFORE TOUCHING ANY 30B RESULTS ⚠️⚠️
+> The eval results now live in **TWO separate folders with DIFFERENT collision
+> physics**. They are NOT directly comparable and must NOT be merged blindly.
+> See "Dataset state" below.
+
+### The 2026-06-07 "camera clipping, not a benchmark bug" conclusion was WRONG
+The previous session blamed the black/white FPV frames on camera-height clipping
+(camera at z=1.6 above the z=0.5/1.0 collision sweeps) and declared it "not a
+benchmark bug". **That was incorrect.** A multi-round investigation (Isaac
+geometry probes + deterministic replay of the exact failing poses) found the
+true root cause. Full evidence + every wrong hypothesis along the way:
+`benchmark_zehao/docs/bw_samples_analysis/ANALYSIS.md`.
+
+### TRUE root cause — WALKABLE substring false-match (a real benchmark bug)
+The collision-ignore list used **substring** matching:
+```python
+WALKABLE = ("floor","ground","rug","blanket","towel","mat")
+if any(w in hit_path for w in WALKABLE): continue   # BUG
+```
+- `"floor"` is a substring of **`FloorLampFactory`** → a floor lamp was treated
+  as walkable.
+- `"mat"` is a substring of **`MattressFactory`** → a mattress was treated as
+  walkable.
+So the agent walked straight THROUGH floor lamps and mattresses. Worse:
+`sweep_sphere_closest` returns only the *closest* hit, and once the agent sphere
+overlapped the lamp (dist=0), that degenerate lamp hit **occluded the wall right
+behind it** — so the wall was never reported either. Net effect: the agent's
+center physically walked through the lamp AND the wall (case12-L4: center reached
+y=0.021, which is 0.12 m past the wall face at y=0.14), the camera followed it
+into the wall → pure-black/white FPV. The 33 logged "collisions" were all
+dist=0.000 degenerate hits recorded only AFTER it was already inside the wall.
+
+This is a genuine benchmark bug: it changes the agent's trajectory, collision
+counts, and success rate (e.g. an agent can cut through a mattress to reach a
+goal it should have had to walk around).
+
+### The fix (commit `03cadbe`)
+Replaced substring matching with a precise `is_walkable_hit(path)` that matches
+on the prim **basename**:
+- structural floor: basename endswith `_floor` or == `floor`/`ground`
+  (NOT `_wall`/`_exterior`/`_ceiling`/`skirtingboard`);
+- soft textiles only: exact factory whitelist
+  `{Rug, Blanket, Towel, Comforter, BoxComforter}Factory`, derived from the
+  asset author's `Puppeteer/native_capability_manifest.md` (verified: all 73
+  Factory types that appear across the 122 scenes are covered; these 5 are the
+  only floor-level soft textiles).
+Now FloorLamp / Mattress / all furniture correctly count as obstacles.
+Deterministic verification: replaying the original crossing poses, the OLD rule
+PASSED steps 55-59 (walked through) while the NEW rule BLOCKS them (agent stops
+at the lamp, y=0.517) → the wall-through can no longer happen.
+
+Related commits:
+- `a046e72` — EYE_H camera-height sweep. **DEFENSIVE ONLY, NOT the root cause.**
+  (Its git message says so explicitly. Kept as cheap extra coverage against
+  genuine overhanging-geometry clips; do not mistake it for the fix.)
+- `03cadbe` — the real fix (WALKABLE precise whitelist) + `[CLIP?]` dist=0
+  embedding warning log + `SWEEP_DEBUG=1` env flag (off by default).
+- `77a8b89` — `parallel_launch_remaining.sh` + `parallel_split.py --completed-from`.
+
+### Diagnostic tooling added
+- `bench_runner.py`: `SWEEP_DEBUG=1` env → logs every MOVE_FORWARD sweep
+  (hit/dist/path per height). Off by default → zero impact on normal eval runs.
+- `bench_runner.py`: `[CLIP?]` line logged whenever a blocking hit has dist≈0
+  (agent sphere already embedded in a collider — early clip warning).
+- `repro_badcase.sh [TASK_ID]`: re-runs ONE task with SWEEP_DEBUG into an
+  isolated batch dir `results/_repro_sweep_debug/` (never touches eval stats).
+
+### ⭐ Dataset state — TWO batches, DO NOT CONFUSE THEM ⭐
+The original parallel run was **paused partway** (224/333 done) and the
+remaining tasks were resumed with the FIXED code into a SEPARATE folder:
+
+| Folder | Tasks | Code / physics | Meaning |
+|---|---|---|---|
+| `results/eval_30B_333_v2/` | **224** (done before pause) | OLD code, **buggy** WALKABLE substring physics (agents could clip through lamps/mattresses/walls) | The pre-fix run. Trajectories/SR here are contaminated by the clip bug. |
+| `results/eval_30B_333_remaining_fixed/` | **109** (the rest) | NEW code (`03cadbe`+), **fixed** physics | Resume of the remaining tasks with correct collision. |
+
+- Split basis: `parallel_split.py --completed-from eval_30B_333_v2` → the 109
+  tasks with no `results.json` in `eval_30B_333_v2`.
+- Resume launched with **4 workers** (5 showed no 5× speedup; GPU0 render + GPU1
+  VLM contention) via `parallel_launch_remaining.sh 4`.
+- **These two folders use different collision physics. To get a clean,
+  self-consistent 333-task dataset you should eventually RE-RUN ALL 333 with the
+  fixed code into one fresh folder.** The current split is a pragmatic
+  "don't-waste-the-224-already-done" measure, NOT a clean dataset.
+- Comparing `eval_30B_333_v2` vs `eval_30B_333_remaining_fixed` on the SAME task
+  ids (none overlap by construction) is not possible; but a full v1(buggy) vs
+  v2(fixed) re-run would directly quantify the clip bug's effect on SR — a
+  worthwhile experiment.
+
+### How to relaunch / monitor (HK)
+```bash
+ssh hk
+# resume remaining into the fixed folder (4 workers):
+cd /home/liuqi/hc/synth/benchmark_zehao && bash parallel_launch_remaining.sh 4
+# monitor:
+tail -f /home/liuqi/hc/eval_remaining_worker_*.log
+tmux ls            # worker_0..3 ; NEVER kill vlm_serve (the vLLM server)
+```
