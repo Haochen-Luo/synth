@@ -1,0 +1,61 @@
+
+### case061_official_solo_run-L2_20260607_013621  [black_longstuck_lowcollision]
+  instruction: Go to the large plant.
+  success=False goalDist=6.529 steps=150 vlm_calls=45 timeout=True
+  collisions=23 (static=22)
+  anom_frames=101/150
+    seg 0049-0149 (len 101) ['BLACK']
+
+### case069_official_solo_run-L4_20260607_021617  [black_birdview_clip_userflag]
+  instruction: Pick up the book stack and bring it to the large plant.
+  success=False goalDist=10.224 steps=150 vlm_calls=48 timeout=True
+  collisions=19 (static=6)
+  anom_frames=56/150
+    seg 0034-0052 (len 19) ['BLACK']
+    seg 0113-0149 (len 37) ['BLACK']
+
+### case03_scene_gen_v5_test_input_case2-L2_20260607_001505  [white_from_spawn_filllight]
+  instruction: Go to the desk.
+  success=False goalDist=3.038 steps=140 vlm_calls=50 timeout=False
+  collisions=46 (static=28)
+  anom_frames=10/141
+    seg 0000-0006 (len 7) ['WHITE']
+    seg 0011-0011 (len 1) ['WHITE']
+    seg 0025-0026 (len 2) ['WHITE']
+
+### case37_mask_dining_04_gallery_table-L4_20260607_055854  [blackwhite_mixed_severe]
+  instruction: First go to the large plant, then go to the cabinet.
+  success=False goalDist=9.191 steps=138 vlm_calls=50 timeout=False
+  collisions=39 (static=39)
+  anom_frames=116/139
+    seg 0023-0138 (len 116) ['BLACK', 'WHITE']
+
+### case022_official_solo_run-L2_20260606_175822  [black_single_transient]
+  instruction: Go to the toilet.
+  success=False goalDist=3.92 steps=116 vlm_calls=50 timeout=False
+  collisions=49 (static=41)
+  anom_frames=1/117
+    seg 0015-0015 (len 1) ['BLACK']
+
+### case11_bedroom_lift-L2_20260607_033200  [white_midrun_segment]
+  instruction: Go to the large plant.
+  success=False goalDist=3.897 steps=120 vlm_calls=50 timeout=False
+  collisions=49 (static=34)
+  anom_frames=24/121
+    seg 0018-0041 (len 24) ['WHITE']
+
+### case060_official_run_dance-L2_20260606_191900  [black_segment_dance]
+  instruction: Go to the large plant.
+  success=False goalDist=6.159 steps=150 vlm_calls=49 timeout=True
+  collisions=35 (static=26)
+  anom_frames=34/150
+    seg 0109-0110 (len 2) ['BLACK']
+    seg 0116-0117 (len 2) ['BLACK']
+    seg 0120-0149 (len 30) ['BLACK']
+
+### case12_text_bedroom_04_minimal_study-L4_20260606_214457  [black_long_segment]
+  instruction: First go to the large plant, then go to the desk.
+  success=False goalDist=6.658 steps=132 vlm_calls=50 timeout=False
+  collisions=33 (static=33)
+  anom_frames=74/133
+    seg 0059-0132 (len 74) ['BLACK']

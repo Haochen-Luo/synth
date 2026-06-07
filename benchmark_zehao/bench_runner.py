@@ -919,7 +919,9 @@ try:
                     visual clipping through thin geometry (window frames)
                     when runner push moves the agent toward walls."""
                     try:
-                        for sz in [0.5, 1.0]:
+                        # EYE_H added: cap push travel at the camera height too,
+                        # so a runner push never drives the camera into a wall.
+                        for sz in [0.5, 1.0, EYE_H]:
                             h = query_if.sweep_sphere_closest(
                                 0.40, carb.Float3(ox, oy, sz),
                                 carb.Float3(dx, dy, 0), dist + 0.15)
@@ -1174,7 +1176,9 @@ try:
 
     def _check_spawn_clear(cx, cy):
         """Return (is_clear, worst_hit_path, worst_dist) for a candidate spawn."""
-        for sz in [0.5, 1.0]:
+        # EYE_H added: also reject spawns where the camera height is embedded in
+        # geometry (e.g. spawn facing a wall corner -> overexposed/black frame 0).
+        for sz in [0.5, 1.0, EYE_H]:
             for dx, dy in _8DIRS:
                 h = query_if.sweep_sphere_closest(
                     0.40, carb.Float3(cx, cy, sz),
@@ -1618,7 +1622,13 @@ try:
                 })
                 log(f"[BENCH] Step {step}: DYNAMIC COLLISION blocked "
                     f"{dynamic_hit['runner']} dist={dynamic_hit['distance_m']:.3f}m")
-            for sz in [0.5, 1.0]:
+            # z=EYE_H added so the FPV camera height is collision-checked:
+            # the body sweep at 0.5/1.0 (sphere top ~1.4m) leaves a 1.4-1.58m
+            # blind spot, so chest-high / overhanging geometry (wall cabinets,
+            # uneven walls) lets the camera (z=1.58) clip through -> black/white
+            # FPV frames with NO 'blocked' feedback to the agent. Checking EYE_H
+            # both prevents the clip and surfaces the obstacle as a real block.
+            for sz in [0.5, 1.0, EYE_H]:
                 if blocked:
                     break
                 hit = query_if.sweep_sphere_closest(0.40, carb.Float3(ax,ay,sz),
