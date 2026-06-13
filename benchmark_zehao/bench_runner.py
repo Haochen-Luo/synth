@@ -164,6 +164,130 @@ def is_walkable_hit(hit_path):
         return True
     return False
 
+
+# ── Room-boundary helpers ──────────────────────────────────────────────────
+# Many compiled scenes are NOT closed boxes: the room footprint has openings /
+# missing walls onto an unlit "void" outside. The collision sweep correctly
+# returns NO hit there (no wall geometry to hit), so an agent that walks toward
+# the opening passes the boundary unobstructed and ends up in black space (FPV
+# all-black, a false failure). Nothing constrains the agent to stay in the room.
+# Fix: compute each room's floor polygon from the USD floor meshes and treat a
+# MOVE_FORWARD that would leave EVERY room polygon as blocked (a soft boundary),
+# exactly like hitting a wall. Self-contained (mirrors validate_all_spawns'
+# find_floor_polygon / point_in_polygon_xy so the runner needs no extra import).
+_ROOM_TOKENS = ("living_room", "living-room", "dining_room", "dining-room",
+                "bedroom", "bathroom", "kitchen", "hallway")
+ROOM_BOUNDARY = os.environ.get("ROOM_BOUNDARY", "1") == "1"
+# Outward margin (m): allow the agent this far past the polygon edge before
+# blocking, so a spawn/target validated right at the floor edge isn't trapped.
+ROOM_BOUNDARY_MARGIN = float(os.environ.get("ROOM_BOUNDARY_MARGIN", "0.5"))
+
+
+def _convex_hull_xy(pts):
+    """Andrew's monotone-chain convex hull of [x,y] points."""
+    pts = sorted(set((round(p[0], 4), round(p[1], 4)) for p in pts))
+    if len(pts) < 3:
+        return [list(p) for p in pts]
+    def cross(o, a, b):
+        return (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0])
+    lower = []
+    for p in pts:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    upper = []
+    for p in reversed(pts):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+    return [list(p) for p in (lower[:-1] + upper[:-1])]
+
+
+def _point_in_polygon_xy(px, py, poly):
+    """Ray-casting point-in-polygon (matches validate_all_spawns)."""
+    if len(poly) < 3:
+        return True
+    inside = False
+    j = len(poly) - 1
+    for i in range(len(poly)):
+        xi, yi = float(poly[i][0]), float(poly[i][1])
+        xj, yj = float(poly[j][0]), float(poly[j][1])
+        if (yi > py) != (yj > py):
+            xc = (xj - xi) * (py - yi) / (yj - yi) + xi
+            if px < xc:
+                inside = not inside
+        j = i
+    return inside
+
+
+def compute_room_polygons(stage):
+    """Return a list of per-room floor convex-hull polygons (world XY).
+    Empty list if no floor meshes found (caller should then disable the gate)."""
+    from pxr import UsdGeom, Gf
+    rooms = {}
+    for prim in stage.Traverse():
+        nl = prim.GetName().lower()
+        pl = str(prim.GetPath()).lower()
+        if "floor" not in nl or not any(t in pl for t in _ROOM_TOKENS):
+            continue
+        if not prim.IsActive():
+            continue
+        room_key = None
+        for part in prim.GetPath().pathString.split("/"):
+            p = part.lower()
+            if "floor" in p and any(t in p for t in _ROOM_TOKENS):
+                room_key = p.replace("_floor", "")
+                break
+        if not room_key:
+            continue
+        mesh = UsdGeom.Mesh(prim)
+        pa = mesh.GetPointsAttr() if mesh else None
+        if not pa or not pa.HasValue():
+            continue
+        pts = pa.Get()
+        if not pts:
+            continue
+        wxf = UsdGeom.XformCache().GetLocalToWorldTransform(prim)
+        bucket = rooms.setdefault(room_key, [])
+        for p in pts:
+            wp = wxf.Transform(Gf.Vec3d(float(p[0]), float(p[1]), float(p[2])))
+            bucket.append([float(wp[0]), float(wp[1])])
+    polys = []
+    for xy in rooms.values():
+        if len(xy) >= 3:
+            h = _convex_hull_xy(xy)
+            if len(h) >= 3:
+                polys.append(h)
+    return polys
+
+
+def inside_any_room(px, py, polys, margin=0.0):
+    """True if (px,py) is inside any room polygon (optionally grown by margin
+    via a cheap point test against the polygon plus a margin-distance check)."""
+    if not polys:
+        return True  # no polygons -> gate disabled, never block
+    for poly in polys:
+        if _point_in_polygon_xy(px, py, poly):
+            return True
+    if margin <= 0:
+        return False
+    # Outside every polygon: allow if within `margin` of any edge.
+    for poly in polys:
+        n = len(poly)
+        for i in range(n):
+            ax_, ay_ = poly[i]
+            bx_, by_ = poly[(i + 1) % n]
+            dx, dy = bx_ - ax_, by_ - ay_
+            seg2 = dx*dx + dy*dy
+            if seg2 <= 1e-9:
+                continue
+            t = max(0.0, min(1.0, ((px-ax_)*dx + (py-ay_)*dy) / seg2))
+            cx, cy = ax_ + t*dx, ay_ + t*dy
+            if (px-cx)**2 + (py-cy)**2 <= margin*margin:
+                return True
+    return False
+
+
 log(f"[BENCH] Task={tid} Level={level} Scene={task['scene_dir']}")
 log(f"[BENCH] Instruction: {task['instruction']}")
 log(f"[BENCH] Model: {MODEL_NAME}")
@@ -1198,6 +1322,28 @@ try:
     plan_queue = []; plan_history = []   # multi-action planning state
     cur_planned = []; cur_executed = []  # current plan tracking
 
+    # Room-boundary gate: compute floor polygons once. If extraction fails (no
+    # floor meshes) or the spawn somehow lands outside them, disable the gate so
+    # we never trap a legitimately-placed agent. The spawn was already validated
+    # in-room, so a spawn falling outside the polygons means our extraction is
+    # wrong, not the spawn — fail open.
+    room_polys = []
+    if ROOM_BOUNDARY:
+        try:
+            room_polys = compute_room_polygons(stage)
+            if room_polys and not inside_any_room(ax, ay, room_polys, ROOM_BOUNDARY_MARGIN):
+                log(f"[BENCH] room-boundary gate DISABLED: spawn ({ax:.2f},{ay:.2f}) "
+                    f"outside extracted polygons ({len(room_polys)} rooms) — failing open")
+                room_polys = []
+            elif room_polys:
+                log(f"[BENCH] room-boundary gate ON: {len(room_polys)} room polygon(s), "
+                    f"margin={ROOM_BOUNDARY_MARGIN}m")
+            else:
+                log("[BENCH] room-boundary gate OFF: no floor polygons extracted")
+        except Exception as e:
+            log(f"[BENCH] room-boundary gate OFF (extract failed): {e}")
+            room_polys = []
+
     log(f"[BENCH] Starting nav loop: start=({ax},{ay}) yaw={ayaw}")
 
     # ── Spawn nudge: ensure agent doesn't overlap static obstacles ──
@@ -1685,6 +1831,15 @@ try:
                     continue
                 hit_info = (sz, hit_path.lower(), hit.get("distance", -1))
                 blocked = True; break
+            # Soft room boundary: the collision sweep can't stop a move toward a
+            # missing-wall opening (no geometry to hit), so the agent would walk
+            # into the unlit void outside the room. Block such a move as if it hit
+            # a wall, keeping the agent inside the room footprint.
+            if not blocked and room_polys:
+                nx_, ny_ = ax + STEP_DIST * dx, ay + STEP_DIST * dy
+                if not inside_any_room(nx_, ny_, room_polys, ROOM_BOUNDARY_MARGIN):
+                    blocked = True
+                    hit_info = (EYE_H, "room_boundary", 0.0)
             if not blocked:
                 ax += STEP_DIST * dx; ay += STEP_DIST * dy
             elif hit_info:
