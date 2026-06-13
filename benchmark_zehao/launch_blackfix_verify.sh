@@ -60,6 +60,7 @@ for w in $(seq 0 $((NW-1))); do
     -v /home/liuqi/hc/synth:/home/liuqi/hc/synth \
     "$ISAAC_IMAGE" \
     -c "sleep infinity"
+  docker exec "$NAME" mkdir -p /usr/share/nvidia 2>/dev/null || true
   docker cp "$NVOPTIX_HOST" "$NAME:/usr/share/nvidia/nvoptix.bin" 2>/dev/null || true
   docker exec "$NAME" bash -c "apt-get update -qq && apt-get install -y -qq ffmpeg > /dev/null 2>&1" &
 done
