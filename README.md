@@ -1208,10 +1208,28 @@ the original 1frame run silently lost 46 tasks (287/333 on disk; "328" = tasks t
 Removed the 5 dead bench containers → root back to 17 %. Root fix (not yet done): migrate
 docker data-root to `/home` (1.5 T). See memory `project_synth_hk_docker_rootdisk`.
 
+### Acceptance (one-shot)
+After the overnight run, accept the fixes with a single command (login-node, no GPU):
+```bash
+ssh hk
+cat /home/liuqi/overnight.log          # progress; look for both "BATCH ... done"
+cd /home/liuqi/hc/synth/benchmark_zehao
+source ~/miniconda3/etc/profile.d/conda.sh && conda activate vlm
+python verify_blackfix.py              # per-task OLD vs NEW black% + verdict
+```
+`verify_blackfix.py` compares each of the 10 flagged tasks OLD (`eval_30B_333_rerun_fixed`)
+vs NEW (`eval_30B_blackfix_verify`) and prints a verdict:
+- **CAMERA** tasks PASS when new black% drops to ~0 **and** run.log shows `hit=room_boundary`
+  (the gate fired).
+- **RENDER** tasks are EXPECTED-still-black (boundary can't fix them); PASS when the guard set
+  `render_invalid=true` so SR can exclude them.
+Re-run it any time; tasks not yet rendered show PENDING. Backfill check:
+`ls results/eval_30B_1frame_backfill/*/*/results.json | wc -l` should reach ~46.
+
 ### Next steps
-1. **Verify the fixes** (after tonight): diff `eval_30B_blackfix_verify` vs the old flagged
-   runs — CAMERA cases should have ~0 black frames + `hit=room_boundary` blocks; RENDER cases
-   should still be black (boundary can't fix them) and carry `render_invalid=true`.
+1. **Verify the fixes** (after tonight): run `verify_blackfix.py` (above). CAMERA cases should
+   have ~0 black frames + `hit=room_boundary` blocks; RENDER cases should still be black
+   (boundary can't fix them) and carry `render_invalid=true`.
 2. **RENDER class** (case06/064/075/024): Isaac diagnosis — drop the extreme scene lights
    (e.g. real2sim / 2–8e8 PointLamps) to a normal level, re-render one frame, see if the
    black disappears. Then decide the real fix (tighter light cap vs renderer workaround).
