@@ -76,6 +76,7 @@ for w in $(seq 0 $((NW-1))); do
   tmux kill-session -t "verify_$w" 2>/dev/null || true
   tmux new-session -d -s "verify_$w" bash -c "
     cd $WORKDIR
+    TASKS_JSON=$WORKDIR/benchmark_tasks_generated_validated.json \
     N_FRAMES=3 ROOM_BOUNDARY=1 python3 bench_batch.py \
       --tasks $IDS \
       --batch-name $BATCH \

@@ -43,7 +43,20 @@ if [ "$NREM" -gt 60 ]; then
   echo "[BACKFILL] ABORT: remaining=$NREM > 60 — expected ~46. Refusing to run a full sweep."; exit 1
 fi
 
-TASKS_JSON="/tmp/backfill_1frame.json" python3 "$WORKDIR/parallel_split.py" "$NW"
+# Round-robin the 46 ids (from /tmp/backfill_1frame.json) into NW comma-strings.
+# We do NOT use parallel_split.py — it hardcodes the full 333-task json and
+# ignores any subset (that bug made an earlier run sweep all 333).
+mapfile -t SHARD < <(python3 - "$NW" <<'PYEOF'
+import json, sys
+nw = int(sys.argv[1])
+ids = [t["id"] for t in json.load(open("/tmp/backfill_1frame.json"))["tasks"]]
+buckets = [[] for _ in range(nw)]
+for i, t in enumerate(ids):
+    buckets[i % nw].append(t)
+for b in buckets:
+    print(",".join(b))
+PYEOF
+)
 
 for w in $(seq 0 $((NW-1))); do
   NAME="vlm-bench-$w"
@@ -61,13 +74,13 @@ echo "[BACKFILL] containers ready"
 
 for w in $(seq 0 $((NW-1))); do
   NAME="vlm-bench-$w"
-  SHARD="$WORKDIR/_shard_${w}.json"
-  [ -f "$SHARD" ] || { echo "[BACKFILL] shard $w empty, skip"; continue; }
-  IDS=$(python3 -c "import json;print(','.join(t['id'] for t in json.load(open('$SHARD'))['tasks']))")
+  IDS="${SHARD[$w]}"
+  [ -z "$IDS" ] && { echo "[BACKFILL] shard $w empty, skip"; continue; }
   echo "[BACKFILL] worker $w via $NAME: $(echo $IDS | tr ',' '\n' | wc -l) tasks"
   tmux kill-session -t "worker_$w" 2>/dev/null || true
   tmux new-session -d -s "worker_$w" bash -c "
     cd $WORKDIR
+    TASKS_JSON=$WORKDIR/benchmark_tasks_generated_validated.json \
     N_FRAMES=1 ROOM_BOUNDARY=1 python3 bench_batch.py \
       --tasks $IDS --batch-name $OUT_BATCH --container $NAME --vllm-url $VLLM_URL \
       2>&1 | tee /home/liuqi/hc/backfill_worker_${w}.log
