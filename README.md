@@ -1099,3 +1099,96 @@ tmux ls            # worker_0..3 ; NEVER kill vlm_serve (the vLLM server)
 > Launcher args: `parallel_launch_remaining.sh <N_WORKERS> <OUTPUT_BATCH> <SKIP_FROM_BATCH(es)>`.
 > `<SKIP_FROM>` accepts a comma-separated list, so a final clean-up pass could use
 > `eval_30B_333_remaining_fixed,eval_30B_333_rerun_fixed` to fill any stragglers.
+
+---
+
+## Session 2026-06-13/14: Black-frame root-cause (3 classes) + room-boundary fix + render guard
+
+### What drove this
+User reviewing the concatenated FPV videos (`fpv_concat_L2_10x.mp4` etc.) flagged
+**blue/purple tint**, **black windows**, and **fully black "walked into a dark room"**
+segments. Tracing the worst one (×10 @6:40 → `case18_dining_push_lift-L2`, rerun_fixed)
+opened a full black-frame audit.
+
+### Findings
+
+**1. Blue/purple tint + black windows = MirroredBall env-map (known, NOT fixed by design).**
+Isaac RTX can't load the Infinigen MirroredBall HDR env map (`MirroredBall environment
+format not supported yet`, once per scene) → sky/GI lost, only the spawn fill-lights +
+DomeLight remain → blue/violet wash; windows/mirrors have no backdrop → black. Recorded
+as eval input-noise, not fixed pre-eval.
+
+**2. Black-frame episodes decompose into THREE classes** (per-task audit
+`blackframe_audit.py`, threshold-free `fpv_black_frac` + auto class from fpv-vs-bird
+sync & displacement). Of 620 audited tasks, only ~2.1% have ≥20% black frames — **not
+systemic**, but the flagged ones are FALSE failures (agent blind → SR=0):
+
+| Class | How it looks | Root cause | Examples |
+|---|---|---|---|
+| **CAMERA** (mislabel; really "walked out") | only FPV black, **bird stays lit**, sync=0, agent moved 2.4–9 m | agent walked OUT of the room through a **missing-wall opening into unlit void** — collision sweep correctly returns NO hit there (no geometry), 0 CLIP, 0 wall-collision. NOT camera-clip/穿模. | case18, case069-L2/L4, case076, case055, case012 |
+| **RENDER** | **FPV+bird black together**, sync=1.0, independent of motion (case075 blacks at disp=0.03 m) | RTX renderer faults and emits empty frames; Python is unaware (`gen_media rc=0`, `All done!`). Common trait: scenes with extreme original light intensity (2–8e8 capped to 1e5; case06 real2sim). Cap→1e5 doesn't fully prevent it → needs Isaac diagnosis. | case06, case064, case075, case024 |
+| **DARK** | only FPV black, low displacement | spawn/area dim — fill-lights anchored at spawn don't cover it | case055 (partial) |
+
+**KEY correction:** the earlier "camera near-clip 穿模" hypothesis was WRONG. All flagged
+CAMERA cases have **0 `[CLIP?]`, 0 wall collisions, bird fully lit** — nothing clips into
+geometry. The agent legitimately walks through an opening into an unlit, possibly
+wall-less space. So `near_clip` was deliberately NOT changed (it would only swap black for
+a wall-texture smear, not fix anything).
+
+### Fixes implemented (committed, pushed; need Isaac re-render to verify)
+
+- **`feat(bench): N_FRAMES temporal-context switch`** (`a90388b`) — ends the HK/SG git
+  divergence: the 1frame-vs-3frame switch the HK eval actually ran on was never pushed.
+  Default `N_FRAMES=3` = byte-identical baseline.
+- **`feat(audit): blackframe_audit.py`** (`aacb3f4`) — per-task threshold-free black-frame
+  audit + RENDER/CAMERA/DARK class. Pure python/PIL, no GPU.
+- **`feat(bench): render-quality guard`** (`246f202`) — every episode writes
+  `metrics.render_quality` (`fpv_black_frac`, `bird_black_frac`, `render_black_sync`,
+  `render_invalid` = fpv_black_frac ≥ `RENDER_INVALID_FRAC` default 0.20). Marks (does NOT
+  fix) false-failure episodes so they can be excluded from SR. `sync≥0.7` → RENDERER-FAULT.
+- **`fix(bench): soft room-boundary gate`** (`3d9413b`) — THE real fix for the CAMERA class.
+  Extracts each room's floor convex-hull polygon from the USD floor meshes at runtime
+  (self-contained, mirrors `validate_all_spawns`) and blocks any MOVE_FORWARD whose landing
+  point leaves EVERY room polygon, like a wall (`hit=room_boundary`, gives the agent a
+  'blocked' cue). **Fail-open**: no polygons / spawn outside them → gate self-disables
+  (never traps a valid agent). Env: `ROOM_BOUNDARY` (default 1), `ROOM_BOUNDARY_MARGIN`
+  (0.5 m). Does NOT touch lighting/rendering. Smoke-tested on case18: gate loaded ("1 room
+  polygon"), nav ran, render_quality written, 0 Traceback.
+- **`fix(launch): mkdir /usr/share/nvidia before docker cp nvoptix.bin`** (`4f81672`) — fresh
+  isaac-sim containers lack the dir → nvoptix copy silently failed → Optix denoiser error →
+  noisier renders. Both launchers now mkdir first.
+
+### Tonight's run (setting)
+Orchestrator `run_overnight.sh` (nohup, HK), 3 Isaac workers reused serially across 2 batches:
+- **Batch 1 — blackfix-verify**: re-render the 10 audit-flagged tasks with the fixes,
+  **N_FRAMES=3 (baseline), ROOM_BOUNDARY=1**, into NEW folder `eval_30B_blackfix_verify`
+  (`launch_blackfix_verify.sh`). Purpose: confirm CAMERA cases no longer walk into the void;
+  confirm RENDER cases still flag `render_invalid` (determinism check).
+- **Batch 2 — 1frame backfill**: the 46 tasks lost to the disk-full event, **N_FRAMES=1,
+  ROOM_BOUNDARY=1**, into NEW folder `eval_30B_1frame_backfill` (`launch_1frame_backfill.sh`,
+  skip-from old `eval_30B_333_1frame`+self, **ABORTs if remaining>60** — guard against the
+  accidental full-333 sweep that happened once and was killed before writing any results).
+  Kept in a separate folder so new-code results never mix with the old 287 (old code, no
+  room-boundary).
+
+`wait_tmux` fixed to wait for sessions to APPEAR then DISAPPEAR (the first launch skipped
+batch1 because it checked for `verify_` before tmux had created it).
+
+### Infra note (HK)
+Root disk `/` (295 G) filled to 100% from docker container writable layers
+(`/var/lib/docker`), 4 bench containers ballooned to 58–67 G each → containers crashed →
+the original 1frame run silently lost 46 tasks (287/333 on disk; "328" = tasks touched).
+Removed the 5 dead bench containers → root back to 17 %. Root fix (not yet done): migrate
+docker data-root to `/home` (1.5 T). See memory `project_synth_hk_docker_rootdisk`.
+
+### Next steps
+1. **Verify the fixes** (after tonight): diff `eval_30B_blackfix_verify` vs the old flagged
+   runs — CAMERA cases should have ~0 black frames + `hit=room_boundary` blocks; RENDER cases
+   should still be black (boundary can't fix them) and carry `render_invalid=true`.
+2. **RENDER class** (case06/064/075/024): Isaac diagnosis — drop the extreme scene lights
+   (e.g. real2sim / 2–8e8 PointLamps) to a normal level, re-render one frame, see if the
+   black disappears. Then decide the real fix (tighter light cap vs renderer workaround).
+3. **DARK / off-spawn dimness**: make fill-lights follow the agent, or a ceiling RectLight
+   sized to the Infinigen floor bbox (replaces the spawn-anchored 5-light cross).
+4. **Migrate docker data-root to `/home`** on HK (root fix for the disk-full failure mode).
+5. **Aggregate SR excluding `render_invalid`**, report as N valid / M total.
