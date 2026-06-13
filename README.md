@@ -1135,6 +1135,33 @@ geometry. The agent legitimately walks through an opening into an unlit, possibl
 wall-less space. So `near_clip` was deliberately NOT changed (it would only swap black for
 a wall-texture smear, not fix anything).
 
+**User manual-inspection log (per-case, drove the classification):**
+- `case18-L2` — ×10@6:40. FPV frames 45→48 show a black block progressively eating
+  the view (looked like 穿模); but bird stays lit, 0 CLIP. Walked x 5→−5.9 (AWAY from
+  goal at x=14.5) ~11 m into a dark space. Frame 115+ the agent turns back, FPV dimly
+  re-lights (a far light spot) → confirms it walked out and partway back. → CAMERA(walk-out).
+- `case06-L4` — **bird ALSO goes black at 0:46 (step6)**, FPV+bird both 0.0 from step6 on;
+  agent stuck at a wall since step4 (didn't move). decision-render 1.0 s/frame (vs ~6.8
+  normal) → renderer emitting empty frames. → RENDER.
+- `case069-L2` — user: "0:11 entered black wall / 穿模, whole scene also very dim". Bird
+  preview shows the room as a lit island in black void with a white opening; agent walked
+  y 8→12.7 toward it, 0 collision. Scene baseline dim (no strong light, fpv head ~85 vs
+  case06's 245). → CAMERA(walk-out) + globally dim.
+- `case075-L4` — full black after 0:30, fpv+bird synced, agent disp 0.03 m (never moved).
+  → RENDER.
+- `case064-L4` — bird black after 0:46, fpv+bird synced. → RENDER.
+- `case076-L3` — user: "0:40 穿模, can see them in another room". Only fpv black, bird lit,
+  walked into an adjacent room. → CAMERA(walk-out).
+- `case055-L3` — user: "no problem, just dim lighting". Only fpv, low/var. → DARK.
+- `case024-L3` — fpv=bird=100% black from step0 (worst), sync=1.0. → RENDER.
+
+**Black-frame stats (`blackframe_audit.py`, 620 tasks across 1frame + 2 fixed folders):**
+threshold-free `fpv_black_frac`: median 0, p95 0.009, p99 0.587. ≥20% black = 13 tasks
+(2.1%), ≥50% = 9 (1.5%). Class counts: 1frame 287→ 5 CAMERA; rerun_fixed 224→ 5 CAMERA +
+4 RENDER; remaining_fixed 109→ 0 (fully clean). Not偏向 a single level. CSV at
+`/home/liuqi/blackframe_audit.csv` on HK. → integral SR should report N valid / M total
+with `render_invalid` excluded.
+
 ### Fixes implemented (committed, pushed; need Isaac re-render to verify)
 
 - **`feat(bench): N_FRAMES temporal-context switch`** (`a90388b`) — ends the HK/SG git
