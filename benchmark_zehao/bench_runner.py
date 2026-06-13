@@ -1879,6 +1879,56 @@ try:
         metrics["agent_pushed_events"]
     )
 
+    # ── Render-quality guard: detect black/blank FPV frames ──
+    # Black/blank FPV frames mean the agent was effectively blind (camera clipped
+    # into geometry, walked into an unlit area, or the RTX renderer faulted and
+    # emitted empty frames). Such an episode is a FALSE failure that silently
+    # depresses SR, so flag it here instead of letting the bad frames count as a
+    # real run. We never *fix* the frames — we only measure and mark.
+    #   fpv_black_frac : fraction of FPV decision frames with mean luminance < dark
+    #   bird_black_frac, render_black_sync : if bird darkens together with fpv the
+    #     renderer itself faulted (vs. only-fpv = camera clip / dark area).
+    #   render_invalid : fpv_black_frac >= RENDER_INVALID_FRAC -> exclude from SR.
+    try:
+        from PIL import Image
+        DARK_LUM = float(os.environ.get("DARK_LUM", "8.0"))
+        INVALID_FRAC = float(os.environ.get("RENDER_INVALID_FRAC", "0.20"))
+
+        def _black_set(d):
+            blk, tot = set(), 0
+            for p in sorted(glob.glob(os.path.join(d, "rgb_*.png"))):
+                m = re.match(r"rgb_(\d+)\.png$", os.path.basename(p))
+                if not m:
+                    continue
+                tot += 1
+                try:
+                    import numpy as _np
+                    if _np.asarray(Image.open(p).convert("L"), dtype=_np.float32).mean() < DARK_LUM:
+                        blk.add(int(m.group(1)))
+                except Exception:
+                    pass
+            return blk, tot
+
+        fpv_blk, fpv_tot = _black_set(fpv_dir)
+        bird_blk, bird_tot = _black_set(bird_dir)
+        fpv_frac = (len(fpv_blk) / fpv_tot) if fpv_tot else 0.0
+        sync = (len(fpv_blk & bird_blk) / len(fpv_blk)) if fpv_blk else 0.0
+        metrics["render_quality"] = {
+            "fpv_frames": fpv_tot,
+            "fpv_black_frac": round(fpv_frac, 3),
+            "bird_black_frac": round((len(bird_blk) / bird_tot) if bird_tot else 0.0, 3),
+            "render_black_sync": round(sync, 3),
+            "first_black_step": (min(fpv_blk) if fpv_blk else -1),
+            "render_invalid": fpv_frac >= INVALID_FRAC,
+            "dark_lum_thresh": DARK_LUM,
+        }
+        if fpv_frac >= INVALID_FRAC:
+            kind = "RENDERER-FAULT" if sync >= 0.7 else "CAMERA/DARK"
+            log(f"[BENCH] RENDER_INVALID: {fpv_frac:.0%} FPV frames black "
+                f"(sync={sync:.2f} -> {kind}); episode excluded from SR")
+    except Exception as e:
+        log(f"[BENCH] render-quality guard skipped: {e}")
+
     # ── Timing breakdown — where did the episode spend wall-clock time? ──
     # NOTE: the VLM thread and filler renders run CONCURRENTLY, so "vlm" (the
     # join window) overlaps "render_filler". Pure VLM wait ≈ vlm - render_filler.
