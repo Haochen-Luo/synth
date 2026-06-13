@@ -45,8 +45,11 @@ def _run_once(task_id, batch_name, dry_run):
     batch_env = f"-e BATCH_NAME={batch_name} " if batch_name else ""
     tasks_json_env = f"-e TASKS_JSON={TASKS_JSON} "
     model_env = f"-e MODEL_NAME={MODEL_NAME} " if MODEL_NAME else ""
+    # Forward N_FRAMES (temporal-context frame count) into the container only
+    # when set in the launcher env, so the default 3-frame baseline is untouched.
+    nframes_env = f"-e N_FRAMES={os.environ['N_FRAMES']} " if os.environ.get('N_FRAMES') else ""
     cmd = (f'docker exec -e TASK_ID={task_id} -e VLLM_URL={VLLM_URL} '
-           f'-e MAX_STEPS={MAX_STEPS} {batch_env}{tasks_json_env}{model_env}'
+           f'-e MAX_STEPS={MAX_STEPS} {batch_env}{tasks_json_env}{model_env}{nframes_env}'
            f'{DOCKER_CONTAINER} /isaac-sim/python.sh {RUNNER_PATH}')
     print(f"  Command: {cmd}")
     if dry_run:

@@ -82,6 +82,11 @@ VISIBILITY_GATE = os.environ.get("VISIBILITY_GATE", "0") == "1"
 # investigate collider registration / wall clipping. Off by default = zero impact
 # on normal eval runs.
 SWEEP_DEBUG = os.environ.get("SWEEP_DEBUG", "0") == "1"
+# Number of temporal context frames fed to the VLM per decision (oldest..current).
+# Default 3 = baseline (step-2, step-1, current). Set N_FRAMES=1 for single
+# current-frame-only mode (no temporal history). "up to 3 images" wording in
+# the system prompt stays valid since "up to" includes 1.
+N_FRAMES = max(1, int(os.environ.get("N_FRAMES", "3")))
 
 # ── Load task config ──
 task_id = os.environ.get("TASK_ID", "")
@@ -1429,9 +1434,10 @@ try:
             fq = check_frame_quality(frame_path)
             if fq.get('guidance'): prompt += fq['guidance']
 
-            # 3-frame temporal context
+            # Temporal context: up to N_FRAMES frames (oldest..current).
+            # N_FRAMES=1 -> current decision frame only (no history).
             vlm_frames = []
-            for prev_step in [step - 2, step - 1]:
+            for prev_step in range(step - (N_FRAMES - 1), step):
                 if prev_step >= 0:
                     prev_path = os.path.join(fpv_dir, f"rgb_{prev_step:04d}.png")
                     if os.path.exists(prev_path):
