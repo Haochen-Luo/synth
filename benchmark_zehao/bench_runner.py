@@ -318,21 +318,31 @@ def debug_spawn_settle(query_if, ax, ay, sim_app, carb, steps=120):
     if os.environ.get("SPAWN_DEBUG") != "1":
         return
     try:
-        from pxr import UsdGeom, Gf
+        from pxr import UsdGeom, Gf, UsdPhysics, UsdGeom as _ug
         import omni.usd, omni.timeline as _tl
         stage = omni.usd.get_context().get_stage()
         zlist = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.3, 1.6]
 
-        # Track the live world-Z (physics-updated) of dynamic furniture, to see
-        # if it FALLS smoothly (gravity) or JUMPS (initial-penetration explosion).
+        # Track FULL pose (translation + rotation) + velocities of dynamic
+        # furniture. Reading only translation misses TUMBLING (centroid fixed,
+        # orientation changing). Velocity reveals whether the body is moving and
+        # whether it starts with a non-zero initial velocity (penetration kick).
         track = [p for p in stage.Traverse()
                  if any(t in p.GetName().lower() for t in ("mattress", "pillow"))
-                 and p.HasAPI(__import__("pxr").UsdPhysics.RigidBodyAPI)]
+                 and p.HasAPI(UsdPhysics.RigidBodyAPI)]
+        bbc = UsdGeom.BBoxCache(0, [UsdGeom.Tokens.default_, UsdGeom.Tokens.render])
 
-        def _wz(prim):
+        def _pose(prim):
             m = UsdGeom.XformCache().GetLocalToWorldTransform(prim)
             t = m.ExtractTranslation()
-            return (float(t[0]), float(t[1]), float(t[2]))
+            r = m.ExtractRotation()             # axis-angle
+            ax_, ang = r.GetAxis(), r.GetAngle()
+            # velocities (USD physics attrs, set by sim)
+            rb = UsdPhysics.RigidBodyAPI(prim)
+            lv = rb.GetVelocityAttr().Get() if rb.GetVelocityAttr() else None
+            av = rb.GetAngularVelocityAttr().Get() if rb.GetAngularVelocityAttr() else None
+            return (float(t[0]), float(t[1]), float(t[2]),
+                    (float(ax_[0]), float(ax_[1]), float(ax_[2])), float(ang), lv, av)
 
         def _probe(tag):
             cells = "".join(
@@ -344,8 +354,13 @@ def debug_spawn_settle(query_if, ax, ay, sim_app, carb, steps=120):
                   if h["hit"] else "")
             log(f"[SPAWN_DEBUG] {tag:14s} z-overlap[{cells}] sweep@0.5={nm}")
             for p in track:
-                x, y, z = _wz(p)
-                log(f"[SPAWN_DEBUG]   {p.GetName()[:38]:38s} pos=({x:.2f},{y:.2f},{z:.2f})")
+                x, y, z, axis, ang, lv, av = _pose(p)
+                bb = bbc.ComputeWorldBound(p).ComputeAlignedRange()
+                bs = (f"bbox z[{bb.GetMin()[2]:.2f},{bb.GetMax()[2]:.2f}]"
+                      if not bb.IsEmpty() else "bbox=EMPTY")
+                log(f"[SPAWN_DEBUG]   {p.GetName()[:30]:30s} "
+                    f"pos=({x:.2f},{y:.2f},{z:.2f}) rot={ang:.1f}deg@({axis[0]:.1f},{axis[1]:.1f},{axis[2]:.1f}) "
+                    f"v={lv} av={av} {bs}")
 
         tli = _tl.get_timeline_interface()
         _probe("t=0(prephys)")
