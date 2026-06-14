@@ -1161,13 +1161,35 @@ try:
                 overlap = SAFE_RADIUS - d
 
                 # ── Wall-slide push resolution ──
+                def _boundary_clear(ox, oy, dx, dy, dist):
+                    """Max travel along (dx,dy) before the soft room boundary.
+                    The PhysX sweep can't see a missing-wall 'void' edge (no
+                    geometry), so treat the room polygon as a virtual wall here:
+                    march along the direction and stop at the last in-bounds
+                    point. This lets the SAME wall-slide logic handle void walls
+                    exactly like real walls (push up to the edge, then slide
+                    along it), instead of a hard freeze."""
+                    if not room_polys:
+                        return dist
+                    step = 0.05
+                    travelled = 0.0
+                    while travelled < dist:
+                        t = min(travelled + step, dist)
+                        if not inside_any_room(ox + dx * t, oy + dy * t,
+                                               room_polys, ROOM_BOUNDARY_INSET):
+                            return travelled        # stop before crossing edge
+                        travelled = t
+                    return dist
+
                 def _sweep_clear(ox, oy, dx, dy, dist):
-                    """Return max safe travel distance along (dx,dy).
-                    Buffer of 0.15m keeps agent center ≥0.55m from walls,
-                    so camera (0.1m forward offset) stays ≥0.45m clear —
-                    well beyond the 0.3m near-clip distance. This prevents
-                    visual clipping through thin geometry (window frames)
-                    when runner push moves the agent toward walls."""
+                    """Return max safe travel distance along (dx,dy), limited by
+                    BOTH real wall geometry (PhysX sweep) and the soft room
+                    boundary (void walls). Buffer of 0.15m keeps agent center
+                    ≥0.55m from walls, so camera (0.1m forward offset) stays
+                    ≥0.45m clear — beyond the 0.3m near-clip — preventing visual
+                    clipping through thin geometry when the runner push moves the
+                    agent toward walls."""
+                    limit = _boundary_clear(ox, oy, dx, dy, dist)
                     try:
                         # EYE_H added: cap push travel at the camera height too,
                         # so a runner push never drives the camera into a wall.
@@ -1180,10 +1202,12 @@ try:
                                       h.get("collider") or "")
                                 if is_walkable_hit(wp):
                                     continue
-                                return max(float(h.get("distance", 0)) - 0.15, 0.0)
+                                limit = min(limit,
+                                            max(float(h.get("distance", 0)) - 0.15, 0.0))
+                                break
                     except Exception:
                         pass
-                    return dist
+                    return limit
 
                 # Step 1: push primary direction
                 primary = min(overlap, _sweep_clear(ax, ay, nx, ny, overlap))
@@ -1216,32 +1240,17 @@ try:
                         f"(remaining={remaining:.3f}m)")
                     continue  # don't push agent at all
 
-                # Apply resolved push
+                # Apply resolved push. Both _sweep_clear calls above already
+                # clamp primary+slide to real walls AND the soft room boundary,
+                # so the resolved destination stays in-bounds; if neither push
+                # nor slide could resolve the overlap, Step 3 above already froze
+                # the runner. No separate boundary check needed here.
                 ax_before, ay_before = ax, ay
-                cand_x = ax + nx * primary
-                cand_y = ay + ny * primary
+                ax += nx * primary
+                ay += ny * primary
                 if slide > 0:
-                    cand_x += px * slide
-                    cand_y += py * slide
-
-                # ── Soft room-boundary clamp on runner push ──
-                # _sweep_clear only stops pushes into REAL wall geometry. At a
-                # "void wall" (missing-wall opening, no geometry) it returns clear,
-                # so a runner could shove the agent through the soft boundary into
-                # the unlit void (case069: residual black frames from runner push,
-                # not self-driven MOVE_FORWARD). Mirror the movement-gate inset:
-                # if the pushed destination leaves the room footprint, freeze the
-                # runner instead of pushing the agent out of bounds.
-                if room_polys and not inside_any_room(cand_x, cand_y, room_polys,
-                                                      ROOM_BOUNDARY_INSET):
-                    runner_frozen[name] = True
-                    if runner_frozen_pos[name] is None:
-                        runner_frozen_pos[name] = list(rp)
-                    log(f"[BENCH] {name} FROZEN — push would cross room boundary "
-                        f"(dest=({cand_x:.2f},{cand_y:.2f}))")
-                    continue  # don't push agent past the soft boundary
-
-                ax, ay = cand_x, cand_y
+                    ax += px * slide
+                    ay += py * slide
 
                 # Update last valid runner position (for future freeze)
                 runner_frozen_pos[name] = list(rp)
