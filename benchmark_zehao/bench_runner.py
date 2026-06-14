@@ -178,9 +178,14 @@ def is_walkable_hit(hit_path):
 _ROOM_TOKENS = ("living_room", "living-room", "dining_room", "dining-room",
                 "bedroom", "bathroom", "kitchen", "hallway")
 ROOM_BOUNDARY = os.environ.get("ROOM_BOUNDARY", "1") == "1"
-# Outward margin (m): allow the agent this far past the polygon edge before
-# blocking, so a spawn/target validated right at the floor edge isn't trapped.
-ROOM_BOUNDARY_MARGIN = float(os.environ.get("ROOM_BOUNDARY_MARGIN", "0.5"))
+# Inward inset (m): the agent's CENTROID must stay at least this far INSIDE the
+# floor polygon. Set to the capsule radius + a small clearance so the collision
+# capsule (r=AGENT_RADIUS=0.40) never reaches a "void wall" (missing-geometry
+# floor-hull edge), and the FPV camera (at the centroid) never peeks through the
+# opening into the unlit exterior -> black frames. 0.40 + 0.05 = 0.45m.
+# (Was previously an OUTWARD margin of 0.5m, which let the centroid leave the
+#  polygon by up to 0.5m and the camera stare into the void -> the case069 bug.)
+ROOM_BOUNDARY_INSET = float(os.environ.get("ROOM_BOUNDARY_INSET", "0.45"))
 
 
 def _convex_hull_xy(pts):
@@ -261,30 +266,45 @@ def compute_room_polygons(stage):
     return polys
 
 
-def inside_any_room(px, py, polys, margin=0.0):
-    """True if (px,py) is inside any room polygon (optionally grown by margin
-    via a cheap point test against the polygon plus a margin-distance check)."""
+def _dist_to_poly_edge(px, py, poly):
+    """Min distance from (px,py) to any edge of poly (XY). inf if degenerate."""
+    n = len(poly)
+    best = float("inf")
+    for i in range(n):
+        ax_, ay_ = poly[i]
+        bx_, by_ = poly[(i + 1) % n]
+        dx, dy = bx_ - ax_, by_ - ay_
+        seg2 = dx*dx + dy*dy
+        if seg2 <= 1e-9:
+            continue
+        t = max(0.0, min(1.0, ((px-ax_)*dx + (py-ay_)*dy) / seg2))
+        cx, cy = ax_ + t*dx, ay_ + t*dy
+        d = ((px-cx)**2 + (py-cy)**2) ** 0.5
+        if d < best:
+            best = d
+    return best
+
+
+def inside_any_room(px, py, polys, inset=0.0):
+    """True if (px,py) is safely inside some room polygon.
+
+    `inset` > 0 shrinks the walkable region INWARD: the point must be inside a
+    polygon AND at least `inset` metres from its nearest edge. This keeps the
+    agent's collision capsule (and FPV camera, both centred on the point) clear
+    of "void wall" floor-hull edges where geometry is missing, preventing the
+    camera from peeking into the unlit exterior (black frames). With inset=0 it
+    is a plain point-in-polygon test.
+    """
     if not polys:
         return True  # no polygons -> gate disabled, never block
     for poly in polys:
         if _point_in_polygon_xy(px, py, poly):
-            return True
-    if margin <= 0:
-        return False
-    # Outside every polygon: allow if within `margin` of any edge.
-    for poly in polys:
-        n = len(poly)
-        for i in range(n):
-            ax_, ay_ = poly[i]
-            bx_, by_ = poly[(i + 1) % n]
-            dx, dy = bx_ - ax_, by_ - ay_
-            seg2 = dx*dx + dy*dy
-            if seg2 <= 1e-9:
-                continue
-            t = max(0.0, min(1.0, ((px-ax_)*dx + (py-ay_)*dy) / seg2))
-            cx, cy = ax_ + t*dx, ay_ + t*dy
-            if (px-cx)**2 + (py-cy)**2 <= margin*margin:
+            if inset <= 0:
                 return True
+            # Inside this polygon: require clearance from its boundary.
+            if _dist_to_poly_edge(px, py, poly) >= inset:
+                return True
+            # Inside but too close to the edge -> treat as outside (blocked).
     return False
 
 
@@ -1331,13 +1351,16 @@ try:
     if ROOM_BOUNDARY:
         try:
             room_polys = compute_room_polygons(stage)
-            if room_polys and not inside_any_room(ax, ay, room_polys, ROOM_BOUNDARY_MARGIN):
+            # Spawn validity uses inset=0 (plain in-room test): a spawn placed
+            # legitimately close to a floor edge must NOT disable the gate. The
+            # 0.45m capsule inset is only applied to MOVEMENT below.
+            if room_polys and not inside_any_room(ax, ay, room_polys, 0.0):
                 log(f"[BENCH] room-boundary gate DISABLED: spawn ({ax:.2f},{ay:.2f}) "
                     f"outside extracted polygons ({len(room_polys)} rooms) — failing open")
                 room_polys = []
             elif room_polys:
                 log(f"[BENCH] room-boundary gate ON: {len(room_polys)} room polygon(s), "
-                    f"margin={ROOM_BOUNDARY_MARGIN}m")
+                    f"inset={ROOM_BOUNDARY_INSET}m (capsule r=0.40 + 0.05 clearance)")
             else:
                 log("[BENCH] room-boundary gate OFF: no floor polygons extracted")
         except Exception as e:
@@ -1421,6 +1444,40 @@ try:
             }
     else:
         log(f"[BENCH] Spawn clear at ({ax:.2f},{ay:.2f})")
+
+    # ── SPAWN_DEBUG: diagnose dynamic-furniture settle onto the spawn ──
+    # Uses the REAL query_if + real physics. Steps the timeline a few frames and
+    # probes overlap_sphere_any at the spawn over a z-scan, to see WHEN/WHERE a
+    # dynamic collider (e.g. a falling mattress) appears at the spawn. Enabled
+    # only when SPAWN_DEBUG=1; no effect on normal runs.
+    if os.environ.get("SPAWN_DEBUG") == "1":
+        try:
+            zlist = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.3, 1.6]
+            def _probe(tag):
+                cells = []
+                for sz in zlist:
+                    hit = query_if.overlap_sphere_any(0.40, carb.Float3(ax, ay, sz))
+                    cells.append("X" if hit else ".")
+                # also closest sweep hit name at z=0.5
+                nm = ""
+                h = query_if.sweep_sphere_closest(0.40, carb.Float3(ax, ay, 0.5),
+                                                  carb.Float3(1, 0, 0), 0.05)
+                if h["hit"]:
+                    nm = (h.get("rigidBody") or h.get("collider") or "").split("/")[-1][:34]
+                log(f"[SPAWN_DEBUG] {tag:14s} z-overlap[{''.join(cells)}] "
+                    f"(z={zlist}) sweep@0.5={nm}")
+            import omni.timeline as _tl
+            tli = _tl.get_timeline_interface()
+            _probe("t=0(prephys)")
+            tli.play()
+            for k in range(1, 121):
+                sim_app.update()
+                if k in (5, 15, 30, 60, 90, 120):
+                    _probe(f"after_{k}_steps")
+            tli.stop()
+            _probe("after_stop")
+        except Exception as e:
+            log(f"[SPAWN_DEBUG] error: {e}")
 
     # Save spawn adjustment info for archival
     if spawn_adjustment:
@@ -1834,12 +1891,17 @@ try:
             # Soft room boundary: the collision sweep can't stop a move toward a
             # missing-wall opening (no geometry to hit), so the agent would walk
             # into the unlit void outside the room. Block such a move as if it hit
-            # a wall, keeping the agent inside the room footprint.
+            # a void wall, keeping the agent's capsule (and FPV camera) inside the
+            # room footprint with ROOM_BOUNDARY_INSET clearance — so the camera
+            # never peeks through the opening into the black exterior.
             if not blocked and room_polys:
                 nx_, ny_ = ax + STEP_DIST * dx, ay + STEP_DIST * dy
-                if not inside_any_room(nx_, ny_, room_polys, ROOM_BOUNDARY_MARGIN):
+                if not inside_any_room(nx_, ny_, room_polys, ROOM_BOUNDARY_INSET):
                     blocked = True
-                    hit_info = (EYE_H, "room_boundary", 0.0)
+                    # sentinel dist=-1 (not 0): this is a soft-boundary refusal,
+                    # NOT a measured physics overlap, so don't fire the dist==0
+                    # "possible embedding" CLIP warning below.
+                    hit_info = (EYE_H, "room_boundary", -1.0)
             if not blocked:
                 ax += STEP_DIST * dx; ay += STEP_DIST * dy
             elif hit_info:
@@ -1854,7 +1916,9 @@ try:
                 # dist==0 means the agent sphere already OVERLAPS this collider
                 # (it is partially inside it) — a clip/embedding warning sign worth
                 # surfacing for later debugging (see ANALYSIS.md wall-clip case).
-                if hit_info[2] <= 1e-6:
+                # Require a real MEASURED overlap (0 <= dist <= eps); the soft
+                # room-boundary refusal uses dist=-1 sentinel and must NOT trip it.
+                if 0.0 <= hit_info[2] <= 1e-6:
                     log(f"[CLIP?] step={step} agent=({ax:.2f},{ay:.2f}) overlaps "
                         f"{hit_info[1].split('/')[-1][:48]} (dist=0) — possible embedding")
                 record_collision_event({
