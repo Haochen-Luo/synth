@@ -4628,10 +4628,10 @@
       "scene_dir": "full_scenarios_extracted/native_case11_bedroom_lift_full_physics_scene",
       "instruction": "Go to the large plant.",
       "agent_start": [
-        9.5,
+        8.0,
         10.0
       ],
-      "agent_yaw": -145.6,
+      "agent_yaw": -157.8,
       "spawn_facing": "back",
       "phases": [
         {
@@ -4661,10 +4661,10 @@
       "scene_dir": "full_scenarios_extracted/native_case11_bedroom_lift_full_physics_scene",
       "instruction": "First go to the large plant, then go to the shelf.",
       "agent_start": [
-        9.42,
-        9.42
+        8.0,
+        10.0
       ],
-      "agent_yaw": 42.5,
+      "agent_yaw": 22.2,
       "spawn_facing": "face",
       "phases": [
         {
@@ -4720,10 +4720,10 @@
       "scene_dir": "full_scenarios_extracted/native_case11_bedroom_lift_full_physics_scene",
       "instruction": "First go to the large plant, then go to the shelf.",
       "agent_start": [
-        9.5,
+        8.0,
         10.0
       ],
-      "agent_yaw": -145.6,
+      "agent_yaw": -157.8,
       "spawn_facing": "back",
       "phases": [
         {

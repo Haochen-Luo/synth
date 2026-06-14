@@ -1237,3 +1237,32 @@ Re-run it any time; tasks not yet rendered show PENDING. Backfill check:
    sized to the Infinigen floor bbox (replaces the spawn-anchored 5-light cross).
 4. **Migrate docker data-root to `/home`** on HK (root fix for the disk-full failure mode).
 5. **Aggregate SR excluding `render_invalid`**, report as N valid / M total.
+
+---
+
+## Known bad scene: case11_bedroom_lift (spawn embedded in mattress) — 2026-06-14
+
+`case11_bedroom_lift` (L2/L3/L4) is the only scene in the 333-task set where the
+agent spawned **embedded inside a mattress** and could never move (SR=0, all 50
+VLM calls exhausted at the spawn coordinate). Root cause is the **scene asset**,
+not the harness:
+
+- The mattress/pillow/comforter are **non-kinematic RigidBodies** placed with
+  **initial inter-penetration** (overlapping the bed frame / each other). At
+  physics start PhysX applies large de-penetration impulses, so the pillows spin
+  with ~40 rad/s angular velocity (visible "pillows flying/tumbling" in the FPV)
+  while their centroids barely move.
+- The mattress collider statically occupies the spawn footprint
+  (bbox x[9.32,10.80] y[8.29,10.27], z[0.75,1.03]; centre 10.06,9.27). The
+  original spawn (9.5,10.0) for L2/L4 and (9.42,9.42) for L3 both fall inside it.
+- `_check_spawn_clear` runs at physics step 0, **before the dynamic colliders
+  are registered to the scene-query** (verified: `overlap_sphere_any` at the
+  spawn returns nothing pre-`play`, then `XXXXXXX` one step after), so the check
+  passes and the agent is trapped once physics ticks.
+
+**Fix (no harness change, scene-local):** hand-picked a clear spawn `(8.0,10.0)`
+— inside the floor `x[6.50,12.38] y[8.12,11.88]`, ≥1.23 m from the nearest
+furniture, 4.0 m from the plant target, 2.3 m from the shelf. Yaw filled with the
+standard `validate_generated_spawns` rule (`face_yaw`, `+180` for `back`): L3
+(face) 22.2°, L2/L4 (back) −157.8°. Updated `agent_start`/`agent_yaw` in
+`benchmark_tasks_generated_validated.json` and re-rendered the three tasks.
