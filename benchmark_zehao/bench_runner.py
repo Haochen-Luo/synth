@@ -1218,11 +1218,30 @@ try:
 
                 # Apply resolved push
                 ax_before, ay_before = ax, ay
-                ax += nx * primary
-                ay += ny * primary
+                cand_x = ax + nx * primary
+                cand_y = ay + ny * primary
                 if slide > 0:
-                    ax += px * slide
-                    ay += py * slide
+                    cand_x += px * slide
+                    cand_y += py * slide
+
+                # ── Soft room-boundary clamp on runner push ──
+                # _sweep_clear only stops pushes into REAL wall geometry. At a
+                # "void wall" (missing-wall opening, no geometry) it returns clear,
+                # so a runner could shove the agent through the soft boundary into
+                # the unlit void (case069: residual black frames from runner push,
+                # not self-driven MOVE_FORWARD). Mirror the movement-gate inset:
+                # if the pushed destination leaves the room footprint, freeze the
+                # runner instead of pushing the agent out of bounds.
+                if room_polys and not inside_any_room(cand_x, cand_y, room_polys,
+                                                      ROOM_BOUNDARY_INSET):
+                    runner_frozen[name] = True
+                    if runner_frozen_pos[name] is None:
+                        runner_frozen_pos[name] = list(rp)
+                    log(f"[BENCH] {name} FROZEN — push would cross room boundary "
+                        f"(dest=({cand_x:.2f},{cand_y:.2f}))")
+                    continue  # don't push agent past the soft boundary
+
+                ax, ay = cand_x, cand_y
 
                 # Update last valid runner position (for future freeze)
                 runner_frozen_pos[name] = list(rp)
