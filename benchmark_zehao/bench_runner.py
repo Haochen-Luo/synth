@@ -308,6 +308,42 @@ def inside_any_room(px, py, polys, inset=0.0):
     return False
 
 
+def debug_spawn_settle(query_if, ax, ay, sim_app, carb, steps=120):
+    """Diagnostic (SPAWN_DEBUG=1, default OFF): trace dynamic furniture settling
+    onto the spawn. Steps the timeline and probes overlap at the spawn over a
+    z-scan, revealing WHEN/WHERE a falling collider (e.g. a mattress) reaches the
+    agent — the case11_bedroom_lift embed bug, where spawn-check passes pre-settle
+    but a dynamic rigid body drops onto the spawn within a few physics steps.
+    No-op on normal runs."""
+    if os.environ.get("SPAWN_DEBUG") != "1":
+        return
+    try:
+        zlist = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.3, 1.6]
+
+        def _probe(tag):
+            cells = "".join(
+                "X" if query_if.overlap_sphere_any(0.40, carb.Float3(ax, ay, sz))
+                else "." for sz in zlist)
+            h = query_if.sweep_sphere_closest(0.40, carb.Float3(ax, ay, 0.5),
+                                              carb.Float3(1, 0, 0), 0.05)
+            nm = ((h.get("rigidBody") or h.get("collider") or "").split("/")[-1][:34]
+                  if h["hit"] else "")
+            log(f"[SPAWN_DEBUG] {tag:14s} z-overlap[{cells}] (z={zlist}) sweep@0.5={nm}")
+
+        import omni.timeline as _tl
+        tli = _tl.get_timeline_interface()
+        _probe("t=0(prephys)")
+        tli.play()
+        for k in range(1, steps + 1):
+            sim_app.update()
+            if k in (5, 15, 30, 60, 90, 120):
+                _probe(f"after_{k}_steps")
+        tli.stop()
+        _probe("after_stop")
+    except Exception as e:
+        log(f"[SPAWN_DEBUG] error: {e}")
+
+
 log(f"[BENCH] Task={tid} Level={level} Scene={task['scene_dir']}")
 log(f"[BENCH] Instruction: {task['instruction']}")
 log(f"[BENCH] Model: {MODEL_NAME}")
@@ -1445,39 +1481,8 @@ try:
     else:
         log(f"[BENCH] Spawn clear at ({ax:.2f},{ay:.2f})")
 
-    # ── SPAWN_DEBUG: diagnose dynamic-furniture settle onto the spawn ──
-    # Uses the REAL query_if + real physics. Steps the timeline a few frames and
-    # probes overlap_sphere_any at the spawn over a z-scan, to see WHEN/WHERE a
-    # dynamic collider (e.g. a falling mattress) appears at the spawn. Enabled
-    # only when SPAWN_DEBUG=1; no effect on normal runs.
-    if os.environ.get("SPAWN_DEBUG") == "1":
-        try:
-            zlist = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.3, 1.6]
-            def _probe(tag):
-                cells = []
-                for sz in zlist:
-                    hit = query_if.overlap_sphere_any(0.40, carb.Float3(ax, ay, sz))
-                    cells.append("X" if hit else ".")
-                # also closest sweep hit name at z=0.5
-                nm = ""
-                h = query_if.sweep_sphere_closest(0.40, carb.Float3(ax, ay, 0.5),
-                                                  carb.Float3(1, 0, 0), 0.05)
-                if h["hit"]:
-                    nm = (h.get("rigidBody") or h.get("collider") or "").split("/")[-1][:34]
-                log(f"[SPAWN_DEBUG] {tag:14s} z-overlap[{''.join(cells)}] "
-                    f"(z={zlist}) sweep@0.5={nm}")
-            import omni.timeline as _tl
-            tli = _tl.get_timeline_interface()
-            _probe("t=0(prephys)")
-            tli.play()
-            for k in range(1, 121):
-                sim_app.update()
-                if k in (5, 15, 30, 60, 90, 120):
-                    _probe(f"after_{k}_steps")
-            tli.stop()
-            _probe("after_stop")
-        except Exception as e:
-            log(f"[SPAWN_DEBUG] error: {e}")
+    # Diagnostic only (SPAWN_DEBUG=1): trace dynamic furniture settling onto spawn.
+    debug_spawn_settle(query_if, ax, ay, sim_app, carb)
 
     # Save spawn adjustment info for archival
     if spawn_adjustment:
