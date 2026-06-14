@@ -36,8 +36,38 @@ for m in dir(query_if):
         emit(f"  {m}")
 
 R=0.40
-# Scan many z heights to find WHERE the mattress collider actually is, and test
-# overlap_sphere_any (cheapest) + overlap_sphere (enumerate) + raycast straight down.
+import carb as _carb
+
+def zscan(tag):
+    emit(f"\n=== [{tag}] z-scan overlap_sphere_any at spawn ===")
+    any_any=False
+    for sz in [0.1,0.3,0.5,0.7,0.9,1.0,1.3,1.6]:
+        try: h=query_if.overlap_sphere_any(R,_carb.Float3(SPAWN[0],SPAWN[1],sz))
+        except Exception as e: h=f"ERR{e}"
+        if h is True: any_any=True
+        emit(f"  z={sz}: overlap_any={h}")
+    rh=query_if.raycast_closest(_carb.Float3(SPAWN[0],SPAWN[1],2.0),_carb.Float3(0,0,-1),3.0)
+    if rh["hit"]:
+        wp=(rh.get("rigidBody") or rh.get("collider") or "")
+        emit(f"  raycast-down: {wp.split('/')[-1][:45]} z={2.0-rh.get('distance',0):.2f}")
+    else: emit("  raycast-down: NO HIT")
+    return any_any
+
+# BEFORE physics step (matches spawn-check moment)
+zscan("BEFORE play")
+
+# Now PLAY the timeline + step physics, like the nav loop does over a few steps
+emit("\n>>> timeline.play() + 60 physics updates (simulate first nav steps) <<<")
+import omni.timeline
+tl=omni.timeline.get_timeline_interface()
+tl.play()
+for _ in range(60): app.update()
+tl.stop()
+for _ in range(5): app.update()
+zscan("AFTER play+step")
+
+emit(f"\n=== (legacy) sweep vs overlap at z=0.5,1.0 ===")
+emit("--- skipped legacy block below is informational ---")
 emit(f"\n=== z-scan overlap_sphere_any at spawn (find collider height) ===")
 import carb as _carb
 for sz in [0.1,0.3,0.5,0.7,0.9,1.0,1.3,1.6]:
