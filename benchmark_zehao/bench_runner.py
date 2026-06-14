@@ -318,7 +318,21 @@ def debug_spawn_settle(query_if, ax, ay, sim_app, carb, steps=120):
     if os.environ.get("SPAWN_DEBUG") != "1":
         return
     try:
+        from pxr import UsdGeom, Gf
+        import omni.usd, omni.timeline as _tl
+        stage = omni.usd.get_context().get_stage()
         zlist = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.3, 1.6]
+
+        # Track the live world-Z (physics-updated) of dynamic furniture, to see
+        # if it FALLS smoothly (gravity) or JUMPS (initial-penetration explosion).
+        track = [p for p in stage.Traverse()
+                 if any(t in p.GetName().lower() for t in ("mattress", "pillow"))
+                 and p.HasAPI(__import__("pxr").UsdPhysics.RigidBodyAPI)]
+
+        def _wz(prim):
+            m = UsdGeom.XformCache().GetLocalToWorldTransform(prim)
+            t = m.ExtractTranslation()
+            return (float(t[0]), float(t[1]), float(t[2]))
 
         def _probe(tag):
             cells = "".join(
@@ -328,15 +342,17 @@ def debug_spawn_settle(query_if, ax, ay, sim_app, carb, steps=120):
                                               carb.Float3(1, 0, 0), 0.05)
             nm = ((h.get("rigidBody") or h.get("collider") or "").split("/")[-1][:34]
                   if h["hit"] else "")
-            log(f"[SPAWN_DEBUG] {tag:14s} z-overlap[{cells}] (z={zlist}) sweep@0.5={nm}")
+            log(f"[SPAWN_DEBUG] {tag:14s} z-overlap[{cells}] sweep@0.5={nm}")
+            for p in track:
+                x, y, z = _wz(p)
+                log(f"[SPAWN_DEBUG]   {p.GetName()[:38]:38s} pos=({x:.2f},{y:.2f},{z:.2f})")
 
-        import omni.timeline as _tl
         tli = _tl.get_timeline_interface()
         _probe("t=0(prephys)")
         tli.play()
         for k in range(1, steps + 1):
             sim_app.update()
-            if k in (5, 15, 30, 60, 90, 120):
+            if k in (1, 2, 3, 5, 10, 20, 60, 120):
                 _probe(f"after_{k}_steps")
         tli.stop()
         _probe("after_stop")
