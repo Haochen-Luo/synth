@@ -1266,3 +1266,60 @@ furniture, 4.0 m from the plant target, 2.3 m from the shelf. Yaw filled with th
 standard `validate_generated_spawns` rule (`face_yaw`, `+180` for `back`): L3
 (face) 22.2°, L2/L4 (back) −157.8°. Updated `agent_start`/`agent_yaw` in
 `benchmark_tasks_generated_validated.json` and re-rendered the three tasks.
+
+---
+
+## Solid-color FPV frames (blue/green/purple) — root cause + how we proved it (2026-06-14)
+
+Manual inspection of the L2 FPV concat video showed some episodes with **saturated
+solid-color frames** (pure blue / green / purple), not just black/white. These were
+**NOT** caught by the black-frame audit (a pure-blue frame `(0,0,255)` is bright, so
+`fpv_black_frac≈0`). Final conclusion: these are a **transient degraded-renderer
+artifact** (most likely the OptiX denoiser failing on the batch that produced them),
+**not** a deterministic scene/lighting/background property. Re-rendering the same
+cases in a healthy container produces normal frames. Below is the exact evidence
+trail so this can be re-checked.
+
+**Step 1 — locate the colored cases (which case, which timestamp).**
+Script: [`scan_color_frames.py`](benchmark_zehao/scan_color_frames.py). It scans each
+case's `nav_preview/fpv_preview.mp4`, classifies frames by mean RGB, and maps each hit
+back to the concat-video timestamp via `fpv_metadata_L{2,3,4}.csv`.
+```
+cd benchmark_zehao
+python3 scan_color_frames.py --csv fpv_metadata_L2.csv --want green   # also: purple, blue, all
+```
+Inputs: `nav_preview_threeframe_fixed/{remaining_fixed,rerun_fixed}/L2/<case>/nav_preview/fpv_preview.mp4`
++ `fpv_metadata_L2.csv`. Output: `/tmp/color_scan.txt` (+ stdout). Confirmed L2 cases:
+`case12_living_two_runners_push-L2` (purple/blue @10x 01:26), `case024_official_two_runners-L2`
+(@10x 03:22), `case019_official_solo_run-L2` (green @10x 03:04), `case067…` (green),
+`case08_dining_two_runners-L2` (green).
+
+**Step 2 — prove it is NOT lighting / NOT env-map color.**
+Pixel-measure the frames directly (PIL/numpy): the pure-blue frame is an EXACT constant
+`(0,0,255)`, std 0, 100 % of pixels — impossible from any light (lighting is noisy and
+never fully saturated). The DomeLight env textures for every case are gray
+(`color_121212.hdr`, `color_204204204.hdr`), and the scene is lit by inside
+`PointLampFactory` + 5 fill lights, so dim gray domes cannot produce a saturated color.
+RTX background settings probe: [`probe_rtx_background.py`](benchmark_zehao/probe_rtx_background.py)
+(`/isaac-sim/python.sh probe_rtx_background.py`, out `/tmp/rtx_probe.txt`) shows all
+`/rtx/.../backgroundColor` are unset (`None`) and logs the `MirroredBall environment
+format not supported yet` error that fires once per scene.
+
+**Step 3 — the decisive test: re-render the exact colored cases in a healthy container.**
+Output dir: `results/eval_30B_color_repro/` (on HK). Re-ran `case18_dining_push_lift-L2`,
+`case024_official_two_runners-L2`, `case12_living_two_runners_push-L2`,
+`case019_official_solo_run-L2` through the full `bench_runner` pipeline. Result: every
+case rendered **normal** (max per-frame color separation ≤15, vs ≥126–255 in the
+originals); case18 rendered its full 121-frame trajectory including the void-facing
+views that were pure blue before — still no blue. Same scene + same pipeline + healthy
+renderer ⇒ no color, which rules out a deterministic cause and points to a transient
+render-state defect.
+([`test_bg_fix.py`](benchmark_zehao/test_bg_fix.py) is a smaller single-pose reproduction
+helper used during the investigation; it reproduces the blue-frame camera poses.)
+
+**Do NOT "fix" by forcing DomeLight color** — git regression `0e1a102` set DomeLight
+color=white, which changed GI bounce and turned case03's door red; it was reverted
+(`ab2d177`). Any future fix must target the RTX background/denoiser, not lighting.
+**Operational mitigation:** keep `/usr/share/nvidia/nvoptix.bin` present in the render
+container (it is lost on `docker run` recreate — see Environment); healthy renderer turns
+void views into honest BLACK, which the existing `render_invalid` guard then catches.
