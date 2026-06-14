@@ -19,10 +19,16 @@ import omni.usd, carb
 open_stage(SCENE)
 n=0
 while is_stage_loading() and n<3000: app.update(); n+=1
-for _ in range(60): app.update()
 
-# get the physx query interface the way bench_runner does
+# Replicate bench_runner init: 100-update warmup (line 837), timeline stopped.
+import omni.timeline
+omni.timeline.get_timeline_interface().stop()
+emit("warmup: 100 app.update() (matching bench_runner)...")
+for _ in range(100): app.update()
+
+# get the physx query interface the way bench_runner does (after warmup, line 1377)
 import omni.physx
+app.update()
 query_if=omni.physx.get_physx_scene_query_interface()
 emit("=== query interface methods (overlap / sweep) ===")
 for m in dir(query_if):
@@ -30,6 +36,27 @@ for m in dir(query_if):
         emit(f"  {m}")
 
 R=0.40
+# Scan many z heights to find WHERE the mattress collider actually is, and test
+# overlap_sphere_any (cheapest) + overlap_sphere (enumerate) + raycast straight down.
+emit(f"\n=== z-scan overlap_sphere_any at spawn (find collider height) ===")
+import carb as _carb
+for sz in [0.1,0.3,0.5,0.7,0.9,1.0,1.3,1.6]:
+    try:
+        any_hit=query_if.overlap_sphere_any(R, _carb.Float3(SPAWN[0],SPAWN[1],sz))
+    except Exception as e:
+        any_hit=f"ERR {e}"
+    emit(f"  z={sz}: overlap_sphere_any = {any_hit}")
+emit("=== raycast DOWN from z=2.0 (what's under spawn?) ===")
+try:
+    rh=query_if.raycast_closest(_carb.Float3(SPAWN[0],SPAWN[1],2.0), _carb.Float3(0,0,-1), 3.0)
+    if rh["hit"]:
+        wp=(rh.get("rigidBody") or rh.get("collider") or "")
+        emit(f"  hit {wp.split('/')[-1][:50]} at dist={rh.get('distance',-1):.2f} (z={2.0-rh.get('distance',0):.2f})")
+    else:
+        emit("  raycast down: NO HIT")
+except Exception as e:
+    emit(f"  raycast down ERR: {e}")
+
 emit(f"\n=== at spawn ({SPAWN[0]},{SPAWN[1]}) — sweep vs overlap at z=0.5,1.0 ===")
 for sz in (0.5,1.0):
     # SWEEP (current validator method) — tiny travel, 8 dirs; report any hit
